@@ -1,6 +1,6 @@
 from typing import List
-from common.parser import Params
-from interfaces.protocol import ReqResProtocol, PubSubProtocol
+from communicator.common.params import Params
+from communicator.interfaces.protocol import ReqResProtocol, PubSubProtocol
 
 
 def valid_params(params: Params, need_params: List[str]):

@@ -16,6 +16,8 @@ communicator/
 ├── interfaces/     # 추상 인터페이스 (Protocol 등)
 ├── protocols/      # 실제 프로토콜 구현체 (MQTT 등)
 ├── manager/        # 프로토콜 매니저
-├── tests/          # 단위 테스트
 ├── __init__.py
 └── ...
+├── tests/          # 단위 테스트
+├── README.md       # 프로젝트 설명
+└── requirements.txt # 프로젝트 의존성

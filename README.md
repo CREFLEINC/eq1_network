@@ -15,6 +15,7 @@ communicator/
 ├── common/         # 공통 모듈 (예외, 로깅 등)
 ├── interfaces/     # 추상 인터페이스 (Protocol 등)
 ├── protocols/      # 실제 프로토콜 구현체 (MQTT 등)
+├── manager/        # 프로토콜 매니저
 ├── tests/          # 단위 테스트
 ├── __init__.py
 └── ...

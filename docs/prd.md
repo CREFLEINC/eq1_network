@@ -1,21 +1,13 @@
 # PRD: EQ-1 Network – 범용 통신 프레임워크
+EQ-1 Network는 다양한 산업·IoT 환경에서 사용할 수 있는 플러그인 기반 통신 프레임워크입니다.
+이 문서는 EQ-1 Network의 목적, 요구사항, 설계 방향, 제약사항을 명확히 정의해 팀 내 공통된 이해를 돕습니다.
 
-## 1. 문서 목적
-본 문서는 EQ-1 Network 모듈의 기능, 비기능 요구사항, 설계 방향, 제약사항을 명확히 정의하여
+## 1. 개요
+- MQTT를 시작으로 다양한 통신 프로토콜을 표준화된 인터페이스로 지원합니다.
+- 신규 프로토콜을 플러그인으로 손쉽게 확장할 수 있습니다.
+- 공통 ReqRes / PubSub 인터페이스와 일관된 직렬화 규칙을 제공합니다.
 
-팀 내 개발 및 유지보수 시 공통된 이해를 돕기 위해 작성되었습니다.
-
-## 2. 프로젝트 개요
-EQ-1 Network는 다양한 산업/IoT 환경에서 사용할 수 있는 플러그인 기반 통신 프레임워크이다.
-
-MQTT를 시작으로 다양한 통신 프로토콜을 표준화된 인터페이스를 통해 지원한다.
-
-### 주요 목표
-- 신규 프로토콜을 플러그인 형태로 쉽게 확장
-- 공통 인터페이스(ReqRes, PubSub) 제공
-- 일관된 패킷 직렬화/역직렬화 규칙 확립
-
-#### 아키텍처 다이어그램
+### 아키텍처 다이아그램
 ```mermaid
 flowchart TD
     subgraph Application["응용 시스템"]
@@ -28,30 +20,35 @@ flowchart TD
     INTERFACES --> PROTOCOLS["Protocol Plugins"]
 
     PROTOCOLS --> MQTT["MQTTProtocol"]
-    PROTOCOLS --> MODBUS["(Future) ModbusProtocol"]
-    PROTOCOLS --> TCPUDP["(Future) TCP/UDPProtocol"]
+    PROTOCOLS --> MODBUS[(Future) ModbusProtocol]
+    PROTOCOLS --> TCPUDP[(Future) TCP/UDPProtocol]
 ```
+
+## 2. 목표
+- 신규 프로토콜을 플러그인 형태로 쉽게 확장
+- 공통 인터페이스(ReqRes, PubSub) 제공
+- 일관된 패킷 직렬화/역직렬화 규칙 확립
 
 ## 3. 배경
 - 기존 시스템별 통신 구현 중복
 - MQTT, TCP/UDP, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요
 - 신규 참여자 온보딩 시간 단축 필요
 
-## 4. 성공 지표(Success Metrics)
-- 개발 효율성 향상: EQ-1 Network를 사용하여 신규 시스템에 통신 기능을 구현하는 데 걸리는 시간을 기존 방식 대비 50% 이상 단축합니다.
-- 프레임워크 채택률: 릴리스 후 1년 이내에 내부 3개 이상의 프로덕션 시스템에서 EQ-1 Network를 핵심 통신 모듈로 채택합니다.
-- 개발자 온보딩 속도: 신규 입사자 또는 다른 팀 개발자가 프레임워크 사용법을 익히고, 테스트용 Pub/Sub 코드를 작성하는 데까지 걸리는 시간이 1일 이내여야 합니다.
-- 안정성 및 품질: 단위 테스트 커버리지를 80% 이상으로 유지하고, 릴리스 후 3개월 동안 치명적인(Critical) 통신 관련 버그가 발생하지 않아야 합니다.
+## 4. 성공 지표
+- 개발 속도: 기존 대비 50% 이상 빠른 통신 기능 구현
+- 채택률: 출시 1년 내 3개 이상 시스템에 적용
+- 온보딩: 신규 개발자가 1일 내 Pub/Sub 코드 작성 가능
+- 품질: 테스트 커버리지 80% 이상, 3개월간 치명적 통신 버그 0건
 
 ## 5. 범위(Scope)
-### 5.1 포함
+### 포함
 - 통신 프로토콜 공통 인터페이스
 - 패킷 구조화 및 직렬화
 - MQTT 프로토콜 구현
 - 단위 테스트 및 샘플 예제
 
-### 5.2 제외
-- GUI, Web UI
+### 제외
+- UI (GUI, Web)
 - 데이터 저장소, 서비스 로직
 - 배포/운영 자동화
 
@@ -73,8 +70,8 @@ flowchart TD
 | **NF-03** | **표준화** | - 모든 프로토콜은 `ProtocolManager`를 통해 `get_protocol("이름")` 형식의 단일 API로 접근.<br/>- 예외 처리는 `common.exceptions`에 정의된 커스텀 예외 클래스를 사용하여 일관되게 처리.<br/>- 로깅은 Python 표준 `logging` 모듈을 사용하며, 설정이 통일되어야 함. |
 | **NF-04** | **유지보수성** | - 프로토콜 구현(`protocols`), 인터페이스(`interfaces`), 공통 기능(`common`) 등 역할에 따라 코드를 명확히 분리 (낮은 결합도).<br/>- 각 모듈은 하나의 핵심 책임만 가지도록 설계 (높은 응집도). |
 
-## 8. 시스템 설계 개요
-### 8.1 폴더 구조
+## 8. 설계 개요
+### 폴더 구조
 ```
 communicator/
 ├── common/         # 예외, 로깅
@@ -85,19 +82,15 @@ communicator/
 └── requirements.txt
 ```
 
-### 8.2 주요 컴포넌트
+### 주요 컴포넌트
 - ReqResProtocol / PubSubProtocol
     - 통신 유형을 표준화한 인터페이스
 - PacketStructure / BinaryPacketStructure
     - 데이터 직렬화/역직렬화를 위한 추상 베이스 클래스(ABC).
     - EQ-1 Network에서 사용하는 모든 데이터 구조는 이 인터페이스를 반드시 구현해야 합니다.
     - build()와 parse() 메서드를 통해 직렬화/역직렬화 규칙을 강제하여, 프로토콜 플러그인과 응용 시스템 간의 데이터 형식을 표준화합니다.
-
 - MQTTProtocol
     - Paho-MQTT 기반의 Pub/Sub 구현
-
-### 클래스 관계 다이어그램
-https://app.diagrams.net/?splash=0#G1mVnDM8BlHodU85sIajWxTCR1fbHlXFuD 참조
 
 ## 9. 사용자 시나리오
 ### Pub/Sub 예시
@@ -115,26 +108,24 @@ tcp.connect()
 tcp.send(b"PING")
 resp = tcp.receive()
 ```
+
 ## 10. 테스트 전략
 - 단위 테스트 (Unit Test)
     - pytest 기반으로 각 프로토콜과 PacketStructure 단위 테스트 진행
     - Mock 객체를 이용한 독립적인 동작 검증
-
 - 통합 테스트 (Integration Test)
     - 실제 MQTT 브로커 환경에서 publish/subscribe 기능 검증
     - 향후 Modbus, TCP/UDP 등 다른 프로토콜 추가 시 동일한 시나리오 확장
-
 - 자동화
     - CI 파이프라인에서 자동 실행되도록 설정
     - 코드 커버리지 측정을 통해 목표 커버리지 80% 이상 유지
 
-## 11. 위험 및 완화 방안(Risk and Mitigation)
-| 위험 (Risk) | 발생 가능성 | 영향도 | 완화 방안 (Mitigation) |
+## 11. 위험 및 대응
+| 위험 (Risk) | 발생 가능성 | 영향도 | 대응 |
 | :--- | :---: | :---: | :--- |
 | **외부 라이브러리 의존성** | 중간 | 높음 | - 라이브러리 핵심 기능을 직접 호출하지 않고, 어댑터(Adapter) 클래스로 한 번 더 감싸서 구현합니다.<br/>- 이를 통해 문제 발생 시 다른 라이브러리(예: gmqtt)로 최소한의 코드 수정으로 교체할 수 있습니다. |
 | **플러그인 아키텍처의 한계** | 중간 | 높음 | - 초기 인터페이스 설계 시 TCP/IP 기반의 요청/응답 시나리오를 미리 고려하여 `ReqResProtocol` 인터페이스를 정의합니다.<br/>- Modbus 프로토콜 추가 단계에서 PoC(Proof of Concept)를 먼저 진행하여 아키텍처의 확장성을 검증합니다. |
 | **낮은 내부 채택률** | 높음 | 중간 | - 상세한 `README.md`와 예제 코드를 제공하여 사용 장벽을 낮춥니다.<br/>- 주요 사용 예상 팀을 대상으로 초기 버전 데모 및 피드백 세션을 진행하여 요구사항을 반영하고 참여를 유도합니다. |
-
 
 ## 12. 배포 및 재사용
 - 패키지화

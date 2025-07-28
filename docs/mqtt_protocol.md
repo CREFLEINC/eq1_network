@@ -1,19 +1,41 @@
-# MQTTProtocol – 사용 설명서
+# MQTTProtocol 사용 가이드
+MQTTProtocol을 사용하면 MQTT 브로커에 연결해 메시지를 발행하고, 구독한 토픽의 메시지를 콜백으로 처리할 수 있습니다.
+이 가이드는 EQ-1 Network 모듈의 MQTTProtocol 클래스 구조, 동작 방식, 사용 예제, 예외 처리 방법을 설명합니다.
 
-## 1. 문서 목적
-이 문서는 EQ-1 Network 모듈에서 제공하는 `MQTTProtocol` 클래스의 구조, 사용 방법, 예외 처리 방식을 설명합니다.
+## 1. 빠른 시작
+```python
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol
 
-## 2. 개요
-`MQTTProtocol`은 Paho-MQTT 라이브러리를 기반으로 Pub/Sub 패턴의 통신을 지원하는 구현체입니다.
+# 1. 프로토콜 객체 생성
+mqtt = MQTTProtocol(
+    broker_address="broker.example.com",
+    port=1883,
+    timeout=60
+)
 
-### 2.1 비동기 백그라운드 동작
-- `connect()` 메서드를 호출하면, 내부적으로 별도의 스레드가 생성되어 MQTT 네트워크 통신을 처리합니다. 따라서 `connect()`는 블로킹(blocking)되지 않으며, 메인 프로그램은 다른 작업을 계속 수행할 수 있습니다.
+# 2. 브로커 연결
+mqtt.connect()
 
-### 2.2 주요 기능
+# 3. 토픽 구독
+mqtt.subscribe("topic/test", callback=print)
+
+# 4. 메시지 발행
+mqtt.publish("topic/test", "hello")
+
+# 5. 연결 해제
+mqtt.disconnect()
+```
+
+## 2. 주요 개념
+### 비동기 동작
+- `connect()`를 호출하면 내부적으로 별도의 스레드가 생성되어 MQTT 네트워크 통신을 처리합니다.
+- `connect()`는 블로킹되지 않으며, 메인 스레드는 다른 작업을 계속 실행할 수 있습니다.
+
+### 지원 기능
 - 브로커 연결 및 해제
-- 토픽 구독 및 메시지 콜백
-- 토픽 발행 (QoS 지원)
-- 에러/이벤트 처리
+- 토픽 구독과 메시지 콜백 처리
+- 메시지 발행 (QoS 지원)
+- 에러와 이벤트 처리
 
 ## 3. 클래스 다이어그램 구조
 ```mermaid
@@ -36,7 +58,7 @@ classDiagram
     PubSubProtocol <|-- MQTTProtocol
 ```
 
-## 4. 초기화
+### 초기화
 ```python
 from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol
 
@@ -47,13 +69,13 @@ mqtt = MQTTProtocol(
 )
 ```
 
-### 4.1 파라미터 설명
+### 파라미터 설명
 - broker_address: 브로커 주소 (IP 또는 호스트명)
 - port: MQTT 포트 (기본 1883)
 - timeout: 연결 타임아웃(초 단위)
 
-## 5. 사용 예제
-### 5.1 연결 및 구독
+## 4. 사용 방법
+### 연결 및 구독
 ```python
 def on_message(topic, payload):
     print(f"[{topic}] {payload}")
@@ -62,17 +84,17 @@ mqtt.connect()
 mqtt.subscribe("vision/events", callback=on_message)
 ```
 
-### 5.2 발행
+### 메시지 발행
 ```python
 mqtt.publish("vision/events", "Camera started", qos=1)
 ```
 
-### 5.3 연결 해제
+### 연결 해제
 ```python
 mqtt.disconnect()
 ```
 
-## 6. 콜백 동작 흐름
+### 콜백 동작 흐름
 ```mermaid
 sequenceDiagram
     participant Broker
@@ -84,18 +106,18 @@ sequenceDiagram
     PahoClient->>MQTTProtocol: on_message 호출
     MQTTProtocol->>UserCallback: callback(topic, payload)
 ```
-### 6.1 콜백 시그니처
+### 콜백 시그니처
 ```python
 def callback(topic: str, payload: bytes):
     ...
 ```
 
-## 7. 예외 처리
-### 7.1 주요 예외 클래스:
+### 예외 처리
+#### 주요 예외 클래스:
 - ProtocolConnectionError: 브로커 연결 실패
 - ProtocolError: 기타 통신 오류
 
-### 7.2 예외 처리 예시:
+#### 예외 처리 예시:
 ```python
 try:
     mqtt.connect()
@@ -105,17 +127,17 @@ except ProtocolError as e:
     print(f"Protocol error: {e}")
 ```
 
-## 8. 테스트 방법
+## 5. 테스트 방법
 - 단위 테스트
     - `pytest` 기반으로 mock 브로커를 활용
     - MQTT 브로커를 실제 실행해 통합 테스트 가능
 
-## 9. 향후 확장 계획
+## 6. 향후 확장 계획
 - 보안
     - 인증서 기반 TLS/mTLS 지원
     - 자동 재연결 옵션
     - QoS 설정
 
-## 10. 참고
-- 상위 PRD: [PRD.md](PRD.md)
-- README: [README.md](README.md)
+## 7. 참고 자료
+- [PRD.md](PRD.md)
+- [README.md](README.md)

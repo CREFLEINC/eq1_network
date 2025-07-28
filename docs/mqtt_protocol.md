@@ -6,10 +6,10 @@
 ## 2. 개요
 `MQTTProtocol`은 Paho-MQTT 라이브러리를 기반으로 Pub/Sub 패턴의 통신을 지원하는 구현체입니다.
 
-### 비동기 백그라운드 동작
+### 2.1 비동기 백그라운드 동작
 - `connect()` 메서드를 호출하면, 내부적으로 별도의 스레드가 생성되어 MQTT 네트워크 통신을 처리합니다. 따라서 `connect()`는 블로킹(blocking)되지 않으며, 메인 프로그램은 다른 작업을 계속 수행할 수 있습니다.
 
-### 주요 기능
+### 2.2 주요 기능
 - 브로커 연결 및 해제
 - 토픽 구독 및 메시지 콜백
 - 토픽 발행 (QoS 지원)
@@ -47,7 +47,7 @@ mqtt = MQTTProtocol(
 )
 ```
 
-### 파라미터 설명
+### 4.1 파라미터 설명
 - broker_address: 브로커 주소 (IP 또는 호스트명)
 - port: MQTT 포트 (기본 1883)
 - timeout: 연결 타임아웃(초 단위)
@@ -84,18 +84,18 @@ sequenceDiagram
     PahoClient->>MQTTProtocol: on_message 호출
     MQTTProtocol->>UserCallback: callback(topic, payload)
 ```
-### 콜백 시그니처
+### 6.1 콜백 시그니처
 ```python
 def callback(topic: str, payload: bytes):
     ...
 ```
 
 ## 7. 예외 처리
-### 주요 예외 클래스:
+### 7.1 주요 예외 클래스:
 - ProtocolConnectionError: 브로커 연결 실패
 - ProtocolError: 기타 통신 오류
 
-### 예외 처리 예시:
+### 7.2 예외 처리 예시:
 ```python
 try:
     mqtt.connect()

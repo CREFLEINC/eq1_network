@@ -31,14 +31,12 @@ flowchart TD
 
 ## 3. 배경
 - 기존 시스템별 통신 구현 중복
-- MQTT, TCP/UDP, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요
-- 신규 참여자 온보딩 시간 단축 필요
+- MQTT, TCP/UDP, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요성 존재
+- 신규 참여자 온보딩 시간 단축 필요성 존재
 
 ## 4. 성공 지표
 - 개발 속도: 기존 대비 50% 이상 빠른 통신 기능 구현
-- 채택률: 출시 1년 내 3개 이상 시스템에 적용
-- 온보딩: 신규 개발자가 1일 내 Pub/Sub 코드 작성 가능
-- 품질: 테스트 커버리지 80% 이상, 3개월간 치명적 통신 버그 0건
+- 품질: 테스트 커버리지 90% 이상, 3개월간 치명적 통신 버그 0건
 
 ## 5. 범위(Scope)
 ### 포함
@@ -60,7 +58,7 @@ flowchart TD
 | **F-03** | **PubSub 인터페이스** | - `PubSubProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 브로커와의 연결 수립 및 종료<br/>  - `publish(topic: str, payload: bytes)`: 메시지 발행<br/>  - `subscribe(topic: str, callback: Callable)`: 토픽 구독 및 콜백 등록<br/>  - `unsubscribe(topic: str)`: 토픽 구독 취소 |
 | **F-04** | **PacketStructure** | - 모든 통신 데이터는 `PacketStructure` 추상 클래스를 상속하여 구현.<br/>- `build() -> bytes`: 패킷 객체를 전송 가능한 `bytes`로 직렬화.<br/>- `parse(bytes) -> PacketStructure`: 수신된 `bytes`를 패킷 객체로 역직렬화.<br/>- `frame_type`: 패킷의 종류나 명령을 식별하는 속성을 제공.<br/>- `payload`: 실제 데이터가 담기는 `bytes` 형식의 속성을 제공. |
 | **F-05** | **MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리를 사용해 구현.<br/>- 연결 끊김 시 자동 재연결 로직을 포함.<br/>- QoS (0, 1, 2) 레벨 및 TLS/SSL 보안 연결 옵션을 제공. |
-| **F-06** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 80% 이상을 목표로 함. |
+| **F-06** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
 
 ## 7. 비기능 요구사항
 | ID | 요구사항 | 상세 |
@@ -142,7 +140,7 @@ resp = tcp.receive()
 - 초기 단계에서는 MQTT만 공식 지원
 
 ## 14. 향후 확장 계획
-- Modbus, OPC UA, TCP/UDP 등 추가 프로토콜
+- Modbus, TCP/UDP, Serial 등 프로토콜 추가
 - 테스트 커버리지 강화
 - Hot-reload 및 모니터링 도입
 

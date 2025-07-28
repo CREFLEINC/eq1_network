@@ -144,3 +144,7 @@ pytest tests/
 - TCP, Serial 프로토콜 추가 지원
 - 자동 재연결, 보안 기능 강화
 - CI 환경에 통합된 테스트 커버리지 확대
+
+## 참고 문서
+- [PRD.md](PRD.md)
+- [README.md](README.md)

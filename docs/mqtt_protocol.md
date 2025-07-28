@@ -134,7 +134,6 @@ except ProtocolError as e:
 
 ## 6. 향후 확장 계획
 - 보안
-    - 인증서 기반 TLS/mTLS 지원
     - 자동 재연결 옵션
     - QoS 설정
 

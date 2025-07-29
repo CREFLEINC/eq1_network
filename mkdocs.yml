@@ -1,0 +1,33 @@
+site_name: EQ1 Network Docs
+nav:
+  - Home: README.md
+  - PRD: prd.md
+  - MQTT Protocol: mqtt_protocol.md
+docs_dir: docs
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.expand
+    - navigation.sections
+  palette:
+    - scheme: default
+      primary: white
+      accent: blue grey
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark
+    - scheme: slate
+      primary: white
+      accent: blue grey
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            paths: ["."]

@@ -4,7 +4,7 @@ EQ-1 Network는 다양한 산업·IoT 환경에서 사용할 수 있는 플러�
 
 ## 1. 개요
 - MQTT를 시작으로 다양한 통신 프로토콜을 표준화된 인터페이스로 지원합니다.
-- 신규 프로토콜을 플러그인으로 손쉽게 확장할 수 있습니다.
+- 신규 프로토콜을 플러그인 방식으로 쉽게 확장할 수 있습니다.
 - 공통 ReqRes / PubSub 인터페이스와 일관된 직렬화 규칙을 제공합니다.
 
 ### 아키텍처 다이아그램
@@ -58,7 +58,8 @@ flowchart TD
 | **F-03** | **PubSub 인터페이스** | - `PubSubProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 브로커와의 연결 수립 및 종료<br/>  - `publish(topic: str, payload: bytes)`: 메시지 발행<br/>  - `subscribe(topic: str, callback: Callable)`: 토픽 구독 및 콜백 등록<br/>  - `unsubscribe(topic: str)`: 토픽 구독 취소 |
 | **F-04** | **PacketStructure** | - 모든 통신 데이터는 `PacketStructure` 추상 클래스를 상속하여 구현.<br/>- `build() -> bytes`: 패킷 객체를 전송 가능한 `bytes`로 직렬화.<br/>- `parse(bytes) -> PacketStructure`: 수신된 `bytes`를 패킷 객체로 역직렬화.<br/>- `frame_type`: 패킷의 종류나 명령을 식별하는 속성을 제공.<br/>- `payload`: 실제 데이터가 담기는 `bytes` 형식의 속성을 제공. |
 | **F-05** | **MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리를 사용해 구현.<br/>- 연결 끊김 시 자동 재연결 로직을 포함.<br/>- QoS (0, 1, 2) 레벨 및 TLS/SSL 보안 연결 옵션을 제공. |
-| **F-06** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
+| **F-06** | **Thread-safe 보장** | - publish, subscribe, unsubscribe, 큐 처리 등 모든 API가 thread-safe해야 함 |
+| **F-07** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
 
 ## 7. 비기능 요구사항
 | ID | 요구사항 | 상세 |
@@ -84,11 +85,13 @@ communicator/
 - ReqResProtocol / PubSubProtocol
     - 통신 유형을 표준화한 인터페이스
 - PacketStructure / BinaryPacketStructure
-    - 데이터 직렬화/역직렬화를 위한 추상 베이스 클래스(ABC).
-    - EQ-1 Network에서 사용하는 모든 데이터 구조는 이 인터페이스를 반드시 구현해야 합니다.
-    - build()와 parse() 메서드를 통해 직렬화/역직렬화 규칙을 강제하여, 프로토콜 플러그인과 응용 시스템 간의 데이터 형식을 표준화합니다.
+    - 데이터 직렬화/역직렬화를 위한 추상 베이스 클래스(ABC)
 - MQTTProtocol
     - Paho-MQTT 기반의 Pub/Sub 구현
+    - 자동 재연결
+    - 구독 복구
+    - QoS 1, 2 지원
+    - thread-safe 보장
 
 ## 9. 사용자 시나리오
 ### Pub/Sub 예시
@@ -116,7 +119,7 @@ resp = tcp.receive()
     - 향후 Modbus, TCP/UDP 등 다른 프로토콜 추가 시 동일한 시나리오 확장
 - 자동화
     - CI 파이프라인에서 자동 실행되도록 설정
-    - 코드 커버리지 측정을 통해 목표 커버리지 80% 이상 유지
+    - 코드 커버리지 측정을 통해 목표 커버리지 90% 이상 유지
 
 ## 11. 위험 및 대응
 | 위험 (Risk) | 발생 가능성 | 영향도 | 대응 |
@@ -145,5 +148,5 @@ resp = tcp.receive()
 - Hot-reload 및 모니터링 도입
 
 ## 15. 참고 문서
-- [DevelopmentDocumentation.md](DevelopmentDocumentation.md)
+- [MQTT Protocol](mqtt_protocol.md)
 - [README.md](README.md)

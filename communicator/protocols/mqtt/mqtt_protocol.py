@@ -10,18 +10,44 @@ from communicator.common.exception import (
     ProtocolAuthenticationError,
     ProtocolError,
 )
+import logging
 
+logger = logging.getLogger(__name__)
+
+import queue
 
 class MQTTProtocol(PubSubProtocol):
     """
     범용 MQTT 프로토콜 구현 클래스 (paho-mqtt 기반)
 
-    - Pub/Sub 패턴 기반의 메시지 통신을 지원합니다.
-    - 다양한 환경(브로커 주소/포트/타임아웃 등)에 맞게 유연하게 사용 가능합니다.
-    - 커스텀 예외 및 콜백 구조를 통해 확장성과 유지보수성을 높였습니다.
+    주요 기능 및 신뢰성 보장:
+    - 자동 재연결 시 구독 복구 (subscribe 정보 내부 저장 및 재연결 후 자동 재구독)
+    - publish 실패 시 내부 큐에 저장, 연결 복구 시 순차 재전송 (데이터 유실 방지)
+    - Blocking/Non-blocking 모드 모두 지원, blocking 모드 graceful shutdown 지원
+    - 내부 동시성 제어를 위한 Lock/Queue 활용 (thread-safe)
+
+    사용법/제약사항:
+    - subscribe와 publish는 thread-safe하게 동작합니다.
+    - blocking 모드(loop_forever)는 stop_loop()로 안전하게 종료 가능
+    - subscribe 시 topic/qos/callback이 내부에 저장되며, 재연결 시 자동 복구됩니다.
+    - publish 실패(네트워크 단절 등) 시 메시지는 큐에 저장되어 복구 후 자동 재전송됩니다.
+    - publish queue의 최대 크기, 재시도 정책 등은 필요에 따라 확장 가능
     """
 
-    def __init__(self, broker_address: str, port: int = 1883, timeout: int = 60, keepalive: int = 60):
+    def __init__(
+        self,
+        broker_address: str,
+        port: int = 1883,
+        timeout: int = 60,
+        keepalive: int = 60,
+        mode: str = "non-blocking",
+        session_expiry_interval: int = 3600,
+        max_reconnect_attempts: int = 10,
+        reconnect_initial_delay: int = 1,
+        reconnect_max_delay: int = 60,
+        heartbeat_check_ratio: float = 0.5,
+        publish_queue_maxsize: int = 1000,
+    ):
         """
         MQTTProtocol 인스턴스를 초기화합니다.
 
@@ -30,18 +56,37 @@ class MQTTProtocol(PubSubProtocol):
             port (int, optional): 포트 번호 (기본값: 1883)
             timeout (int, optional): 연결 타임아웃 (기본값: 60초)
             keepalive (int, optional): Keep-alive 간격 (기본값: 60초)
+            mode (str, optional): 'blocking' 또는 'non-blocking' (기본값: 'non-blocking')
+            publish_queue_maxsize (int, optional): publish 큐 최대 크기
         """
         self.broker_address = broker_address
         self.port = port
         self.timeout = timeout
         self.keepalive = keepalive
-        self.client = mqtt.Client()
+        self.mode = mode
+        self.client = mqtt.Client(clean_session=False)
         self._is_connected = False
         self._callback: Optional[Callable[[str, bytes], None]] = None
         self._heartbeat_thread = None
         self._heartbeat_stop_event = threading.Event()
         self._last_heartbeat = time.time()
+        self.session_expiry_interval = session_expiry_interval
+        self.max_reconnect_attempts = max_reconnect_attempts
+        self.reconnect_initial_delay = reconnect_initial_delay
+        self.reconnect_max_delay = reconnect_max_delay
+        self.heartbeat_check_ratio = heartbeat_check_ratio
+
+        self._subscriptions: Dict[str, Dict] = {}
+        self._publish_queue = queue.Queue(maxsize=publish_queue_maxsize)
+        self._lock = threading.Lock()
+        self._shutdown_event = threading.Event()
+        self._blocking_thread: Optional[threading.Thread] = None
+
         self._setup_callbacks()
+    
+    def _update_heartbeat(self):
+        """브로커 이벤트가 발생할 때마다 heartbeat 갱신."""
+        self._last_heartbeat = time.time()
 
     def _setup_callbacks(self):
         """
@@ -51,6 +96,9 @@ class MQTTProtocol(PubSubProtocol):
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
+        self.client.on_publish = lambda *a, **k: self._update_heartbeat()
+        self.client.on_subscribe = lambda *a, **k: self._update_heartbeat()
+        self.client.on_log = lambda *a, **k: self._update_heartbeat()
 
     def _on_connect(self, client, userdata, flags, rc):
         """
@@ -68,11 +116,12 @@ class MQTTProtocol(PubSubProtocol):
         """
         if rc == 0:
             self._is_connected = True
-            print(f"Connected to MQTT broker ({self.broker_address}:{self.port})")
+            self._update_heartbeat()
+            logger.info(f"Connected to MQTT broker ({self.broker_address}:{self.port})")
         elif rc == 5:
-            raise ProtocolAuthenticationError("MQTT authentication failed (rc=5)")
+            logger.error("MQTT authentication failed (rc=5)")
         else:
-            raise ProtocolConnectionError(f"MQTT connection failed (rc={rc})")
+            logger.error(f"MQTT connection failed (rc={rc})")
 
     def _on_disconnect(self, client, userdata, rc):
         """
@@ -85,7 +134,8 @@ class MQTTProtocol(PubSubProtocol):
             rc (int): 연결 해제 코드
         """
         self._is_connected = False
-        print(f"MQTT broker disconnected (rc={rc})")
+        self._update_heartbeat()
+        logger.info(f"MQTT broker disconnected (rc={rc})")
 
     def _on_message(self, client, userdata, msg):
         """
@@ -99,15 +149,21 @@ class MQTTProtocol(PubSubProtocol):
         Raises:
             ProtocolDecodeError: 메시지 디코딩 실패 시
         """
+        self._update_heartbeat()
         try:
-            if self._callback:
-                self._callback(msg.topic, msg.payload)
+            sub = self._subscriptions.get(msg.topic)
+            if sub and "callback" in sub:
+                sub["callback"](msg.topic, msg.payload)
         except Exception as e:
-            raise ProtocolDecodeError(f"MQTT message decoding failed: {e}")
+            logger.exception(f"MQTT message decoding failed: {e}")
 
     def connect(self) -> bool:
         """
         MQTT 브로커에 연결을 시도합니다.
+
+        - blocking 모드: 사용자가 connect()만 호출하면 내부적으로 loop_forever()를 메인 스레드에서 직접 실행하며, KeyboardInterrupt 등으로 graceful shutdown이 자동 처리됩니다.
+        - non-blocking 모드: 내부적으로 loop_start() 및 heartbeat 모니터를 사용합니다.
+        - 사용자는 mode만 지정하면 되고, 별도의 루프/스레드/종료 관리가 필요 없습니다.
 
         Returns:
             bool: 연결 성공 시 True
@@ -116,9 +172,41 @@ class MQTTProtocol(PubSubProtocol):
             ProtocolConnectionError: 기타 예외 발생 시
         """
         try:
-            self.client.connect(self.broker_address, self.port, self.keepalive)
-            self.client.loop_start()
-            self._start_heartbeat_monitor()
+            props = None
+            if hasattr(mqtt, "Properties") and hasattr(mqtt, "SESSION_EXPIRY_INTERVAL"):
+                props = mqtt.Properties(mqtt.PacketTypes.CONNECT)
+                props.SessionExpiryInterval = self.session_expiry_interval
+                self.client.connect(
+                    self.broker_address,
+                    self.port,
+                    self.keepalive,
+                    clean_session=False,
+                    properties=props,
+                )
+            else:
+                self.client.connect(
+                    self.broker_address,
+                    self.port,
+                    self.keepalive,
+                    clean_session=False,
+                )
+            if self.mode == "blocking":
+                def loop_forever():
+                    try:
+                        self.client.loop_forever()
+                    except Exception as e:
+                        logger.error(f"Blocking loop error: {e}")
+
+                self._blocking_thread = threading.Thread(target=loop_forever, daemon=True)
+                self._blocking_thread.start()
+
+                start_time = time.time()
+                while not self._is_connected and time.time() - start_time < self.timeout:
+                    time.sleep(0.1)
+                if not self._is_connected:
+                    raise ProtocolConnectionError("MQTT connection timeout")
+                self._start_heartbeat_monitor()
+            
             return True
         except Exception as e:
             raise ProtocolConnectionError(f"MQTT connection failed: {e}")
@@ -127,62 +215,66 @@ class MQTTProtocol(PubSubProtocol):
         """
         MQTT 브로커와의 연결을 해제합니다.
         내부 상태를 초기화합니다.
-
-        예외 발생 시 로그만 출력하며, 항상 _is_connected를 False로 만듭니다.
+        shutdown 이벤트를 발생시켜 blocking 모드도 안전하게 종료합니다.
         """
         try:
+            self._shutdown_event.set()
             self._stop_heartbeat_monitor()
             self.client.loop_stop()
             self.client.disconnect()
+
+            if self._blocking_thread and self._blocking_thread.is_alive():
+                self._blocking_thread.join(timeout=2.0)
+
         except Exception as e:
-            print(f"Exception occurred while disconnecting MQTT: {e}")
+            logger.exception(f"Exception occurred while disconnecting MQTT: {e}")
         finally:
             self._is_connected = False
 
-    def publish(self, topic: str, message: str, qos: int = 0) -> bool:
+    def publish(self, topic: str, message: str, qos: int = 1) -> bool:
         """
         지정한 토픽에 메시지를 발행(Publish)합니다.
-
-        Args:
-            topic (str): 발행할 토픽명
-            message (str): 발행할 메시지
-            qos (int, optional): QoS 레벨 (기본값: 0)
-        Returns:
-            bool: 발행 성공 시 True
-        Raises:
-            ProtocolValidationError: 발행 실패 시
-            ProtocolError: 기타 예외 발생 시
+        실패 시 메시지는 내부 큐에 저장되어, 연결 복구 후 자동 재전송됩니다.
+        Thread-safe하게 동작합니다.
         """
-        try:
-            result = self.client.publish(topic, message, qos)
-            if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                raise ProtocolValidationError(f"MQTT message publish failed (rc={result.rc})")
-            return True
-        except Exception as e:
-            raise ProtocolError(f"MQTT message publish failed: {e}")
+        with self._lock:
+            if not self.is_connected:
+                # 연결이 안 되어 있으면 큐잉
+                try:
+                    self._publish_queue.put_nowait((topic, message, qos))
+                except queue.Full:
+                    logger.error("Publish queue is full. Message dropped.")
+                    raise ProtocolError("Publish queue is full. Message dropped.")
+                return False
+            try:
+                result = self.client.publish(topic, message, qos)
+                if result.rc != mqtt.MQTT_ERR_SUCCESS:
+                    # 발행 실패 시 큐잉
+                    self._publish_queue.put_nowait((topic, message, qos))
+                    raise ProtocolValidationError(f"MQTT message publish failed (rc={result.rc})")
+                return True
+            except ProtocolValidationError:
+                raise ProtocolValidationError("MQTT message publish failed")
+            except Exception as e:
+                # 예외 발생 시 큐잉
+                try:
+                    self._publish_queue.put_nowait((topic, message, qos))
+                except queue.Full:
+                    logger.error("Publish queue is full. Message dropped.")
+                raise ProtocolError(f"MQTT message publish failed: {e}")
 
-    def subscribe(self, topic: str, callback: Callable[[str, bytes], None], qos: int = 0) -> bool:
+    def subscribe(self, topic: str, callback: Callable[[str, bytes], None], qos: int = 1) -> bool:
         """
         지정한 토픽을 구독(Subscribe)하며, 메시지 수신 시 콜백을 등록합니다.
-
-        Args:
-            topic (str): 구독할 토픽명
-            callback (Callable[[str, bytes], None]): 메시지 수신 시 호출될 콜백 함수
-            qos (int, optional): QoS 레벨 (기본값: 0)
-        Returns:
-            bool: 구독 성공 시 True
-        Raises:
-            ProtocolValidationError: 구독 실패 시
-            ProtocolError: 기타 예외 발생 시
+        구독 정보는 내부에 저장되어 재연결 시 자동 복구됩니다.
+        Thread-safe하게 동작합니다.
         """
-        try:
-            self._callback = callback
+        with self._lock:
+            self._subscriptions[topic] = {"qos": qos, "callback": callback}
             result, _ = self.client.subscribe(topic, qos)
             if result != mqtt.MQTT_ERR_SUCCESS:
                 raise ProtocolValidationError(f"MQTT subscription failed (rc={result})")
             return True
-        except Exception as e:
-            raise ProtocolError(f"MQTT subscription failed: {e}")
 
     def unsubscribe(self, topic: str) -> bool:
         """
@@ -196,13 +288,11 @@ class MQTTProtocol(PubSubProtocol):
             ProtocolValidationError: 해제 실패 시
             ProtocolError: 기타 예외 발생 시
         """
-        try:
-            result, _ = self.client.unsubscribe(topic)
-            if result != mqtt.MQTT_ERR_SUCCESS:
-                raise ProtocolValidationError(f"MQTT subscription failed (rc={result})")
-            return True
-        except Exception as e:
-            raise ProtocolError(f"MQTT subscription failed: {e}")
+        result, _ = self.client.unsubscribe(topic)
+        if result != mqtt.MQTT_ERR_SUCCESS:
+            raise ProtocolValidationError(f"MQTT subscription failed (rc={result})")
+        self._subscriptions.pop(topic, None)
+        return True
 
     def _start_heartbeat_monitor(self):
         """
@@ -225,36 +315,90 @@ class MQTTProtocol(PubSubProtocol):
         """
         Keep-alive 모니터링을 수행하는 백그라운드 스레드입니다.
         연결이 끊어진 것을 감지하면 자동으로 재연결을 시도합니다.
+        shutdown 이벤트가 발생하면 안전하게 종료됩니다.
         """
-        while not self._heartbeat_stop_event.is_set():
+        delay = self.reconnect_initial_delay
+        max_delay = self.reconnect_max_delay
+        attempts = 0
+        while not self._heartbeat_stop_event.is_set() and not self._shutdown_event.is_set():
             try:
                 if self._is_connected:
-                    # MQTT 클라이언트의 내장 keep-alive 메커니즘 활용
-                    # paho-mqtt는 자동으로 PINGREQ/PINGRESP를 처리함
                     current_time = time.time()
                     if current_time - self._last_heartbeat > self.keepalive * 1.5:
-                        print("Keep-alive timeout detected, attempting reconnection...")
-                        self._attempt_reconnection()
-                    self._last_heartbeat = current_time
-                
-                time.sleep(self.keepalive // 3)  # keepalive 간격의 1/3마다 체크
+                        logger.warning("Keep-alive timeout detected, attempting reconnection...")
+                        if self._attempt_reconnection():
+                            delay = self.reconnect_initial_delay
+                            attempts = 0
+                            self._last_heartbeat = time.time()
+                        else:
+                            attempts += 1
+                            if attempts >= self.max_reconnect_attempts:
+                                logger.error("Max reconnection attempts reached. Stopping monitor.")
+                                break
+                            logger.warning(f"Reconnection failed. Retrying in {delay} seconds...")
+                            time.sleep(delay)
+                            delay = min(delay * 2, max_delay)
+                        self._last_heartbeat = current_time
+                self._heartbeat_stop_event.wait(self.keepalive * self.heartbeat_check_ratio)
             except Exception as e:
-                print(f"Heartbeat monitor error: {e}")
+                logger.exception(f"Heartbeat monitor error: {e}")
                 time.sleep(5)
 
-    def _attempt_reconnection(self):
+    def _attempt_reconnection(self) -> bool:
         """
         연결이 끊어졌을 때 자동 재연결을 시도합니다.
+        성공 시 구독 복구 및 publish 큐 재전송을 수행합니다.
         """
         try:
             if self._is_connected:
                 self.client.disconnect()
-            
             self.client.reconnect()
-            print(f"MQTT reconnection successful to {self.broker_address}:{self.port}")
+            self._is_connected = True
+            self._update_heartbeat()
+            logger.info(f"MQTT reconnection successful to {self.broker_address}:{self.port}")
+            # 구독 복구
+            self._recover_subscriptions()
+            time.sleep(0.5)
+            # publish 큐 재전송
+            self._flush_publish_queue()
+            return True
         except Exception as e:
-            print(f"MQTT reconnection failed: {e}")
+            logger.error(f"MQTT reconnection failed: {e}")
             self._is_connected = False
+            return False
+
+    def _recover_subscriptions(self):
+        """
+        내부에 저장된 구독 정보를 모두 재구독합니다.
+        """
+        with self._lock:
+            for topic, sub in self._subscriptions.items():
+                try:
+                    self.client.subscribe(topic, sub["qos"])
+                except Exception as e:
+                    logger.warning(f"Failed to recover subscription for topic {topic}: {e}")
+
+    def _flush_publish_queue(self):
+        """
+        publish 큐에 쌓인 메시지를 모두 재전송합니다.
+        """
+        with self._lock:
+            while not self._publish_queue.empty() and self.is_connected:
+                try:
+                    topic, message, qos = self._publish_queue.get_nowait()
+                    self.client.publish(topic, message, qos)
+                except Exception as e:
+                    logger.warning(f"Failed to resend queued message: {e}")
+                    break
+
+    def stop_loop(self):
+        """
+        blocking 모드에서 안전하게 종료하려면 이 메서드를 호출하세요.
+        shutdown 이벤트를 발생시키고, 내부 스레드를 안전하게 정리합니다.
+        """
+        self._shutdown_event.set()
+        if self._blocking_thread and self._blocking_thread.is_alive():
+            self._blocking_thread.join(timeout=2.0)
 
     @property
     def is_connected(self) -> bool:

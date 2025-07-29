@@ -1,4 +1,6 @@
 import paho.mqtt.client as mqtt
+import threading
+import time
 from typing import Optional, Callable
 from communicator.interfaces.protocol import PubSubProtocol
 from communicator.common.exception import (
@@ -19,7 +21,7 @@ class MQTTProtocol(PubSubProtocol):
     - 커스텀 예외 및 콜백 구조를 통해 확장성과 유지보수성을 높였습니다.
     """
 
-    def __init__(self, broker_address: str, port: int = 1883, timeout: int = 60):
+    def __init__(self, broker_address: str, port: int = 1883, timeout: int = 60, keepalive: int = 60):
         """
         MQTTProtocol 인스턴스를 초기화합니다.
 
@@ -27,13 +29,18 @@ class MQTTProtocol(PubSubProtocol):
             broker_address (str): MQTT 브로커 주소
             port (int, optional): 포트 번호 (기본값: 1883)
             timeout (int, optional): 연결 타임아웃 (기본값: 60초)
+            keepalive (int, optional): Keep-alive 간격 (기본값: 60초)
         """
         self.broker_address = broker_address
         self.port = port
         self.timeout = timeout
+        self.keepalive = keepalive
         self.client = mqtt.Client()
         self._is_connected = False
         self._callback: Optional[Callable[[str, bytes], None]] = None
+        self._heartbeat_thread = None
+        self._heartbeat_stop_event = threading.Event()
+        self._last_heartbeat = time.time()
         self._setup_callbacks()
 
     def _setup_callbacks(self):
@@ -109,8 +116,9 @@ class MQTTProtocol(PubSubProtocol):
             ProtocolConnectionError: 기타 예외 발생 시
         """
         try:
-            self.client.connect(self.broker_address, self.port, self.timeout)
+            self.client.connect(self.broker_address, self.port, self.keepalive)
             self.client.loop_start()
+            self._start_heartbeat_monitor()
             return True
         except Exception as e:
             raise ProtocolConnectionError(f"MQTT connection failed: {e}")
@@ -123,6 +131,7 @@ class MQTTProtocol(PubSubProtocol):
         예외 발생 시 로그만 출력하며, 항상 _is_connected를 False로 만듭니다.
         """
         try:
+            self._stop_heartbeat_monitor()
             self.client.loop_stop()
             self.client.disconnect()
         except Exception as e:
@@ -195,6 +204,58 @@ class MQTTProtocol(PubSubProtocol):
         except Exception as e:
             raise ProtocolError(f"MQTT subscription failed: {e}")
 
+    def _start_heartbeat_monitor(self):
+        """
+        Keep-alive 모니터링 스레드를 시작합니다.
+        """
+        if self._heartbeat_thread is None or not self._heartbeat_thread.is_alive():
+            self._heartbeat_stop_event.clear()
+            self._heartbeat_thread = threading.Thread(target=self._heartbeat_monitor, daemon=True)
+            self._heartbeat_thread.start()
+
+    def _stop_heartbeat_monitor(self):
+        """
+        Keep-alive 모니터링 스레드를 중지합니다.
+        """
+        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+            self._heartbeat_stop_event.set()
+            self._heartbeat_thread.join(timeout=1.0)
+
+    def _heartbeat_monitor(self):
+        """
+        Keep-alive 모니터링을 수행하는 백그라운드 스레드입니다.
+        연결이 끊어진 것을 감지하면 자동으로 재연결을 시도합니다.
+        """
+        while not self._heartbeat_stop_event.is_set():
+            try:
+                if self._is_connected:
+                    # MQTT 클라이언트의 내장 keep-alive 메커니즘 활용
+                    # paho-mqtt는 자동으로 PINGREQ/PINGRESP를 처리함
+                    current_time = time.time()
+                    if current_time - self._last_heartbeat > self.keepalive * 1.5:
+                        print("Keep-alive timeout detected, attempting reconnection...")
+                        self._attempt_reconnection()
+                    self._last_heartbeat = current_time
+                
+                time.sleep(self.keepalive // 3)  # keepalive 간격의 1/3마다 체크
+            except Exception as e:
+                print(f"Heartbeat monitor error: {e}")
+                time.sleep(5)
+
+    def _attempt_reconnection(self):
+        """
+        연결이 끊어졌을 때 자동 재연결을 시도합니다.
+        """
+        try:
+            if self._is_connected:
+                self.client.disconnect()
+            
+            self.client.reconnect()
+            print(f"MQTT reconnection successful to {self.broker_address}:{self.port}")
+        except Exception as e:
+            print(f"MQTT reconnection failed: {e}")
+            self._is_connected = False
+
     @property
     def is_connected(self) -> bool:
         """
@@ -203,4 +264,4 @@ class MQTTProtocol(PubSubProtocol):
         Returns:
             bool: 연결되어 있으면 True, 아니면 False
         """
-        return self._is_connected
+        return self._is_connected and self.client.is_connected()

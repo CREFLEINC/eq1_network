@@ -196,23 +196,34 @@ class MQTTProtocol(PubSubProtocol):
                     clean_session=False,
                 )
             if self.mode == "blocking":
-                def loop_forever():
-                    try:
-                        self.client.loop_forever()
-                    except Exception as e:
-                        logger.error(f"blocking loop error: {e}")
+                # 연결 대기
+                start_time = time.time()
+                while not self._is_connected and time.time() - start_time < self.timeout:
+                    time.sleep(0.1)
 
-                self._blocking_thread = threading.Thread(target=loop_forever, daemon=True)
-                self._blocking_thread.start()
+                if not self._is_connected:
+                    raise ProtocolConnectionError("MQTT connection timeout")
 
+                self._start_heartbeat_monitor()
+
+                try:
+                    self.client.loop_forever()
+                except KeyboardInterrupt:
+                    logger.info("MQTT blocking loop interrupted by user.")
+                    self.disconnect()
+
+                # loop_forever()는 무한루프라 보통 이 아래 코드는 실행되지 않음
+                return True
+
+            else:
+                self.client.loop_start()
                 start_time = time.time()
                 while not self._is_connected and time.time() - start_time < self.timeout:
                     time.sleep(0.1)
                 if not self._is_connected:
                     raise ProtocolConnectionError("MQTT connection timeout")
                 self._start_heartbeat_monitor()
-            
-            return True
+                return True
         except Exception as e:
             raise ProtocolConnectionError(f"MQTT connection failed: {e}")
 

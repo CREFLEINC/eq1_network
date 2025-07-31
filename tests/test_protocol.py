@@ -1,5 +1,6 @@
 import pytest
 from typing import Optional, Tuple
+from communicator.common.exception import ProtocolConnectionError
 from communicator.interfaces.protocol import BaseProtocol, ReqResProtocol, PubSubProtocol
 
 class MockReqResProtocol(ReqResProtocol):
@@ -8,7 +9,7 @@ class MockReqResProtocol(ReqResProtocol):
 
     - connect/disconnect 상태를 가짐
     - send 시 내부 버퍼에 데이터를 저장하고
-    - read 시 해당 버퍼 값을 반환합니다.
+    - receive 시 해당 버퍼 값을 반환합니다.
     """
 
     def __init__(self):
@@ -24,20 +25,20 @@ class MockReqResProtocol(ReqResProtocol):
         """연결 상태를 False로 설정"""
         self.connected = False
 
-    def send(self, data: bytes) -> bool:
+    def send(self, data: bytes) -> int:
         """연결된 상태일 경우 데이터를 내부 버퍼에 저장"""
         if not self.connected:
-            return False
+            raise ProtocolConnectionError("Not connected")
         if not isinstance(data, bytes):
             raise TypeError("data must be bytes")
         self._data = data
-        return True
+        return len(data)
 
-    def read(self) -> Tuple[bool, Optional[bytes]]:
-        """연결된 경우 저장된 데이터를 반환, 아닐 경우 실패"""
+    def receive(self, buffer_size: int = 1024) -> bytes:
+        """연결된 경우 저장된 데이터를 반환, 아닐 경우 예외 발생"""
         if not self.connected:
-            return False, None
-        return True, self._data
+            raise ProtocolConnectionError("Not connected")
+        return self._data
 
 
 class MockPubSubProtocol(PubSubProtocol):
@@ -82,10 +83,8 @@ def test_reqres_protocol():
     """
     proto = MockReqResProtocol()
     assert proto.connect() is True
-    assert proto.send(b"hello") is True
-    success, data = proto.read()
-    assert success is True
-    assert data == b"hello"
+    assert proto.send(b"hello") == 5
+    assert proto.receive() == b"hello"
     proto.disconnect()
     assert proto.connected is False
 
@@ -115,20 +114,18 @@ def test_pubsub_protocol():
 
 def test_reqres_protocol_send_without_connect():
     """
-    ReqResProtocol: 연결되지 않은 상태에서 send 호출 시 False 반환
+    ReqResProtocol: 연결되지 않은 상태에서 send 호출 시 예외 발생
     """
     proto = MockReqResProtocol()
-    assert proto.send(b"data") is False
+    with pytest.raises(ProtocolConnectionError):
+        proto.send(b"data")
 
 
-def test_reqres_protocol_read_without_connect():
-    """
-    ReqResProtocol: 연결되지 않은 상태에서 read 호출 시 (False, None) 반환
-    """
+def test_reqres_protocol_receive_without_connect():
+    """ReqResProtocol: 연결되지 않은 상태에서 receive 호출 시 예외 발생"""
     proto = MockReqResProtocol()
-    success, data = proto.read()
-    assert success is False
-    assert data is None
+    with pytest.raises(ProtocolConnectionError):
+        proto.receive()
 
 
 def test_pubsub_callback_error_handling():

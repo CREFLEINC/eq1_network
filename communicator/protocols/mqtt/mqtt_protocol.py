@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import threading
 import time
-from typing import Optional, Callable
+from typing import Optional, Callable, Dict
 from communicator.interfaces.protocol import PubSubProtocol
 from communicator.common.exception import (
     ProtocolConnectionError,
@@ -13,8 +13,8 @@ from communicator.common.exception import (
 import logging
 
 logger = logging.getLogger(__name__)
-
 import queue
+
 
 class MQTTProtocol(PubSubProtocol):
     """
@@ -110,21 +110,17 @@ class MQTTProtocol(PubSubProtocol):
         MQTT 브로커 연결 시 호출되는 콜백 함수입니다.
         연결 성공/실패/인증오류에 따라 상태를 갱신하거나 예외를 발생시킵니다.
 
-        Args:
-            client: paho-mqtt client 인스턴스
-            userdata: 사용자 데이터
-            flags: 연결 플래그
-            rc (int): 연결 결과 코드
-        Raises:
-            ProtocolAuthenticationError: 인증 실패 시
-            ProtocolConnectionError: 기타 연결 실패 시
+        연결 성공 시 내부 상태를 갱신하고, 실패 시 에러를 로깅합니다.
+        paho-mqtt 콜백 내에서 예외를 직접 raise하는 것은 paho-mqtt의 네트워크 루프를
+        중단시킬 수 있으므로, 여기서는 로깅만 수행하고 연결 상태 관리는 connect 메서드와
+        heartbeat 모니터에서 처리합니다.
         """
         if rc == 0:
             self._is_connected = True
             self._update_heartbeat()
             logger.info(f"Connected to MQTT broker ({self.broker_address}:{self.port})")
         else:
-            logger.error(f"MQTT connection failed (rc={rc})")
+            logger.error("MQTT connection failed (rc=%s)", rc)
 
     def _on_disconnect(self, client, userdata, rc):
         """
@@ -138,7 +134,7 @@ class MQTTProtocol(PubSubProtocol):
         """
         self._is_connected = False
         self._update_heartbeat()
-        logger.info(f"MQTT broker disconnected (rc={rc})")
+        logger.info("Disconnected from MQTT broker (rc=%s)", rc)
 
     def _on_message(self, client, userdata, msg):
         """
@@ -158,7 +154,22 @@ class MQTTProtocol(PubSubProtocol):
             if sub and "callback" in sub:
                 sub["callback"](msg.topic, msg.payload)
         except Exception as e:
-            logger.exception(f"MQTT message decoding failed on topic {msg.topic}: {e}")
+            logger.exception("MQTT message decoding failed on topic %s: %s", msg.topic, e)
+
+    def _wait_for_connection(self):
+        """
+        지정된 타임아웃 시간 동안 연결이 수립되기를 기다립니다.
+
+        Raises:
+            ProtocolConnectionError: 타임아웃 발생 시
+        """
+        start_time = time.time()
+        while not self._is_connected and time.time() - start_time < self.timeout:
+            time.sleep(0.1)
+
+        if not self._is_connected:
+            self.client.loop_stop() # 연결 실패 시 루프 정리
+            raise ProtocolConnectionError("MQTT connection timeout")
 
     def connect(self) -> bool:
         """
@@ -194,13 +205,7 @@ class MQTTProtocol(PubSubProtocol):
                     clean_session=False,
                 )
             if self.mode == "blocking":
-                # 연결 대기
-                start_time = time.time()
-                while not self._is_connected and time.time() - start_time < self.timeout:
-                    time.sleep(0.1)
-
-                if not self._is_connected:
-                    raise ProtocolConnectionError("MQTT connection timeout")
+                self._wait_for_connection()
 
                 self._start_heartbeat_monitor()
 
@@ -215,14 +220,7 @@ class MQTTProtocol(PubSubProtocol):
 
             else:
                 self.client.loop_start()
-                # 연결 대기
-                start_time = time.time()
-                while not self._is_connected and time.time() - start_time < self.timeout:
-                    time.sleep(0.1)
-                
-                if not self._is_connected:
-                    raise ProtocolConnectionError("MQTT connection timeout")
-                
+                self._wait_for_connection()
                 self._start_heartbeat_monitor()
                 return True
 
@@ -261,7 +259,7 @@ class MQTTProtocol(PubSubProtocol):
                 try:
                     self._publish_queue.put_nowait((topic, message, qos))
                 except queue.Full:
-                    logger.error(f"Publish queue is full. Message to {topic} dropped.")
+                    logger.error("Publish queue is full. Message to %s dropped.", topic)
                     raise ProtocolError("Publish queue is full. Message dropped.")
                 return False
             try:
@@ -353,7 +351,7 @@ class MQTTProtocol(PubSubProtocol):
                             if attempts >= self.max_reconnect_attempts:
                                 logger.error("Max reconnection attempts reached. Stopping monitor.")
                                 break
-                            logger.warning(f"Reconnection failed. Retrying in {delay} seconds...")
+                            logger.warning("Reconnection failed. Retrying in %d seconds...", delay)
                             time.sleep(delay)
                             delay = min(delay * 2, max_delay)
                         self._last_heartbeat = current_time
@@ -381,7 +379,7 @@ class MQTTProtocol(PubSubProtocol):
             self._flush_publish_queue()
             return True
         except Exception as e:
-            logger.error(f"MQTT reconnection failed: {e}")
+            logger.error("MQTT reconnection failed: %s", str(e).replace('\n', ' ').replace('\r', ' '))
             self._is_connected = False
             return False
 

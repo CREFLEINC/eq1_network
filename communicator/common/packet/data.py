@@ -1,52 +1,65 @@
-from .builder import SyncNoGenerator
-from .base import PacketStructure
-from typing import Type, Tuple, Optional
+from typing import Type, Optional, Dict, Any, Tuple
 
-class PacketSender:
+from communicator.common.packet.base import PacketStructure
+from communicator.common.packet.config import PacketConfig
+
+
+class SendData:
     """
-    PacketStructure와 SyncNoGenerator를 이용해 패킷을 생성하고 송신하는 헬퍼 클래스입니다.
+    설정 기반으로 패킷을 직렬화하는 클래스입니다.
     """
-    def __init__(self, structure_cls: Type[PacketStructure], sync_gen: SyncNoGenerator):
+    def __init__(self, packet_structure: PacketStructure, config: PacketConfig):
         """
-        PacketSender 인스턴스를 초기화합니다.
-
+        SendData 인스턴스를 초기화합니다.
         Args:
-            structure_cls (Type[PacketStructure]): 사용할 패킷 구조체 클래스
-            sync_gen (SyncNoGenerator): 동기화 번호 생성기
+            packet_structure (PacketStructure): 사용할 패킷 구조체 인스턴스
+            config (PacketConfig): 패킷 구성 정보
         """
-        self.structure_cls = structure_cls
-        self.sync_gen = sync_gen
+        self._packet_structure = packet_structure
+        self._config = config
 
-    def send(self, cmd: int, payload: bytes = b'') -> bytes:
+    def build(self, **kwargs) -> bytes:
         """
-        주어진 명령과 페이로드로 패킷을 빌드하여 bytes로 반환합니다.
-
+        주어진 데이터로 패킷을 빌드하여 bytes로 반환합니다.
         Args:
-            cmd: 프레임 타입(명령, Enum 또는 int)
-            payload (bytes, optional): 페이로드 데이터. 기본값 b''
+            **kwargs: 패킷 필드에 해당하는 데이터
         Returns:
             bytes: 직렬화된 패킷 데이터
+        Raises:
+            ValueError: config 또는 필수 필드 누락시
         """
-        packet = self.structure_cls(sync_no=self.sync_gen.next(), cmd=cmd, payload=payload)
-        return packet.build()
+        return self._packet_structure.build(self._config, **kwargs)
 
-class PacketReceiver:
+
+class ReceivedData:
     """
     수신된 프로토콜 패킷을 파싱하는 헬퍼 클래스입니다.
     """
-    @staticmethod
-    def parse(raw_data: bytes, structure_cls: Type[PacketStructure]) -> Tuple[Optional[object], Optional[bytes]]:
+    def __init__(self, structure_cls: Type[PacketStructure], config: PacketConfig):
         """
-        원시 bytes 데이터를 패킷으로 파싱하고, 프레임 타입과 페이로드를 추출합니다.
+        ReceivedData 인스턴스를 초기화합니다.
+        Args:
+            structure_cls (Type[PacketStructure]): 파싱에 사용할 패킷 구조체 클래스
+            config (PacketConfig): 패킷 구성 정보
+        """
+        self.structure_cls = structure_cls
+        self.config = config
 
+    def parse(self, raw_data: bytes) -> Optional[PacketStructure]:
+        """
+        원시 bytes 데이터를 패킷으로 파싱하여 PacketStructure 인스턴스를 반환합니다.
         Args:
             raw_data (bytes): 수신된 원시 데이터
-            structure_cls (Type[PacketStructure]): 파싱에 사용할 패킷 구조체 클래스
         Returns:
-            Tuple[Optional[object], Optional[bytes]]: (프레임 타입, 페이로드) 또는 실패 시 (None, None)
+            Optional[PacketStructure]: 파싱된 패킷 인스턴스 또는 실패 시 None
+        Raises:
+            ValueError: config 누락 등
         """
+        if not self.config:
+            raise ValueError("PacketConfig가 지정되지 않았습니다.")
         try:
-            packet = structure_cls.parse(raw_data)
-            return packet.frame_type, packet.payload
-        except Exception:
-            return None, None
+            return self.structure_cls.parse(raw_data, self.config)
+        except Exception as e:
+            # 실제 환경에서는 print 대신 logging 사용 권장
+            print(f"Failed to parse packet: {e}")
+            return None

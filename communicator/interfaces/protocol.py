@@ -45,13 +45,14 @@ class ReqResProtocol(BaseProtocol):
         pass
 
     @abstractmethod
-    def read(self) -> Tuple[bool, Optional[bytes]]:
-        """장치로부터 데이터를 수신합니다. 블로킹 없이 즉시 반환되어야 합니다.
+    def receive(self, buffer_size: int = 1024) -> bytes:
+        """장치로부터 데이터를 수신합니다.
+
+        Args:
+            buffer_size (int): 수신 버퍼 크기
 
         Returns:
-            Tuple[bool, Optional[bytes]]:
-                - 첫 번째 요소: 수신 성공 여부 (bool)
-                - 두 번째 요소: 수신된 데이터 (bytes) 또는 실패 시 None
+            bytes: 수신된 데이터
         """
         pass
 
@@ -64,18 +65,21 @@ class PubSubProtocol(BaseProtocol):
     """
 
     @abstractmethod
-    def publish(self, topic: str, message: bytes, qos: int = 0):
+    def publish(self, topic: str, message: str, qos: int = 0) -> bool:
         """특정 토픽에 메시지를 발행(Publish)합니다.
 
         Args:
             topic (str): 발행할 토픽 이름
-            message (bytes): 전송할 메시지 바이트 데이터
+            message (str): 전송할 메시지
             qos (int, optional): 메시지 전송 보장 수준 (0, 1, 2 중 선택)
+        
+        Returns:
+            bool: 발행 성공 시 True
         """
         pass
 
     @abstractmethod
-    def subscribe(self, topic: str, callback: Callable[[str, bytes], None]):
+    def subscribe(self, topic: str, callback: Callable[[str, bytes], None], qos: int = 0) -> bool:
         """지정된 토픽을 구독하고, 메시지 수신 시 콜백 함수를 호출합니다.
 
         Args:
@@ -84,5 +88,9 @@ class PubSubProtocol(BaseProtocol):
                 - 메시지 수신 시 호출될 함수
                 - 인자: 수신된 토픽(str), 메시지(bytes)
                 - 반환값 없음
+            qos (int, optional): 구독 QoS 수준
+        
+        Returns:
+            bool: 구독 성공 시 True
         """
         pass

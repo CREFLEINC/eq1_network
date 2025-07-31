@@ -57,7 +57,7 @@ def test_create_mqtt_protocol_success(mock_mqtt_cls):
     result = create_mqtt_protocol(broker, port, timeout)
 
     mock_mqtt_cls.assert_called_once_with(broker, port, timeout)
-    assert result is mock_instance
+    assert result == mock_instance
 
 
 @patch("communicator.manager.protocol_factory.create_mqtt_protocol")
@@ -80,7 +80,7 @@ def test_create_protocol_with_mqtt(mock_create_mqtt):
     mock_create_mqtt.assert_called_once_with(
         broker_address="localhost", port=1883, timeout=30
     )
-    assert result is mock_instance
+    assert result == mock_instance
 
 def test_create_protocol_missing_method():
     """

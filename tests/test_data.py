@@ -1,5 +1,5 @@
 import pytest
-from communicator.common.packet.data import PacketSender, PacketReceiver
+from communicator.common.packet.data import SendData, ReceivedData
 from communicator.common.packet.base import PacketStructure
 
 
@@ -71,35 +71,36 @@ def sync_gen():
     return MockSyncNoGenerator()
 
 
-def test_packet_sender_build(sync_gen):
+def test_send_data_build(sync_gen):
     """
-    PacketSender의 send 메서드가 정상적으로 동작하는지 테스트합니다.
+    SendData의 build 메서드가 정상적으로 동작하는지 테스트합니다.
     """
-    sender = PacketSender(structure_cls=MockPacketStructure, sync_gen=sync_gen)
-    built = sender.send(cmd=10, payload=b'hello')
+    # PacketSender -> SendData로 변경, 메서드 호출을 send -> build로 변경 (일관성)
+    sender = SendData(structure_cls=MockPacketStructure, sync_gen=sync_gen)
+    built = sender.build(cmd=10, payload=b'hello')
     
     # 예: b'1:10:hello'
     assert isinstance(built, bytes)
     assert built == b'1:10:hello'
 
 
-def test_packet_receiver_parse_valid():
+def test_received_data_parse_valid():
     """
-    PacketReceiver의 parse 메서드가 정상적인 데이터를 파싱할 때 정상적으로 동작하는지 테스트합니다.
+    ReceivedData의 parse 메서드가 정상적인 데이터를 파싱할 때 정상적으로 동작하는지 테스트합니다.
     """
     raw_data = b'5:20:world'
-    frame_type, payload = PacketReceiver.parse(raw_data, MockPacketStructure)
+    frame_type, payload = ReceivedData.parse(raw_data, MockPacketStructure)
 
     assert frame_type == 20
     assert payload == b'world'
 
 
-def test_packet_receiver_parse_invalid():
+def test_received_data_parse_invalid():
     """
-    PacketReceiver의 parse 메서드가 비정상적인 데이터를 파싱할 때 정상적으로 동작하는지 테스트합니다.
+    ReceivedData의 parse 메서드가 비정상적인 데이터를 파싱할 때 정상적으로 동작하는지 테스트합니다.
     """
     raw_data = b'invalid_data'
-    frame_type, payload = PacketReceiver.parse(raw_data, MockPacketStructure)
+    frame_type, payload = ReceivedData.parse(raw_data, MockPacketStructure)
 
     assert frame_type is None
     assert payload is None

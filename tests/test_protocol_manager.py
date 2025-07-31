@@ -11,7 +11,7 @@ def mock_reqres_plugin():
     """
     plugin = MagicMock()
     plugin.connect.return_value = True
-    plugin.send.return_value = 5
+    plugin.send.return_value = True
     plugin.receive.return_value = b"response"
     return plugin
 
@@ -22,7 +22,7 @@ def test_reqres_load_and_get(mock_reqres_plugin):
     """
     ReqResManager._plugins.clear()
     ReqResManager.load("tcp", mock_reqres_plugin)
-    assert ReqResManager.get("tcp") is mock_reqres_plugin
+    assert ReqResManager.get("tcp") == mock_reqres_plugin
 
 
 def test_reqres_get_missing():
@@ -51,7 +51,7 @@ def test_reqres_send(mock_reqres_plugin):
     ReqResManager._plugins.clear()
     ReqResManager.load("tcp", mock_reqres_plugin)
     result = ReqResManager.send("tcp", b"data")
-    assert result == 5
+    assert result is True
     mock_reqres_plugin.send.assert_called_once_with(b"data")
 
 
@@ -96,7 +96,7 @@ def test_pubsub_load_and_get(mock_pubsub_plugin):
     """
     PubSubManager._plugins.clear()
     PubSubManager.load("mqtt", mock_pubsub_plugin)
-    assert PubSubManager.get("mqtt") is mock_pubsub_plugin
+    assert PubSubManager.get("mqtt") == mock_pubsub_plugin
 
 
 def test_pubsub_get_missing():

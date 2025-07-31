@@ -28,28 +28,28 @@ class ReqResManager:
     @classmethod
     def connect(cls, name: str) -> bool:
         """
-        등록된 플러그인 이름으로 connect() 호출 시 플러그인의 connect()가 호출되는지 테스트합니다.
+        등록된 프로토콜로 연결을 시도합니다.
         """
         return cls.get(name).connect()
 
     @classmethod
-    def send(cls, name: str, data: bytes) -> int:
+    def send(cls, name: str, data: bytes) -> bool:
         """
-        등록된 플러그인 이름으로 send() 호출 시 플러그인의 send()가 호출되는지 테스트합니다.
+        등록된 프로토콜로 데이터를 전송합니다.
         """
         return cls.get(name).send(data)
 
     @classmethod
     def receive(cls, name: str, buffer_size: int = 1024) -> bytes:
         """
-        등록된 플러그인 이름으로 receive() 호출 시 플러그인의 receive()가 호출되는지 테스트합니다.
+        등록된 프로토콜로 데이터를 수신합니다.
         """
         return cls.get(name).receive(buffer_size)
 
     @classmethod
     def disconnect(cls, name: str) -> None:
         """
-        등록된 플러그인 이름으로 disconnect() 호출 시 플러그인의 disconnect()가 호출되는지 테스트합니다.
+        등록된 프로토콜의 연결을 해제합니다.
         """
         cls.get(name).disconnect()
 

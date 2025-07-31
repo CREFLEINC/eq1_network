@@ -123,8 +123,6 @@ class MQTTProtocol(PubSubProtocol):
             self._is_connected = True
             self._update_heartbeat()
             logger.info(f"Connected to MQTT broker ({self.broker_address}:{self.port})")
-        elif rc == 5:
-            logger.error("MQTT authentication failed (rc=5)")
         else:
             logger.error(f"MQTT connection failed (rc={rc})")
 
@@ -217,13 +215,17 @@ class MQTTProtocol(PubSubProtocol):
 
             else:
                 self.client.loop_start()
+                # 연결 대기
                 start_time = time.time()
                 while not self._is_connected and time.time() - start_time < self.timeout:
                     time.sleep(0.1)
+                
                 if not self._is_connected:
                     raise ProtocolConnectionError("MQTT connection timeout")
+                
                 self._start_heartbeat_monitor()
                 return True
+
         except Exception as e:
             raise ProtocolConnectionError(f"MQTT connection failed: {e}")
 

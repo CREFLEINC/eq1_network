@@ -1,6 +1,6 @@
 # MQTTProtocol 사용 가이드
-MQTTProtocol을 사용하면 MQTT 브로커에 연결해 메시지를 발행하고, 구독한 토픽의 메시지를 콜백으로 처리할 수 있습니다.
-이 가이드는 EQ-1 Network 모듈의 MQTTProtocol 클래스 구조, 동작 방식, 사용 예제, 예외 처리 방법을 설명합니다.
+MQTTProtocol은 EQ-1 Network의 Pub/Sub 프로토콜 구현체입니다.
+MQTT 브로커와 연결하여 메시지 발행(publish), 토픽 구독(subscribe), 자동 재연결 및 데이터 유실 방지를 제공합니다.
 
 ## 1. 빠른 시작
 ```python
@@ -27,15 +27,23 @@ mqtt.disconnect()
 ```
 
 ## 2. 주요 개념
-### 비동기 동작
-- `connect()`를 호출하면 내부적으로 별도의 스레드가 생성되어 MQTT 네트워크 통신을 처리합니다.
-- `connect()`는 블로킹되지 않으며, 메인 스레드는 다른 작업을 계속 실행할 수 있습니다.
+### 동작 모드
+- non-blocking (기본)
+    - `loop_start()` 기반
+    - 연결 후 별도 스레드에서 통신
+    - 메인 스레드에서 자유롭게 작업 가능
+- blocking
+    - `loop_forever()` 기반
+    - 별도 스레드 대신 메인 스레드에서 통신 루프
+    - `stop_loop()`로 안전하게 종료 가능
 
-### 지원 기능
-- 브로커 연결 및 해제
-- 토픽 구독과 메시지 콜백 처리
-- 메시지 발행 (QoS 지원)
-- 에러와 이벤트 처리
+### 주요 기능
+- 브로커 연결/해제
+- 토픽 구독 및 메시지 콜백 처리
+- QoS 지원 메시지 발행
+- 자동 재연결 및 구독 복구
+- publish 큐잉 (연결이 끊겼을 때 메시지 보관 후 재전송)
+- thread-safe API (publish, subscribe, unsubscribe)
 
 ## 3. 클래스 다이어그램 구조
 ```mermaid
@@ -74,7 +82,29 @@ mqtt = MQTTProtocol(
 - port: MQTT 포트 (기본 1883)
 - timeout: 연결 타임아웃(초 단위)
 
-## 4. 사용 방법
+## 4. 고급 동작 방식
+### 자동 재연결 및 데이터 유실 방지
+- 연결 끊김 감지 → 자동 재연결 시도
+- 재연결 성공 → 기존 구독 정보 복구
+- 발행 실패 시 → 내부 큐에 보관 후 재전송
+
+### thread-safe 처리
+- Lock과 Queue를 활용하여 publish/subscribe가 안전하게 동작합니다.
+
+### 콜백 흐름
+```mermaid
+sequenceDiagram
+    participant Broker
+    participant PahoClient
+    participant MQTTProtocol
+    participant UserCallback
+
+    Broker->>PahoClient: 메시지 수신
+    PahoClient->>MQTTProtocol: on_message 이벤트
+    MQTTProtocol->>UserCallback: callback(topic, payload)
+```
+
+## 5. 사용 방법
 ### 연결 및 구독
 ```python
 def on_message(topic, payload):
@@ -94,24 +124,6 @@ mqtt.publish("vision/events", "Camera started", qos=1)
 mqtt.disconnect()
 ```
 
-### 콜백 동작 흐름
-```mermaid
-sequenceDiagram
-    participant Broker
-    participant PahoClient
-    participant MQTTProtocol
-    participant UserCallback
-
-    Broker->>PahoClient: 메시지 전달
-    PahoClient->>MQTTProtocol: on_message 호출
-    MQTTProtocol->>UserCallback: callback(topic, payload)
-```
-### 콜백 시그니처
-```python
-def callback(topic: str, payload: bytes):
-    ...
-```
-
 ### 예외 처리
 #### 주요 예외 클래스:
 - ProtocolConnectionError: 브로커 연결 실패
@@ -127,16 +139,16 @@ except ProtocolError as e:
     print(f"Protocol error: {e}")
 ```
 
-## 5. 테스트 방법
+## 6. 테스트 방법
 - 단위 테스트
     - `pytest` 기반으로 mock 브로커를 활용
     - MQTT 브로커를 실제 실행해 통합 테스트 가능
 
-## 6. 향후 확장 계획
+## 7. 향후 확장 계획
 - 보안
     - 자동 재연결 옵션
     - QoS 설정
 
-## 7. 참고 자료
+## 8. 참고 자료
 - [PRD.md](PRD.md)
 - [README.md](README.md)

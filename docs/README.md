@@ -1,6 +1,6 @@
 # EQ-1 Network
 EQ-1 Network는 다양한 통신 프로토콜을 플러그인 기반으로 확장 가능하게 구성한 파이썬 통신 프레임워크입니다.
-현재 MQTT를 지원하며, 추후 TCP/Serial 프로토콜로 확장될 예정입니다.
+현재 MQTT 프로토콜를 우선 지원하며, 향후 TCP 및 Serial 프로토콜로 확장될 예정입니다.
 
 ## 1. 빠른 시작
 ### 요청/응답(Req/Res) 예시
@@ -81,7 +81,7 @@ communicator/
 
 ## 4. 환경 설정
 ### 요구 사항
-- Python 3.11.10 (권장)
+- Python 3.10.18 (권장)
 - OS: macOS Sonoma
 - 설치 전 가상환경(venv) 사용을 권장합니다.
 
@@ -142,9 +142,9 @@ pytest tests/
 
 ## 다음 단계
 - TCP, Serial 프로토콜 추가 지원
-- 자동 재연결, 보안 기능 강화
+- 보안 기능 강화
 - CI 환경에 통합된 테스트 커버리지 확대
 
 ## 참고 문서
 - [PRD.md](PRD.md)
-- [README.md](README.md)
+- [MQTT Protocol](mqtt_protocol.md)

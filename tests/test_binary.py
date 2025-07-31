@@ -70,8 +70,8 @@ def test_build_without_head_and_tail():
 
     # 헤더와 테일이 없어도 동작해야 함
     parsed = BinaryPacketStructure.parse(built, config)
-    assert parsed["frame_type"] == frame_type
-    assert parsed["payload"] == payload
+    assert parsed.frame_type == frame_type
+    assert parsed.payload == payload
 
 
 def test_is_valid_packet_with_no_length_field():

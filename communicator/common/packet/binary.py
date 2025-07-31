@@ -38,26 +38,27 @@ class BinaryPacketStructure(PacketStructure):
         self._sync_no = sync_no
         self._payload = payload
 
-    def build(self) -> bytes:
+    def build(self, config: PacketConfig = None, **kwargs) -> bytes:
         """
         config 기반으로 직렬화
         """
+        config = config or self.config
         parts = []
 
         # 헤더
-        if self.config.head:
-            parts.append(self.config.head)
+        if config.head:
+            parts.append(config.head)
 
         # 길이 계산: length 필드가 있는 경우만
-        if self.config.use_length_field:
+        if config.use_length_field:
             # length는 (전체 길이 - header 길이)로 계산하는 것을 기본으로 두되, 옵션으로 조정 가능
             total_len = len(self._payload)
-            if self.config.include_frame_type_in_length:
+            if config.include_frame_type_in_length:
                 total_len += 1
-            if self.config.include_sync_in_length:
+            if config.include_sync_in_length:
                 total_len += 1
-            if self.config.include_tail_in_length and self.config.tail:
-                total_len += len(self.config.tail)
+            if config.include_tail_in_length and config.tail:
+                total_len += len(config.tail)
             total_len += 2  # length field 자체를 포함
             parts.append(Numeric.int_to_bytes(total_len, 2))
 
@@ -65,15 +66,15 @@ class BinaryPacketStructure(PacketStructure):
         parts.append(Numeric.int_to_bytes(self._frame_type, 1))
 
         # sync
-        if self.config.use_sync_field:
+        if config.use_sync_field:
             parts.append(Numeric.int_to_bytes(self._sync_no, 1))
 
         # payload
         parts.append(self._payload)
 
         # tail
-        if self.config.tail:
-            parts.append(self.config.tail)
+        if config.tail:
+            parts.append(config.tail)
 
         return b"".join(parts)
 
@@ -123,6 +124,8 @@ class BinaryPacketStructure(PacketStructure):
 
         # 길이 검증
         header_len = len(config.head) if config.head else 0
+        if len(raw_data) < header_len + 2:
+            return False
         declared_length = Numeric.bytes_to_int(raw_data[header_len:header_len+2])
         actual_length = len(raw_data) - header_len
 

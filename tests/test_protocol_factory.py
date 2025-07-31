@@ -6,7 +6,9 @@ from communicator.manager.protocol_factory import (
     create_mqtt_protocol,
     create_protocol,
 )
-
+from communicator.manager.protocol_factory import create_protocol
+from communicator.manager.protocol_factory import Params
+from communicator.manager.protocol_manager import ReqResManager, PubSubManager
 
 class DummyParams(Params):
     """

@@ -8,9 +8,11 @@ class SyncNoGenerator:
         SyncNoGenerator 인스턴스를 초기화합니다.
 
         Args:
-            max_value (int): 최대 sync 번호 값.
-                             기본값 255 (1바이트 full range).
-                             필요시 65535로 변경 가능.
+            max_value (
+                int): 최대 sync 번호 값.
+                기본값 255 (1바이트 full range
+                ).
+            필요시 65535로 변경 가능.
         """
         if max_value <= 0:
             raise ValueError("max_value는 1 이상이어야 합니다.")

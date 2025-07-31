@@ -79,6 +79,10 @@ class MissingPacketDetector:
             self._last_sync_no = received_sync_no
             return []
 
+        # 동일한 번호가 연속으로 들어온 경우 (중복/재전송)
+        if self._last_sync_no == received_sync_no:
+            return []
+
         missing_packets = []
         expected_sync_no = (self._last_sync_no + 1) % (self._max_sync_no + 1)
 

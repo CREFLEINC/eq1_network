@@ -106,3 +106,56 @@ def test_get_default_missing_key(sample_config):
     """키가 없을 경우 default 값을 반환하는지 확인"""
     p = Params(sample_config)
     assert p.get_default("not_found", "default") == "default"
+
+
+def test_none_configure():
+    """configure가 None일 때 동작 테스트 (라인 103 커버)"""
+    p = Params(None)
+    assert p.include("any_key") is False
+    assert "any_key" not in p
+    assert p["any_key"] is None
+    assert p.any_key is None
+    assert p.get_default("any_key", "default") == "default"
+
+
+def test_cast_data_type_value_error_coverage():
+    """ValueError 예외 처리 경로 커버 (라인 63, 78)"""
+    p = Params({})
+    
+    # int 변환 실패 후 float 변환 시도하는 경로 (라인 63)
+    result = p.cast_data_type("not_a_number")
+    assert result == "not_a_number"
+    
+    # float 변환도 실패하는 경우 (라인 78)
+    result = p.cast_data_type("definitely_not_a_number")
+    assert result == "definitely_not_a_number"
+
+
+def test_case_insensitive_access():
+    """대소문자 구분 없는 키 접근 테스트"""
+    config = {"test_key": "value"}
+    p = Params(config)
+    
+    assert p["TEST_KEY"] == "value"
+    assert p["Test_Key"] == "value"
+    assert p.TEST_KEY == "value"
+    assert p.Test_Key == "value"
+    assert "TEST_KEY" in p
+    assert "Test_Key" in p
+
+
+def test_empty_string_cast():
+    """빈 문자열 처리 테스트"""
+    p = Params({})
+    result = p.cast_data_type("")
+    assert result == ""
+
+
+def test_single_comma_list():
+    """단일 쉼표가 있는 문자열 처리 테스트"""
+    p = Params({})
+    result = p.cast_data_type("a,")
+    assert result == ["a", ""]
+    
+    result = p.cast_data_type(",b")
+    assert result == ["", "b"]

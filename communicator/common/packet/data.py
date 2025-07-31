@@ -1,7 +1,10 @@
 from typing import Type, Optional, Dict, Any, Tuple
+import logging
 
 from communicator.common.packet.base import PacketStructure
 from communicator.common.packet.config import PacketConfig
+
+logger = logging.getLogger(__name__)
 
 
 class SendData:
@@ -60,6 +63,5 @@ class ReceivedData:
         try:
             return self.structure_cls.parse(raw_data, self.config)
         except Exception as e:
-            # 실제 환경에서는 print 대신 logging 사용 권장
-            print(f"Failed to parse packet: {e}")
+            logger.error(f"Failed to parse packet: {e}")
             return None

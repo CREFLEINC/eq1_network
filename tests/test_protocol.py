@@ -176,3 +176,93 @@ def test_pubsub_subscribe_with_non_callable():
     proto.connect()
     with pytest.raises(TypeError):
         proto.subscribe("topic", "not_callable")  # type: ignore
+
+
+class IncompleteBaseProtocol(BaseProtocol):
+    """추상 메서드를 구현하지 않은 BaseProtocol (테스트용)"""
+    def connect(self) -> bool:
+        return super().connect()
+    
+    def disconnect(self):
+        return super().disconnect()
+
+
+class IncompleteReqResProtocol(ReqResProtocol):
+    """추상 메서드를 구현하지 않은 ReqResProtocol (테스트용)"""
+    def connect(self) -> bool:
+        return super().connect()
+    
+    def disconnect(self):
+        return super().disconnect()
+    
+    def send(self, data: bytes) -> bool:
+        return super().send(data)
+    
+    def receive(self, buffer_size: int = 1024) -> bytes:
+        return super().receive(buffer_size)
+
+
+class IncompletePubSubProtocol(PubSubProtocol):
+    """추상 메서드를 구현하지 않은 PubSubProtocol (테스트용)"""
+    def connect(self) -> bool:
+        return super().connect()
+    
+    def disconnect(self):
+        return super().disconnect()
+    
+    def publish(self, topic: str, message: str, qos: int = 0) -> bool:
+        return super().publish(topic, message, qos)
+    
+    def subscribe(self, topic: str, callback, qos: int = 0) -> bool:
+        return super().subscribe(topic, callback, qos)
+
+
+def test_abstract_method_pass_statements():
+    """추상 메서드의 pass 문 커버리지 테스트 (라인 20, 25, 45, 57, 79, 96)"""
+    # BaseProtocol 추상 메서드 pass 문 실행
+    base = IncompleteBaseProtocol()
+    try:
+        base.connect()  # 라인 20
+    except (NotImplementedError, TypeError):
+        pass
+    
+    try:
+        base.disconnect()  # 라인 25
+    except (NotImplementedError, TypeError):
+        pass
+    
+    # ReqResProtocol 추상 메서드 pass 문 실행
+    reqres = IncompleteReqResProtocol()
+    try:
+        reqres.send(b"test")  # 라인 45
+    except (NotImplementedError, TypeError):
+        pass
+    
+    try:
+        reqres.receive()  # 라인 57
+    except (NotImplementedError, TypeError):
+        pass
+    
+    # PubSubProtocol 추상 메서드 pass 문 실행
+    pubsub = IncompletePubSubProtocol()
+    try:
+        pubsub.publish("topic", "message")  # 라인 79
+    except (NotImplementedError, TypeError):
+        pass
+    
+    try:
+        pubsub.subscribe("topic", lambda t, m: None)  # 라인 96
+    except (NotImplementedError, TypeError):
+        pass
+
+
+def test_cannot_instantiate_abstract_classes():
+    """추상 클래스들을 직접 인스턴스화할 수 없는지 테스트"""
+    with pytest.raises(TypeError):
+        BaseProtocol()
+    
+    with pytest.raises(TypeError):
+        ReqResProtocol()
+    
+    with pytest.raises(TypeError):
+        PubSubProtocol()

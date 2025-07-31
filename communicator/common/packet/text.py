@@ -16,6 +16,7 @@ class TextPacketStructure(PacketStructure):
         """
         if not config:
             raise ValueError("config: PacketConfig는 필수입니다.")
+        config.validate()  # 설정 검증
         self.config = config
         self._data = fields
 

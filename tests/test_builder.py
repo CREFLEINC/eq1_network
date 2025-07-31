@@ -22,19 +22,19 @@ def test_sync_no_increment():
 
 def test_sync_no_wraps_around():
     """
-    sync 번호가 250에서 next() 호출 시 0으로 순환되는지 테스트합니다.
+    sync 번호가 255에서 next() 호출 시 0으로 순환되는지 테스트합니다.
     """
     gen = SyncNoGenerator()
-    gen._sync_no = 250  # wrap 직전 상태
-    assert gen.next() == 0  # 251 % 251 == 0
+    gen._sync_no = 255  # wrap 직전 상태
+    assert gen.next() == 0  # (255 + 1) % 256 == 0
     assert gen.next() == 1
 
 
-def test_sync_no_never_exceeds_250():
+def test_sync_no_never_exceeds_255():
     """
-    sync 번호가 항상 0~250 범위 내에 있는지 1000회 반복 테스트합니다.
+    sync 번호가 항상 0~255 범위 내에 있는지 1000회 반복 테스트합니다.
     """
     gen = SyncNoGenerator()
     for _ in range(1000):
         n = gen.next()
-        assert 0 <= n <= 250
+        assert 0 <= n <= 255

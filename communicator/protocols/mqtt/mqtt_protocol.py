@@ -158,7 +158,7 @@ class MQTTProtocol(PubSubProtocol):
             if sub and "callback" in sub:
                 sub["callback"](msg.topic, msg.payload)
         except Exception as e:
-            logger.exception(f"MQTT message decoding failed: {e}")
+            logger.exception(f"MQTT message decoding failed on topic {msg.topic}: {e}")
 
     def connect(self) -> bool:
         """
@@ -261,7 +261,7 @@ class MQTTProtocol(PubSubProtocol):
                 try:
                     self._publish_queue.put_nowait((topic, message, qos))
                 except queue.Full:
-                    logger.error("Publish queue is full. Message dropped.")
+                    logger.error(f"Publish queue is full. Message to {topic} dropped.")
                     raise ProtocolError("Publish queue is full. Message dropped.")
                 return False
             try:

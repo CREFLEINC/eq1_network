@@ -24,7 +24,7 @@ def mock_client(monkeypatch):
 @pytest.fixture
 def protocol(mock_client):
     """MQTTProtocol의 테스트용 인스턴스를 생성합니다."""
-    return MQTTProtocol("localhost", port=1883, mode="background", publish_queue_maxsize=5)
+    return MQTTProtocol("localhost", port=1883, mode="non-blocking", publish_queue_maxsize=5)
 
 
 def test_connect_success(protocol, mock_client):
@@ -53,8 +53,8 @@ def test_disconnect(protocol, mock_client):
 
 def test_stop_loop(protocol):
     """stop_loop() 호출 시 shutdown_event 세팅과 join 동작 테스트"""
-    protocol._foreground_thread = MagicMock()
-    protocol._foreground_thread.is_alive.return_value = True
+    protocol._blocking_thread = MagicMock()
+    protocol._blocking_thread.is_alive.return_value = True
     protocol.stop_loop()
     assert protocol._shutdown_event.is_set()
 

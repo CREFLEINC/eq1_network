@@ -23,12 +23,12 @@ class MQTTProtocol(PubSubProtocol):
     주요 기능 및 신뢰성 보장:
     - 자동 재연결 시 구독 복구 (subscribe 정보 내부 저장 및 재연결 후 자동 재구독)
     - publish 실패 시 내부 큐에 저장, 연결 복구 시 순차 재전송 (데이터 유실 방지)
-    - foreground/background 모드 모두 지원, foreground 모드 graceful shutdown 지원
+    - blocking/non-blocking 모드 모두 지원, blocking 모드 graceful shutdown 지원
     - 내부 동시성 제어를 위한 Lock/Queue 활용 (thread-safe)
 
     사용법/제약사항:
     - subscribe와 publish는 thread-safe하게 동작합니다.
-    - foreground 모드(loop_forever)는 stop_loop()로 안전하게 종료 가능
+    - blocking 모드(loop_forever)는 stop_loop()로 안전하게 종료 가능
     - subscribe 시 topic/qos/callback이 내부에 저장되며, 재연결 시 자동 복구됩니다.
     - publish 실패(네트워크 단절 등) 시 메시지는 큐에 저장되어 복구 후 자동 재전송됩니다.
     - publish queue의 최대 크기, 재시도 정책 등은 필요에 따라 확장 가능
@@ -40,7 +40,7 @@ class MQTTProtocol(PubSubProtocol):
         port: int = 1883,
         timeout: int = 60,
         keepalive: int = 60,
-        mode: str = "background",
+        mode: str = "non-blocking",
         session_expiry_interval: int = 3600,
         max_reconnect_attempts: int = 10,
         reconnect_initial_delay: int = 1,
@@ -56,7 +56,7 @@ class MQTTProtocol(PubSubProtocol):
             port (int, optional): 포트 번호 (기본값: 1883)
             timeout (int, optional): 연결 타임아웃 (기본값: 60초)
             keepalive (int, optional): Keep-alive 간격 (기본값: 60초)
-            mode (str, optional): 'foreground' 또는 'background' (기본값: 'background')
+            mode (str, optional): 'blocking' 또는 'non-blocking' (기본값: 'non-blocking')
             publish_queue_maxsize (int, optional): publish 큐 최대 크기
             session_expiry_interval (int, optional): 세션 만료 시간 (기본값: 3600초)
             max_reconnect_attempts (int, optional): 재연결 최대 시도 횟수 (기본값: 10)
@@ -85,7 +85,7 @@ class MQTTProtocol(PubSubProtocol):
         self._publish_queue = queue.Queue(maxsize=publish_queue_maxsize)
         self._lock = threading.Lock()
         self._shutdown_event = threading.Event()
-        self._foreground_thread: Optional[threading.Thread] = None
+        self._blocking_thread: Optional[threading.Thread] = None
 
         self._setup_callbacks()
     
@@ -166,8 +166,8 @@ class MQTTProtocol(PubSubProtocol):
         """
         MQTT 브로커에 연결을 시도합니다.
 
-        - foreground 모드: 사용자가 connect()만 호출하면 내부적으로 loop_forever()를 메인 스레드에서 직접 실행하며, KeyboardInterrupt 등으로 graceful shutdown이 자동 처리됩니다.
-        - background 모드: 내부적으로 loop_start() 및 heartbeat 모니터를 사용합니다.
+        - blocking 모드: 사용자가 connect()만 호출하면 내부적으로 loop_forever()를 메인 스레드에서 직접 실행하며, KeyboardInterrupt 등으로 graceful shutdown이 자동 처리됩니다.
+        - non-blocking 모드: 내부적으로 loop_start() 및 heartbeat 모니터를 사용합니다.
         - 사용자는 mode만 지정하면 되고, 별도의 루프/스레드/종료 관리가 필요 없습니다.
 
         Returns:
@@ -195,15 +195,15 @@ class MQTTProtocol(PubSubProtocol):
                     self.keepalive,
                     clean_session=False,
                 )
-            if self.mode == "foreground":
+            if self.mode == "blocking":
                 def loop_forever():
                     try:
                         self.client.loop_forever()
                     except Exception as e:
-                        logger.error(f"foreground loop error: {e}")
+                        logger.error(f"blocking loop error: {e}")
 
-                self._foreground_thread = threading.Thread(target=loop_forever, daemon=True)
-                self._foreground_thread.start()
+                self._blocking_thread = threading.Thread(target=loop_forever, daemon=True)
+                self._blocking_thread.start()
 
                 start_time = time.time()
                 while not self._is_connected and time.time() - start_time < self.timeout:
@@ -220,7 +220,7 @@ class MQTTProtocol(PubSubProtocol):
         """
         MQTT 브로커와의 연결을 해제합니다.
         내부 상태를 초기화합니다.
-        shutdown 이벤트를 발생시켜 foreground 모드도 안전하게 종료합니다.
+        shutdown 이벤트를 발생시켜 blocking 모드도 안전하게 종료합니다.
         """
         try:
             self._shutdown_event.set()
@@ -228,8 +228,8 @@ class MQTTProtocol(PubSubProtocol):
             self.client.loop_stop()
             self.client.disconnect()
 
-            if self._foreground_thread and self._foreground_thread.is_alive():
-                self._foreground_thread.join(timeout=2.0)
+            if self._blocking_thread and self._blocking_thread.is_alive():
+                self._blocking_thread.join(timeout=2.0)
 
         except Exception as e:
             logger.exception(f"Exception occurred while disconnecting MQTT: {e}")
@@ -398,12 +398,12 @@ class MQTTProtocol(PubSubProtocol):
 
     def stop_loop(self):
         """
-        foreground 모드에서 안전하게 종료하려면 이 메서드를 호출하세요.
+        blocking 모드에서 안전하게 종료하려면 이 메서드를 호출하세요.
         shutdown 이벤트를 발생시키고, 내부 스레드를 안전하게 정리합니다.
         """
         self._shutdown_event.set()
-        if self._foreground_thread and self._foreground_thread.is_alive():
-            self._foreground_thread.join(timeout=2.0)
+        if self._blocking_thread and self._blocking_thread.is_alive():
+            self._blocking_thread.join(timeout=2.0)
 
     @property
     def is_connected(self) -> bool:

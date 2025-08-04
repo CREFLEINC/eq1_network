@@ -5,7 +5,7 @@ MQTT 프로토콜 커스터마이징 예제
 - 다양한 설정 옵션 활용
 """
 
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 import time
 import uuid
 
@@ -13,13 +13,14 @@ def create_custom_mqtt():
     """커스터마이징된 MQTT 클라이언트 생성"""
     
     # 1. 기본 설정
-    basic_mqtt = MQTTProtocol(
+    basic_config = MQTTConfig(
         broker_address="localhost",
         port=1883
     )
+    basic_mqtt = MQTTProtocol(basic_config)
     
     # 2. 고급 설정 (재연결, 큐 크기 등)
-    advanced_mqtt = MQTTProtocol(
+    advanced_config = MQTTConfig(
         broker_address="localhost",
         port=1883,
         timeout=30,
@@ -28,13 +29,15 @@ def create_custom_mqtt():
         reconnect_initial_delay=2,
         publish_queue_maxsize=500
     )
+    advanced_mqtt = MQTTProtocol(advanced_config)
     
     # 3. blocking 모드
-    blocking_mqtt = MQTTProtocol(
+    blocking_config = MQTTConfig(
         broker_address="localhost",
         port=1883,
         mode="blocking"
     )
+    blocking_mqtt = MQTTProtocol(blocking_config)
     
     return advanced_mqtt
 
@@ -58,8 +61,9 @@ def run_custom_example():
     mqtt = create_custom_mqtt()
     
     try:
-        print("커스텀 MQTT 클라이언트 연결...")
-        mqtt.connect()
+        print("커스텀 MQTT 클라이언트 연결... (자동 연결 활성화)")
+        # mqtt.connect()  # 자동 연결로 인해 생략 가능
+        time.sleep(2)  # 연결 대기
         
         # 다양한 토픽 구독
         topics = [

@@ -3,6 +3,7 @@ import threading
 from typing import Optional, Callable
 from dataclasses import dataclass
 import logging
+import time
 
 from communicator.interfaces.protocol import PubSubProtocol
 from communicator.common.exception import (
@@ -51,6 +52,8 @@ class MQTTProtocol(PubSubProtocol):
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
+        self._is_connected = False
+
     def _on_connect(self, client, userdata, flags, rc):
         """
         연결 성공 시 구독 복구
@@ -64,37 +67,37 @@ class MQTTProtocol(PubSubProtocol):
         Returns:
             None
         """
-        if rc != mqtt.MQTT_ERR_SUCCESS:
-            logger.error(f"MQTT 연결 실패 (rc={rc})")
-            raise ProtocolConnectionError(f"MQTT 연결 실패. 반환 코드: {rc}")
-        logger.info("MQTT 브로커에 연결됨")
         if rc == 0:
             logger.info("Connected to MQTT broker")
+            self._is_connected = True
             # 기존 구독 복구
-            for topic, qos in self._subscriptions.items():
+            for topic, (qos, callback) in self._subscriptions.items():
                 try:
-                    client.subscribe(topic, qos)
-                    client.message_callback_add(topic, self._subscriptions[topic])
-                    logger.info(f"Resubscribed to topic: {topic}")
+                    result, _ = client.subscribe(topic, qos)
+                    if result != mqtt.MQTT_ERR_SUCCESS:
+                        logger.error(f"Failed to recover subscription for {topic}: {result}")
                 except Exception as e:
-                    logger.error(f"Resubscribe error: {e}")
+                    logger.error(f"Error recovering subscription for {topic}: {e}")
         else:
-            logger.error("MQTT 연결 실패 (rc=%s)", rc)
-            raise ProtocolConnectionError(f"MQTT 연결 실패. 반환 코드: {rc}")
+            logger.error(f"MQTT 연결 실패 (rc={rc})")
+            self._is_connected = False
 
     def _on_disconnect(self, client, userdata, rc):
         """연결 해제 시 로그"""
+        self._is_connected = False
         if rc != 0:
             logger.warning("Unexpected disconnection")
 
     def _on_message(self, client, userdata, msg):
         """메시지 수신 시 콜백 호출"""
         topic = msg.topic
-        if topic in self._subscriptions and hasattr(self._subscriptions[topic], '__call__'):
-            try:
-                self._subscriptions[topic](topic, msg.payload)
-            except Exception as e:
-                logger.error(f"Message callback error: {e}")
+        if topic in self._subscriptions:
+            _, callback = self._subscriptions[topic]
+            if callable(callback):
+                try:
+                    callback(topic, msg.payload)
+                except Exception as e:
+                    logger.error(f"Message callback error: {e}")
 
     def connect(self) -> bool:
         """
@@ -140,6 +143,12 @@ class MQTTProtocol(PubSubProtocol):
             self.client.loop_stop()
         self.client.disconnect()
         
+        # 연결 해제 대기 루프 (최대 5초)
+        for _ in range(10):
+            if not self._is_connected:
+                break
+            time.sleep(0.5)
+        
         if self._blocking_thread and self._blocking_thread.is_alive():
             self._blocking_thread.join(timeout=2.0)
 
@@ -173,13 +182,19 @@ class MQTTProtocol(PubSubProtocol):
     def subscribe(self, topic: str, callback: Callable[[str, bytes], None], qos: int = 0) -> bool:
         """토픽 구독"""
         try:
+            # 구독 정보를 먼저 저장 (재연결 시 복구용)
+            self._subscriptions[topic] = (qos, callback)
+            
             result, _ = self.client.subscribe(topic, qos)
             if result == mqtt.MQTT_ERR_SUCCESS:
-                self._subscriptions[topic] = callback
                 return True
             else:
+                # 실패 시 구독 정보 제거
+                self._subscriptions.pop(topic, None)
                 raise ProtocolValidationError(f"Subscribe failed: {result}")
         except Exception as e:
+            # 실패 시 구독 정보 제거
+            self._subscriptions.pop(topic, None)
             raise ProtocolValidationError(f"Subscribe error: {e}")
 
     def unsubscribe(self, topic: str) -> bool:
@@ -206,4 +221,4 @@ class MQTTProtocol(PubSubProtocol):
     @property
     def is_connected(self) -> bool:
         """연결 상태 확인"""
-        return self.client.is_connected()
+        return self._is_connected

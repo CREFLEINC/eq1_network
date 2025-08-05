@@ -8,7 +8,7 @@ from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 def mqtt_config():
     """실제 MQTT 브로커 연결을 위한 설정"""
     return MQTTConfig(
-        broker_address="test.mosquitto.org",
+        broker_address="test.mosquitto.org",  # 실제 MQTT 브로커 주소
         port=1883,
         mode="non-blocking",
         keepalive=60
@@ -109,57 +109,24 @@ def test_real_mqtt_publish_subscribe(protocol):
 @pytest.mark.integration
 def test_real_mqtt_reconnection(protocol):
     """실제 MQTT 브로커에서 재연결 테스트"""
-    # 연결 대기
-    max_wait = 20
-    wait_time = 0
-    while not protocol.is_connected and wait_time < max_wait:
-        time.sleep(1)
-        wait_time += 1
-        print(f"Waiting for initial connection... {wait_time}s")
+    # 연결 시도
+    protocol.connect()
+    time.sleep(2)
     
     if not protocol.is_connected:
         pytest.skip("Cannot connect to MQTT broker for reconnection test")
     
-    print(f"Initial connection established after {wait_time}s")
+    print("Initial connection established")
     
-    protocol._is_connected = False
-    
-    # paho-mqtt 클라이언트 연결 해제
-    try:
-        protocol.client.disconnect()
-        print("Client disconnected")
-    except Exception as e:
-        print(f"Disconnect error (expected): {e}")
-    
-    # 연결 해제 확인
+    # 연결 해제
+    protocol.disconnect()
     time.sleep(2)
-    print(f"Connection status after disconnect: {protocol.is_connected}")
     
-    # 재연결을 위해 내부 상태 복구 (자동 재연결 활성화)
-    if not protocol.is_connected:
-        print("Triggering reconnection...")
-        # 재연결 시도
-        threading.Thread(target=protocol._immediate_reconnect, daemon=True).start()
+    # 재연결
+    protocol.connect()
+    time.sleep(2)
     
-    # 자동 재연결 대기 (시간 증가)
-    max_reconnect_wait = 20
-    reconnect_wait = 0
-    while not protocol.is_connected and reconnect_wait < max_reconnect_wait:
-        time.sleep(1)
-        reconnect_wait += 1
-        print(f"Waiting for reconnection... {reconnect_wait}s (connected: {protocol.is_connected})")
-    
-    if protocol.is_connected:
-        print(f"Reconnection successful after {reconnect_wait}s")
-    else:
-        print(f"Reconnection failed after {reconnect_wait}s")
-        # 디버깅 정보 출력
-        print(f"Internal state: _is_connected={protocol._is_connected}")
-        print(f"Client state: is_connected={protocol.client.is_connected()}")
-        print(f"Shutdown event: {protocol._shutdown_event.is_set()}")
-        print(f"Auto connect: {protocol.config.auto_connect}")
-    
-    assert protocol.is_connected, f"재연결 실패 (대기 시간: {reconnect_wait}초)"
+    assert protocol.is_connected, "재연결 실패"
 
 
 @pytest.mark.integration

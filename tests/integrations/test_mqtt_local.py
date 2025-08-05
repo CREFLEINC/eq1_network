@@ -32,7 +32,7 @@ def local_config():
         broker_address="test.mosquitto.org",
         port=1883,
         mode="non-blocking",
-        keepalive=10,
+        keepalive=10
     )
 
 

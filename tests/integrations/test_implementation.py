@@ -18,7 +18,7 @@ def test_auto_connection():
     mqtt.connect()
     time.sleep(2)
     
-    if mqtt.is_connected:
+    if mqtt._is_connected:
         print("✅ 연결 성공!")
     else:
         print("❌ 연결 실패")
@@ -83,12 +83,12 @@ def test_low_latency_connection():
     mqtt.connect()
     
     # 연결 완료까지 시간 측정
-    while not mqtt.is_connected and time.time() - start_time < 10:
+    while not mqtt._is_connected and time.time() - start_time < 10:
         time.sleep(0.1)
     
     connection_time = time.time() - start_time
     
-    if mqtt.is_connected:
+    if mqtt._is_connected:
         print(f"✅ 연결 성공! 소요 시간: {connection_time:.2f}초")
         if connection_time < 5:
             print("✅ 빠른 연결 달성!")

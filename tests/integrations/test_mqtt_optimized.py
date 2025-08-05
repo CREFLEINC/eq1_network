@@ -128,11 +128,20 @@ class TestSubscribe:
         result = protocol.unsubscribe("test/optimized/unsubscribe")
         assert result is True
 
-    def test_unsubscribe_failure(self, protocol):
+    def test_unsubscribe_nonexistent_topic(self, protocol):
         protocol.connect()
         time.sleep(2)
         if not protocol.is_connected:
             pytest.skip("Cannot connect to MQTT broker")
+        
+        # 구독하지 않은 토픽 구독 해제 시도 (성공으로 처리됨)
+        result = protocol.unsubscribe("test/nonexistent/topic")
+        assert result is True  # MQTT 브로커는 존재하지 않는 토픽도 성공으로 처리
+    
+    def test_unsubscribe_when_disconnected(self, protocol):
+        # 연결하지 않은 상태에서 unsubscribe 시도
+        with pytest.raises(ProtocolValidationError):
+            protocol.unsubscribe("test/disconnected/topic")
 
 class TestMessageHandling:
     """메시지 처리 테스트"""
@@ -239,7 +248,7 @@ class TestThreadManagement:
         protocol.connect()
         time.sleep(2)
         
-        if protocol.is_connected:
+        if protocol._is_connected:
             # blocking 모드에서는 별도 스레드가 생성되어야 함
             assert protocol._blocking_thread is not None
             if protocol._blocking_thread:

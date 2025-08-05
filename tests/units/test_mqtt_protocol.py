@@ -1,6 +1,4 @@
 import pytest
-import time
-import queue
 from unittest.mock import MagicMock
 from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 from communicator.common.exception import (
@@ -106,7 +104,8 @@ def test_unsubscribe_failure(protocol, mock_client):
 def test_on_message_callback(protocol):
     """MQTTProtocol._on_message 콜백 테스트."""
     called = []
-    protocol._subscriptions["topic"] = lambda t, m: called.append((t, m))
+    callback = lambda t, m: called.append((t, m))
+    protocol._subscriptions["topic"] = (0, callback)  # (qos, callback) 튜플 형태
     msg = type("msg", (), {"topic": "topic", "payload": b"data"})
     protocol._on_message(None, None, msg)
     assert called[0] == ("topic", b"data")
@@ -114,14 +113,17 @@ def test_on_message_callback(protocol):
 
 def test_on_message_with_exception(protocol):
     """MQTTProtocol._on_message 예외 발생 테스트."""
-    protocol._subscriptions["topic"] = lambda t, m: 1 / 0
+    error_callback = lambda t, m: 1 / 0
+    protocol._subscriptions["topic"] = (0, error_callback)  # (qos, callback) 튜플 형태
     msg = type("msg", (), {"topic": "topic", "payload": b"data"})
     protocol._on_message(None, None, msg)  # 예외 발생해도 죽지 않아야 함
 
 
 def test_on_connect_callback(protocol, mock_client):
     """MQTTProtocol._on_connect 콜백 테스트."""
-    protocol._subscriptions["topic"] = 0  # QoS 값만 저장
+    callback = lambda t, m: None
+    protocol._subscriptions["topic"] = (0, callback)  # (qos, callback) 튜플 형태
+    mock_client.subscribe.return_value = (0, 1)  # 성공 반환
     protocol._on_connect(mock_client, None, None, 0)
     mock_client.subscribe.assert_called_once_with("topic", 0)
 

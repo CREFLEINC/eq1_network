@@ -18,17 +18,19 @@ def signal_handler(sig, frame):
 
 def run_reconnect_test():
     config = MQTTConfig(
-        broker_address="test.mosquitto.org",
+        broker_address="localhost",
         port=1883,
-        mode="non-blocking"
+        mode="non-blocking",
+        max_reconnect_attempts=5,
+        reconnect_initial_delay=2
     )
     mqtt = MQTTProtocol(config)
     
     signal.signal(signal.SIGINT, signal_handler)
     
     try:
-        print("MQTT 연결 및 구독...")
-        mqtt.connect()
+        print("MQTT 연결 및 구독... (자동 연결 활성화)")
+        # mqtt.connect()  # 자동 연결로 인해 생략 가능
         mqtt.subscribe("test/reconnect", message_handler)
         time.sleep(1)  # 연결 대기
         

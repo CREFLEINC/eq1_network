@@ -1,6 +1,6 @@
 # MQTTProtocol 사용 가이드
-MQTTProtocol은 EQ-1 Network의 RFC 준수 Pub/Sub 프로토콜 구현체입니다.
-MQTT 브로커와 연결하여 메시지 발행(publish), 토픽 구독(subscribe), 자동 재연결, 데이터 유실 방지, 보안 인증, Will Message 등을 제공합니다.
+MQTTProtocol은 EQ-1 Network의 MQTT Pub/Sub 프로토콜 구현체입니다.
+MQTT 브로커와 연결하여 메시지 발행(publish), 토픽 구독(subscribe), 자동 재연결 등의 기본 기능을 제공합니다.
 
 ## 1. 빠른 시작
 ### 기본 사용법
@@ -11,7 +11,7 @@ from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 config = MQTTConfig(
     broker_address="broker.example.com",
     port=1883,
-    timeout=60
+    keepalive=60    # 별도의 설정 가능
 )
 
 # 2. 프로토콜 객체 생성
@@ -20,43 +20,37 @@ mqtt = MQTTProtocol(config)
 # 3. 브로커 연결
 mqtt.connect()
 
-# 4. 토픽 구독
-mqtt.subscribe("topic/test", callback=print)
+# 4. 메시지 콜백 함수 정의
+def message_callback(topic: str, payload: bytes):
+    print(f"Received: [{topic}] {payload.decode()}")
 
-# 5. 메시지 발행
+# 5. 토픽 구독
+mqtt.subscribe("topic/test", message_callback)
+
+# 6. 메시지 발행
 mqtt.publish("topic/test", "hello")
 
-# 6. 연결 해제
+# 7. 연결 해제
 mqtt.disconnect()
 ```
 
-### RFC 준수 보안 기능 사용법
+### 인증 기능 사용법
 ```python
 from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 
-# RFC 준수: 인증 및 TLS 보안 설정
+# 인증 설정
 config = MQTTConfig(
-    broker_address="secure-broker.example.com",
-    port=8883,  # TLS 포트
-    username="mqtt_user",
-    password="secure_password",
-    ca_certs="/path/to/ca.crt",
-    timeout=30
+    broker_address="test.mosquitto.org",
+    port=1883,
+    username="mqtt_username",
+    password="mqtt_password",
+    keepalive=60
 )
 
 mqtt = MQTTProtocol(config)
-
-# RFC 준수: Will Message 설정
-mqtt.set_will(
-    topic="device/status",
-    payload="offline",
-    qos=1,
-    retain=True
-)
-
 mqtt.connect()
 
-# RFC 준수: Retained Message 발행
+# Retained Message 발행
 mqtt.publish("device/status", "online", qos=1, retain=True)
 
 mqtt.disconnect()
@@ -64,104 +58,70 @@ mqtt.disconnect()
 
 ## 2. 주요 개념
 ### 동작 모드
-- non-blocking (기본)
+- **non-blocking (기본)**
     - `loop_start()` 기반
     - 연결 후 별도 스레드에서 통신
     - 메인 스레드에서 자유롭게 작업 가능
-- blocking
+- **blocking**
     - `loop_forever()` 기반
-    - 별도 스레드 대신 메인 스레드에서 통신 루프
-    - `stop_loop()`로 안전하게 종료 가능
+    - 별도 스레드에서 통신 루프 실행
+    - 메인 스레드는 블록되지 않음
 
 ### 주요 기능
 #### 기본 MQTT 기능
 - 브로커 연결/해제
 - 토픽 구독 및 메시지 콜백 처리
-- QoS 0, 1, 2 지원 메시지 발행 (기본값: QoS 1)
-- 자동 재연결 및 구독 복구
-- publish 큐잉 (연결이 끊겼을 때 메시지 보관 후 재전송)
-- thread-safe API (publish, subscribe, unsubscribe)
+- QoS 0, 1, 2 지원 메시지 발행 (기본값: QoS 0)
+- 재연결 시 구독 자동 복구
+- 연결 상태 확인 기능
 
-#### RFC 준수 기능
+#### 추가 기능
 - **보안 인증**: username/password 인증 지원
-- **TLS/SSL**: 암호화된 연결 지원
-- **Will Message**: 클라이언트 비정상 종료 시 자동 메시지 발행
-- **Retained Messages**: 브로커에 메시지 보관 및 신규 구독자에게 자동 전송
-- **상세한 에러 처리**: RFC 표준 연결 실패 코드 처리
+- **Retained Messages**: retain 플래그 지원
+- **예외 처리**: 연결, 발행, 구독 실패 예외 처리
+- **로깅**: 주요 이벤트 로깅 지원
 
-## 3. 클래스 다이어그램 구조
-```mermaid
-classDiagram
-    class PubSubProtocol {
-      +connect()
-      +disconnect()
-      +publish(topic, message)
-      +subscribe(topic, callback)
-    }
-
-    class MQTTConfig {
-      +broker_address: str
-      +port: int
-      +username: Optional[str]
-      +password: Optional[str]
-      +ca_certs: Optional[str]
-    }
-    
-    class MQTTProtocol {
-      +__init__(config: MQTTConfig)
-      +connect()
-      +disconnect()
-      +set_will(topic, payload, qos, retain)
-      +publish(topic, message, qos, retain)
-      +subscribe(topic, callback)
-    }
-    
-    MQTTConfig --> MQTTProtocol
-
-    PubSubProtocol <|-- MQTTProtocol
-```
-
-### 초기화
+## 3. 클래스 구조
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol
+@dataclass
+class MQTTConfig:
+    broker_address: str
+    port: int = 1883
+    keepalive: int = 60
+    mode: str = "non-blocking"
+    username: Optional[str] = None
+    password: Optional[str] = None
 
-mqtt = MQTTProtocol(
-    broker_address="broker.example.com",
-    port=1883,
-    timeout=60
-)
+class MQTTProtocol(PubSubProtocol):
+    def __init__(self, config: MQTTConfig)
+    def connect(self) -> bool
+    def disconnect(self)
+    def publish(self, topic: str, message: str, qos: int = 0, retain: bool = False) -> bool
+    def subscribe(self, topic: str, callback: Callable[[str, bytes], None], qos: int = 0) -> bool
+    def unsubscribe(self, topic: str) -> bool
+    def is_connected(self) -> bool
 ```
 
 ### MQTTConfig 파라미터 설명
 #### 기본 연결 설정
-- `broker_address` (str): 브로커 주소 (IP 또는 호스트명)
-- `port` (int): MQTT 포트 (기본 1883, TLS는 8883)
-- `timeout` (int): 연결 타임아웃(초 단위, 기본 60)
+- `broker_address` (str): 브로커 주소 (IP 또는 호스트명) - **필수**
+- `port` (int): MQTT 포트 (기본 1883)
 - `keepalive` (int): Keep-alive 간격(초 단위, 기본 60)
 - `mode` (str): 'blocking' 또는 'non-blocking' (기본 'non-blocking')
 
-#### RFC 준수 보안 설정
+#### 보안 설정
 - `username` (Optional[str]): MQTT 인증 사용자명
 - `password` (Optional[str]): MQTT 인증 비밀번호
-- `ca_certs` (Optional[str]): CA 인증서 파일 경로 (TLS 사용시)
-- `tls_version` (Optional[int]): TLS 버전 (기본값: ssl.PROTOCOL_TLS)
-
-#### 고급 설정
-- `session_expiry_interval` (int): 세션 만료 시간(초, 기본 3600)
-- `max_reconnect_attempts` (int): 재연결 최대 시도 횟수 (기본 10)
-- `reconnect_initial_delay` (int): 재연결 초기 지연 시간(초, 기본 1)
-- `reconnect_max_delay` (int): 재연결 최대 지연 시간(초, 기본 60)
-- `heartbeat_check_ratio` (float): heartbeat 확인 비율 (기본 0.5)
-- `publish_queue_maxsize` (int): publish 큐 최대 크기 (기본 1000)
 
 ## 4. 고급 동작 방식
-### 자동 재연결 및 데이터 유실 방지
-- 연결 끊김 감지 → 자동 재연결 시도
-- 재연결 성공 → 기존 구독 정보 복구
-- 발행 실패 시 → 내부 큐에 보관 후 재전송
+### 자동 재연결 및 구독 복구
+- 연결 끊김 감지 → 수동 재연결 가능
+- 재연결 성공 → 기존 구독 정보 자동 복구
+- 발행 실패 시 → False 반환
 
-### thread-safe 처리
-- Lock과 Queue를 활용하여 publish/subscribe가 안전하게 동작합니다.
+### 스레드 처리
+- non-blocking 모드: `loop_start()` 사용
+- blocking 모드: 별도 스레드에서 `loop_forever()` 실행
 
 ### 콜백 흐름
 ```mermaid
@@ -179,8 +139,8 @@ sequenceDiagram
 ## 5. 사용 방법
 ### 연결 및 구독
 ```python
-def on_message(topic, payload):
-    print(f"[{topic}] {payload}")
+def on_message(topic: str, payload: bytes):
+    print(f"[{topic}] {payload.decode()}")
 
 mqtt.connect()
 mqtt.subscribe("vision/events", callback=on_message)
@@ -188,26 +148,20 @@ mqtt.subscribe("vision/events", callback=on_message)
 
 ### 메시지 발행
 ```python
-# 기본 메시지 발행 (QoS 1 기본값)
+# 기본 메시지 발행 (QoS 0 기본값)
 mqtt.publish("vision/events", "Camera started")
 
 # QoS 레벨 명시적 지정
-mqtt.publish("vision/events", "Camera started", qos=0)  # QoS 0
+mqtt.publish("vision/events", "Camera started", qos=1)  # QoS 1
 mqtt.publish("vision/events", "Camera started", qos=2)  # QoS 2
 
-# RFC 준수: Retained Message 발행
+# Retained Message 발행
 mqtt.publish("device/status", "online", qos=1, retain=True)
 ```
 
-### Will Message 설정
+### 구독 해제
 ```python
-# RFC 준수: 연결 전에 Will Message 설정
-mqtt.set_will(
-    topic="device/status",
-    payload="device_offline",
-    qos=1,
-    retain=True
-)
+mqtt.unsubscribe("vision/events")
 ```
 
 ### 연결 해제
@@ -217,57 +171,66 @@ mqtt.disconnect()
 
 ### 예외 처리
 #### 주요 예외 클래스:
-- `ProtocolConnectionError`: 브로커 연결 실패, 타임아웃
-- `ProtocolAuthenticationError`: 인증 실패 (잘못된 username/password, 권한 없음)
-- `ProtocolError`: 프로토콜 버전 불일치, 서버 사용 불가 등
+- `ProtocolConnectionError`: 브로커 연결 실패
 - `ProtocolValidationError`: 메시지 발행/구독 실패
+- `ProtocolError`: 일반적인 프로토콜 오류
 
-#### RFC 준수 예외 처리 예시:
+#### 예외 처리 예시:
 ```python
 from communicator.common.exception import (
     ProtocolConnectionError,
-    ProtocolAuthenticationError,
+    ProtocolValidationError,
     ProtocolError
 )
 
 try:
     mqtt.connect()
-except ProtocolAuthenticationError as e:
-    print(f"Authentication failed: {e}")
 except ProtocolConnectionError as e:
     print(f"Connection failed: {e}")
-except ProtocolError as e:
-    print(f"Protocol error: {e}")
+
+try:
+    mqtt.subscribe("test/topic", callback)
+except ProtocolValidationError as e:
+    print(f"Subscribe failed: {e}")
 ```
 
 ## 6. 테스트 방법
-- 단위 테스트
-    - `pytest` 기반으로 mock 브로커를 활용
-    - MQTT 브로커를 실제 실행해 통합 테스트 가능
+### 단위 테스트
+```bash
+# Mock 기반 단위 테스트
+pytest -m "unit" -v
+```
 
-## 7. RFC 준수 수준
-현재 구현은 MQTT v3.1.1 및 v5.0 RFC 표준의 약 95%를 준수합니다:
+### 통합 테스트
+```bash
+# 실제 브로커와 연동 테스트
+pytest -m "integration" -v
+```
+
+### E2E 테스트
+```bash
+# 실제 시나리오 테스트
+pytest -m "e2e" -v
+```
+
+## 7. 현재 구현 수준
+현재 구현은 MQTT v3.1.1 기본 기능을 지원합니다:
 
 ### ✅ 완전 지원
 - 기본 MQTT 기능 (CONNECT, DISCONNECT, PUBLISH, SUBSCRIBE)
 - QoS 0, 1, 2 레벨
 - Keep-alive 메커니즘
-- Clean session 지원
-- 자동 재연결
 - Username/Password 인증
+- Retained Messages
+- 재연결 시 구독 복구
+- 예외 처리 및 로깅
+
+### 🔄 미지원
 - TLS/SSL 보안 연결
 - Will Message (Last Will and Testament)
-- Retained Messages
-- 상세한 연결 실패 코드 처리 (rc 1-5)
-
-### 🔄 부분 지원
-- MQTT v5.0 Properties (session_expiry_interval만 지원)
-
-## 8. 향후 확장 계획
-- MQTT v5.0 완전 지원 (User Properties, Topic Aliases 등)
-- 클러스터 브로커 지원
-- 메트릭 및 모니터링 기능
+- MQTT v5.0 기능들
+- 자동 재연결 (수동 재연결만 지원)
 
 ## 8. 참고 자료
-- [PRD.md](PRD.md)
-- [README.md](README.md)
+- [README.md](README.md) - 프로젝트 전체 개요
+- [PRD.md](prd.md) - 프로젝트 요구사항 문서

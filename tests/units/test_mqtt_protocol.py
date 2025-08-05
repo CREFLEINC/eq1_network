@@ -135,6 +135,7 @@ def test_on_disconnect_callback(protocol, mock_client):
 
 def test_is_connected_property(protocol, mock_client):
     """MQTTProtocol.is_connected 프로퍼티 테스트."""
+    protocol._is_connected = True
     mock_client.is_connected.return_value = True
     assert protocol.is_connected is True
 

@@ -93,6 +93,7 @@ class MQTTProtocol(PubSubProtocol):
         if rc != 0:
             logging.warning("Unexpected disconnection")
 
+# 각 파라미터 기능 서치
     def _on_message(self, client, userdata, msg):
         """메시지 수신 시 콜백 호출"""
         topic = msg.topic

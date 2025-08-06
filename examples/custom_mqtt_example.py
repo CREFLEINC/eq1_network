@@ -25,9 +25,6 @@ def create_custom_mqtt():
         port=1883,
         timeout=30,
         keepalive=30,
-        max_reconnect_attempts=5,
-        reconnect_initial_delay=2,
-        publish_queue_maxsize=500
     )
     advanced_mqtt = MQTTProtocol(advanced_config)
     

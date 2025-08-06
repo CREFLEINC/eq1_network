@@ -278,6 +278,23 @@ def test_subscribe_error_cleanup(protocol, mock_client):
     with pytest.raises(ProtocolValidationError):
         protocol.subscribe("topic", lambda t, m: None)
     
+    # 구독 정보가 정리되었는지 확인
+    assert "topic" not in protocol._subscriptions
+
+
+@pytest.mark.unit
+def test_disconnect_connection_wait_timeout(protocol, mock_client):
+    """연결 해제 대기 타임아웃 테스트 - 161번째 라인 커버리지"""
+    protocol._is_connected = True
+    protocol._blocking_thread = MagicMock()
+    protocol._blocking_thread.is_alive.return_value = True
+    
+    # _is_connected가 계속 True로 유지되도록 설정
+    protocol.disconnect()
+    
+    # blocking thread join이 호출되었는지 확인
+    protocol._blocking_thread.join.assert_called_once_with(timeout=2.0)
+    
     # 오류 발생 시 구독 정보가 제거되어야 함
     assert "topic" not in protocol._subscriptions
 

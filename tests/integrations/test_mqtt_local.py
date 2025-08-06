@@ -18,8 +18,8 @@ def is_port_open(host, port):
 
 
 @pytest.fixture(scope="session")
-def mosquitto_broker():
-    """로컬 Mosquitto 브로커 시작 (있는 경우)"""
+def local_broker():
+    """로컬 브로커 시작 (있는 경우)"""
     if not is_port_open("localhost", 1883):
         pytest.skip("Local MQTT broker not available")
     yield
@@ -37,7 +37,7 @@ def local_config():
 
 
 @pytest.fixture
-def protocol(local_config, mosquitto_broker):
+def protocol(local_config, local_broker):
     """로컬 MQTT 프로토콜 인스턴스"""
     protocol = MQTTProtocol(local_config)
     yield protocol

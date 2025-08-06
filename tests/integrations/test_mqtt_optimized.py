@@ -11,9 +11,9 @@ from communicator.common.exception import (
 
 @pytest.fixture
 def protocol():
-    """MQTTProtocol 실제 테스트 인스턴스"""
+    """MQTTProtocol EMQX 테스트 인스턴스"""
     config = MQTTConfig(
-        broker_address="test.mosquitto.org",
+        broker_address="broker.emqx.io",
         port=1883,
         mode="non-blocking"
     )
@@ -239,7 +239,7 @@ class TestThreadManagement:
     
     def test_blocking_mode(self):
         config = MQTTConfig(
-            broker_address="test.mosquitto.org",
+            broker_address="broker.emqx.io",
             port=1883,
             mode="blocking"
         )
@@ -249,7 +249,6 @@ class TestThreadManagement:
         time.sleep(2)
         
         if protocol._is_connected:
-            # blocking 모드에서는 별도 스레드가 생성되어야 함
             assert protocol._blocking_thread is not None
             if protocol._blocking_thread:
                 assert protocol._blocking_thread.is_alive()

@@ -4,6 +4,7 @@ from typing import Optional, Callable
 from dataclasses import dataclass
 import logging
 import time
+import queue as Queue
 
 from communicator.interfaces.protocol import PubSubProtocol
 from communicator.common.exception import (
@@ -11,8 +12,6 @@ from communicator.common.exception import (
     ProtocolValidationError,
     ProtocolError,
 )
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -53,6 +52,9 @@ class MQTTProtocol(PubSubProtocol):
         self.client.on_message = self._on_message
 
         self._is_connected = False
+        
+        self._publish_queue = Queue.Queue()
+        self._publish_lock = threading.Lock()
 
     def _on_connect(self, client, userdata, flags, rc):
         """
@@ -68,25 +70,28 @@ class MQTTProtocol(PubSubProtocol):
             None
         """
         if rc == 0:
-            logger.info("Connected to MQTT broker")
+            logging.info("Connected to MQTT broker")
             self._is_connected = True
             # 기존 구독 복구
             for topic, (qos, callback) in self._subscriptions.items():
                 try:
                     result, _ = client.subscribe(topic, qos)
                     if result != mqtt.MQTT_ERR_SUCCESS:
-                        logger.error(f"Failed to recover subscription for {topic}: {result}")
+                        logging.error(f"Failed to recover subscription for {topic}: {result}")
                 except Exception as e:
-                    logger.error(f"Error recovering subscription for {topic}: {e}")
+                    logging.error(f"Error recovering subscription for {topic}: {e}")
+                    
+            self._flush_publish_queue()
+
         else:
-            logger.error(f"MQTT 연결 실패 (rc={rc})")
+            logging.error(f"MQTT 연결 실패 (rc={rc})")
             self._is_connected = False
 
     def _on_disconnect(self, client, userdata, rc):
         """연결 해제 시 로그"""
         self._is_connected = False
         if rc != 0:
-            logger.warning("Unexpected disconnection")
+            logging.warning("Unexpected disconnection")
 
     def _on_message(self, client, userdata, msg):
         """메시지 수신 시 콜백 호출"""
@@ -97,7 +102,7 @@ class MQTTProtocol(PubSubProtocol):
                 try:
                     callback(topic, msg.payload)
                 except Exception as e:
-                    logger.error(f"Message callback error: {e}")
+                    logging.error(f"Message callback error: {e}")
 
     def connect(self) -> bool:
         """
@@ -125,7 +130,13 @@ class MQTTProtocol(PubSubProtocol):
             else:
                 self.client.loop_start()
             
-            return True
+            for _ in range(10):
+                logging.debug(f"Waiting for connection... {self._is_connected}")
+                if self._is_connected:
+                    return True
+                time.sleep(0.5)
+            raise ProtocolConnectionError("Connection timed out")
+
         except Exception as e:
             raise ProtocolConnectionError(f"Connection failed: {e}")
 
@@ -169,15 +180,31 @@ class MQTTProtocol(PubSubProtocol):
             ProtocolValidationError: 발행 실패 시 예외 발생
         """
         try:
-            result = self.client.publish(topic, message, qos, retain)
-            if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                return True
-            else:
-                logger.error(f"Publish failed: {result.rc}")
+            if not self._is_connected:
+                logging.warning(f"Not connected. Queueing message to {topic}")
+                self._publish_queue.put((topic, message, qos, retain))
                 return False
+            
+            result = self.client.publish(topic, message, qos, retain)
+            return result.rc == mqtt.MQTT_ERR_SUCCESS
         except Exception as e:
-            logger.error(f"Publish error: {e}")
+            logging.error(f"Publish error: {e}")
             return False
+
+    def _flush_publish_queue(self):
+        """
+        재연결 후 큐에 남아 있던 메시지를 다시 발행
+        """
+        logging.info("Flushing queued messages...")
+        while not self._publish_queue.empty():
+            try:
+                topic, message, qos, retain = self._publish_queue.get_nowait()
+                result = self.client.publish(topic, message, qos, retain)
+                if result.rc != mqtt.MQTT_ERR_SUCCESS:
+                    logging.error(f"Failed to re-publish to {topic}: {result.rc}")
+                    # 실패 시 다시 큐에 넣을 수도 있음 (원하면)
+            except Exception as e:
+                logging.error(f"Exception while flushing publish queue: {e}")
 
     def subscribe(self, topic: str, callback: Callable[[str, bytes], None], qos: int = 0) -> bool:
         """토픽 구독"""
@@ -215,7 +242,7 @@ class MQTTProtocol(PubSubProtocol):
             else:
                 raise ProtocolValidationError(f"Unsubscribe failed: {result}")
         except Exception as e:
-            logger.error(f"Unsubscribe error: {e}")
+            logging.error(f"Unsubscribe error: {e}")
             raise ProtocolValidationError(f"Unsubscribe error: {e}")
 
     @property

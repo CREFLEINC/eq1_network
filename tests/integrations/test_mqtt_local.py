@@ -29,7 +29,7 @@ def mosquitto_broker():
 def local_config():
     """로컬 MQTT 브로커 설정"""
     return MQTTConfig(
-        broker_address="test.mosquitto.org",
+        broker_address="localhost",
         port=1883,
         mode="non-blocking",
         keepalive=10

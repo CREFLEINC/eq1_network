@@ -6,12 +6,12 @@ from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 
 @pytest.fixture
 def mqtt_config():
-    """실제 MQTT 브로커 연결을 위한 설정"""
+    """EMQX 브로커 연결을 위한 설정"""
     return MQTTConfig(
-        broker_address="test.mosquitto.org",  # 실제 MQTT 브로커 주소
+        broker_address="broker.emqx.io",
         port=1883,
         mode="non-blocking",
-        keepalive=60
+        keepalive=60,
     )
 
 
@@ -54,10 +54,8 @@ def test_real_mqtt_publish_subscribe(protocol):
     
     print("Connected successfully")
     
-    # 고유한 토픽 생성 (충돌 방지)
-    import uuid
-    test_topic = f"test/eq1_network/{uuid.uuid4().hex[:8]}/{int(time.time())}"
-    print(f"Using topic: {test_topic}")
+    # 고유한 토픽 생성
+    test_topic = f"test/eq1_network/{int(time.time())}"
     
     # 구독
     try:
@@ -81,23 +79,12 @@ def test_real_mqtt_publish_subscribe(protocol):
         print(f"Publish failed: {e}")
         pytest.fail(f"Failed to publish: {e}")
     
-    # 메시지 수신 대기 (시간 증가)
-    max_receive_wait = 10
-    receive_wait = 0
-    while (
-        len(received_messages) == 0 and
-        receive_wait < max_receive_wait
-    ):
-        time.sleep(1)
-        receive_wait += 1
-        print(f"Waiting for message... {receive_wait}s (received: {len(received_messages)})")
-    
-    print(f"Final received messages count: {len(received_messages)}")
+    # 메시지 수신 대기
+    time.sleep(3)
     
     # 검증
     if len(received_messages) == 0:
-        print(f"No messages received. Connection status: {protocol.is_connected}")
-        pytest.fail(f"No messages received after {receive_wait}s wait")
+        pytest.fail("No messages received")
     
     assert len(received_messages) == 1, f"Expected 1 message, got {len(received_messages)}"
     assert received_messages[0][0] == test_topic, f"Topic mismatch: expected {test_topic}, got {received_messages[0][0]}"
@@ -138,6 +125,8 @@ def test_real_mqtt_queue_persistence(protocol):
         received_messages.append((topic, payload))
         print(f"Received message: {payload.decode()}")
     
+    protocol.connect()
+    
     # 연결 대기
     max_wait = 20
     wait_time = 0
@@ -148,48 +137,31 @@ def test_real_mqtt_queue_persistence(protocol):
     if not protocol.is_connected:
         pytest.skip("Cannot connect to MQTT broker for queue persistence test")
     
-    test_topic = f"test/eq1_network_client/queue/{int(time.time())}"
+    test_topic = f"test/eq1_network/queue/{int(time.time())}"
     protocol.subscribe(test_topic, message_callback)
-    time.sleep(2)
+    time.sleep(1)
     
-    # 연결 강제 해제
-    protocol._is_connected = False
-    protocol.client.disconnect()
-    time.sleep(2)
+    protocol.disconnect()
     
-    # 연결이 끊어진 상태에서 메시지 발행 (큐에 저장됨)
+    # 연결이 끊어진 상태에서 메시지 발행
     test_message = "Queued message test"
     result = protocol.publish(test_topic, test_message)
-    assert result is False  # 연결이 끊어져서 즉시 전송 실패
-    assert not protocol._publish_queue.empty()  # 큐에 저장됨
+    assert result is False
+    assert not protocol._publish_queue.empty()
     
-    # 재연결 대기 (시간 증가)
-    max_reconnect_wait = 20
-    reconnect_wait = 0
-    while not protocol.is_connected and reconnect_wait < max_reconnect_wait:
-        time.sleep(1)
-        reconnect_wait += 1
-        print(f"Waiting for reconnection... {reconnect_wait}s")
-    
-    if not protocol.is_connected:
-        pytest.skip("Reconnection failed - cannot test queue persistence")
-    
-    # 큐가 비워질 때까지 대기 (시간 증가)
-    max_flush_wait = 10
-    flush_wait = 0
-    while not protocol._publish_queue.empty() and flush_wait < max_flush_wait:
-        time.sleep(1)
-        flush_wait += 1
-        print(f"Waiting for queue flush... {flush_wait}s")
-    
-    # 큐가 비워졌는지 확인 (자동으로 전송됨)
-    assert protocol._publish_queue.empty(), f"Queue not empty after {flush_wait}s"
-    
-    # 메시지 수신 대기
+    protocol.connect()
     time.sleep(3)
     
-    # 메시지가 수신되었는지 확인
-    assert len(received_messages) >= 1, f"No messages received. Queue size: {protocol._publish_queue.qsize()}"
+    if not protocol.is_connected:
+        pytest.skip("Reconnection failed")
+    
+    # 큐가 비워질 때까지 대기
+    time.sleep(2)
+    assert protocol._publish_queue.empty()
+    
+    # 메시지 수신 확인
+    time.sleep(2)
+    assert len(received_messages) >= 1
 
 
 if __name__ == "__main__":

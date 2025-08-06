@@ -32,7 +32,9 @@ def protocol(mock_client):
 
 def test_connect_success(protocol, mock_client):
     """MQTTProtocol.connect 성공 시나리오 테스트."""
-    mock_client.is_connected.return_value = True
+    mock_client.connect.return_value = 0
+    # simulate loop_start triggers on_connect
+    mock_client.loop_start.side_effect = lambda: protocol._on_connect(mock_client, None, None, 0)
     assert protocol.connect() is True
     mock_client.connect.assert_called_once()
 

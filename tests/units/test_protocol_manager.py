@@ -16,6 +16,7 @@ def mock_reqres_plugin():
     return plugin
 
 
+@pytest.mark.unit
 def test_reqres_load_and_get(mock_reqres_plugin):
     """
     ReqResManager에 플러그인을 등록하고 정상적으로 조회되는지 테스트합니다.
@@ -25,6 +26,7 @@ def test_reqres_load_and_get(mock_reqres_plugin):
     assert ReqResManager.get("tcp") is mock_reqres_plugin
 
 
+@pytest.mark.unit
 def test_reqres_get_missing():
     """
     등록되지 않은 프로토콜 이름으로 get() 호출 시 예외 발생 여부를 테스트합니다.
@@ -34,6 +36,7 @@ def test_reqres_get_missing():
         ReqResManager.get("abc")
 
 
+@pytest.mark.unit
 def test_reqres_connect(mock_reqres_plugin):
     """
     등록된 플러그인 이름으로 connect() 호출 시 플러그인의 connect()가 호출되는지 테스트합니다.
@@ -44,6 +47,7 @@ def test_reqres_connect(mock_reqres_plugin):
     mock_reqres_plugin.connect.assert_called_once()
 
 
+@pytest.mark.unit
 def test_reqres_send(mock_reqres_plugin):
     """
     등록된 플러그인 이름으로 send() 호출 시 플러그인의 send()가 호출되는지 테스트합니다.
@@ -55,6 +59,7 @@ def test_reqres_send(mock_reqres_plugin):
     mock_reqres_plugin.send.assert_called_once_with(b"data")
 
 
+@pytest.mark.unit
 def test_reqres_receive(mock_reqres_plugin):
     """
     등록된 플러그인 이름으로 receive() 호출 시 플러그인의 receive()가 호출되는지 테스트합니다.
@@ -66,6 +71,7 @@ def test_reqres_receive(mock_reqres_plugin):
     mock_reqres_plugin.receive.assert_called_once_with(2048)
 
 
+@pytest.mark.unit
 def test_reqres_disconnect(mock_reqres_plugin):
     """
     등록된 플러그인 이름으로 disconnect() 호출 시 플러그인의 disconnect()가 호출되는지 테스트합니다.
@@ -90,6 +96,7 @@ def mock_pubsub_plugin():
     return plugin
 
 
+@pytest.mark.unit
 def test_pubsub_load_and_get(mock_pubsub_plugin):
     """
     PubSubManager에 플러그인을 등록하고 정상적으로 조회되는지 테스트합니다.
@@ -99,6 +106,7 @@ def test_pubsub_load_and_get(mock_pubsub_plugin):
     assert PubSubManager.get("mqtt") is mock_pubsub_plugin
 
 
+@pytest.mark.unit
 def test_pubsub_get_missing():
     """
     등록되지 않은 플러그인 이름으로 get() 호출 시 예외 발생 여부를 테스트합니다.
@@ -108,6 +116,7 @@ def test_pubsub_get_missing():
         PubSubManager.get("xyz")
 
 
+@pytest.mark.unit
 def test_pubsub_connect(mock_pubsub_plugin):
     """
     등록된 플러그인 이름으로 connect() 호출 시 플러그인의 connect()가 호출되는지 테스트합니다.
@@ -118,6 +127,7 @@ def test_pubsub_connect(mock_pubsub_plugin):
     mock_pubsub_plugin.connect.assert_called_once()
 
 
+@pytest.mark.unit
 def test_pubsub_publish(mock_pubsub_plugin):
     """
     등록된 플러그인 이름으로 publish() 호출 시 플러그인의 publish()가 호출되는지 테스트합니다.
@@ -129,6 +139,7 @@ def test_pubsub_publish(mock_pubsub_plugin):
     mock_pubsub_plugin.publish.assert_called_once_with("topic/a", "hello", 1)
 
 
+@pytest.mark.unit
 def test_pubsub_subscribe(mock_pubsub_plugin):
     """
     등록된 플러그인 이름으로 subscribe() 호출 시 플러그인의 subscribe()가 호출되는지 테스트합니다.
@@ -141,6 +152,7 @@ def test_pubsub_subscribe(mock_pubsub_plugin):
     mock_pubsub_plugin.subscribe.assert_called_once_with("topic/b", cb, 2)
 
 
+@pytest.mark.unit
 def test_pubsub_unsubscribe(mock_pubsub_plugin):
     """
     등록된 플러그인 이름으로 unsubscribe() 호출 시 플러그인의 unsubscribe()가 호출되는지 테스트합니다.
@@ -152,6 +164,7 @@ def test_pubsub_unsubscribe(mock_pubsub_plugin):
     mock_pubsub_plugin.unsubscribe.assert_called_once_with("topic/c")
 
 
+@pytest.mark.unit
 def test_pubsub_disconnect(mock_pubsub_plugin):
     """
     등록된 플러그인 이름으로 disconnect() 호출 시 플러그인의 disconnect()가 호출되는지 테스트합니다.

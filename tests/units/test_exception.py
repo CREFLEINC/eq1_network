@@ -9,6 +9,7 @@ from communicator.common.exception import (
 )
 
 
+@pytest.mark.unit
 def test_protocol_error_default_message():
     """
     ProtocolError가 기본 메시지로 초기화되고 메시지가 정확히 포함되는지 확인
@@ -18,6 +19,7 @@ def test_protocol_error_default_message():
     assert str(exc_info.value) == "프로토콜 처리 중 오류가 발생했습니다."
 
 
+@pytest.mark.unit
 def test_protocol_error_custom_message():
     """
     ProtocolError가 커스텀 메시지로 초기화되는지 확인
@@ -27,6 +29,7 @@ def test_protocol_error_custom_message():
     assert str(exc_info.value) == "사용자 정의 오류"
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("exception_class, expected_message", [
     (ProtocolConnectionError, "프로토콜 연결에 실패했습니다."),
     (ProtocolTimeoutError, "프로토콜 응답 시간이 초과되었습니다."),
@@ -44,6 +47,7 @@ def test_default_messages(exception_class, expected_message):
     assert isinstance(exc_info.value, ProtocolError)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("exception_class", [
     ProtocolConnectionError,
     ProtocolTimeoutError,

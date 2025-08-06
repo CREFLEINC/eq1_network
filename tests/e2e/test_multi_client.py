@@ -1,17 +1,10 @@
-#!/usr/bin/env python3
-"""
-멀티 클라이언트 MQTT 테스트
-- Publisher와 Subscriber를 별도 프로세스로 실행
-- 실제 서버 환경과 유사한 테스트
-"""
-
 import sys
 import time
 import json
 from datetime import datetime
 from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 
-def run_publisher(broker="test.mosquitto.org", port=1883):
+def run_publisher(broker="broker.emqx.io", port=1883):
     """Publisher 클라이언트"""
     print("📤 Publisher 시작")
     
@@ -54,7 +47,7 @@ def run_publisher(broker="test.mosquitto.org", port=1883):
     finally:
         mqtt.disconnect()
 
-def run_subscriber(broker="test.mosquitto.org", port=1883):
+def run_subscriber(broker="broker.emqx.io", port=1883):
     """Subscriber 클라이언트"""
     print("📥 Subscriber 시작")
     
@@ -109,7 +102,7 @@ def run_subscriber(broker="test.mosquitto.org", port=1883):
     finally:
         mqtt.disconnect()
 
-def run_monitor(broker="test.mosquitto.org", port=1883):
+def run_monitor(broker="broker.emqx.io", port=1883):
     """모니터링 클라이언트 (모든 메시지 감시)"""
     print("👁️  Monitor 시작")
     

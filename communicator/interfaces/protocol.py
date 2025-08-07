@@ -64,13 +64,18 @@ class PubSubProtocol(BaseProtocol):
     """
 
     @abstractmethod
-    def publish(self, topic: str, message: bytes, qos: int = 0):
+    def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
         """특정 토픽에 메시지를 발행(Publish)합니다.
 
         Args:
             topic (str): 발행할 토픽 이름
             message (bytes): 전송할 메시지 바이트 데이터
             qos (int, optional): 메시지 전송 보장 수준 (0, 1, 2 중 선택)
+            retain (bool, optional): Retain 플래그 (기본값: False)
+        
+        Returns:
+            bool: 발행 성공 시 True
+>>>>>>> Stashed changes
         """
         pass
 

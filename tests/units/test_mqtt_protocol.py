@@ -1,8 +1,6 @@
 import pytest
-import time
-import queue
 from unittest.mock import MagicMock
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 from communicator.common.exception import (
     ProtocolConnectionError,
     ProtocolValidationError,
@@ -24,13 +22,19 @@ def mock_client(monkeypatch):
 @pytest.fixture
 def protocol(mock_client):
     """MQTTProtocol의 테스트용 인스턴스를 생성합니다."""
-    return MQTTProtocol("localhost", port=1883, mode="non-blocking", publish_queue_maxsize=5)
+    config = MQTTConfig(
+        broker_address="test.mosquitto.org",
+        port=1883,
+        mode="non-blocking"
+    )
+    return MQTTProtocol(config)
 
 
 def test_connect_success(protocol, mock_client):
     """MQTTProtocol.connect 성공 시나리오 테스트."""
-    mock_client.is_connected.return_value = True
-    protocol._is_connected = True
+    mock_client.connect.return_value = 0
+    # simulate loop_start triggers on_connect
+    mock_client.loop_start.side_effect = lambda: protocol._on_connect(mock_client, None, None, 0)
     assert protocol.connect() is True
     mock_client.connect.assert_called_once()
 
@@ -44,43 +48,37 @@ def test_connect_failure(protocol, mock_client):
 
 def test_disconnect(protocol, mock_client):
     """MQTTProtocol.disconnect 성공 시나리오 테스트."""
-    protocol._is_connected = True
     protocol.disconnect()
-    assert protocol._is_connected is False
     mock_client.loop_stop.assert_called_once()
     mock_client.disconnect.assert_called_once()
 
 
-def test_stop_loop(protocol):
-    """stop_loop() 호출 시 shutdown_event 세팅과 join 동작 테스트"""
+def test_blocking_thread_cleanup(protocol):
+    """blocking thread 정리 테스트"""
     protocol._blocking_thread = MagicMock()
     protocol._blocking_thread.is_alive.return_value = True
-    protocol.stop_loop()
-    assert protocol._shutdown_event.is_set()
+    protocol.disconnect()
+    protocol._blocking_thread.join.assert_called_once()
 
 
 def test_publish_success(protocol, mock_client):
     """MQTTProtocol.publish 성공 시나리오 테스트."""
-    protocol._is_connected = True
     mock_client.is_connected.return_value = True
     mock_client.publish.return_value.rc = 0
     assert protocol.publish("topic", "message") is True
 
 
-def test_publish_failure_queue(protocol, mock_client):
-    """MQTTProtocol.publish 실패 시나리오 테스트."""
-    protocol._is_connected = False
+def test_publish_not_connected(protocol, mock_client):
+    """연결이 되지 않은 상태에서 publish 호출 시 실패 테스트"""
+    mock_client.is_connected.return_value = False
     assert protocol.publish("topic", "offline") is False
-    assert not protocol._publish_queue.empty()
 
 
-def test_publish_queue_full(protocol, mock_client):
-    """MQTTProtocol.publish 큐가 가득 차는 경우 테스트."""
-    protocol._is_connected = False
-    for _ in range(5):
-        protocol._publish_queue.put_nowait(("t", "m", 1))
-    with pytest.raises(ProtocolError):
-        protocol.publish("topic", "overflow")
+def test_publish_error(protocol, mock_client):
+    """MQTTProtocol.publish 오류 발생 테스트."""
+    mock_client.is_connected.return_value = True
+    mock_client.publish.side_effect = Exception("publish error")
+    assert protocol.publish("topic", "message") is False
 
 
 def test_subscribe_unsubscribe_success(protocol, mock_client):
@@ -108,7 +106,8 @@ def test_unsubscribe_failure(protocol, mock_client):
 def test_on_message_callback(protocol):
     """MQTTProtocol._on_message 콜백 테스트."""
     called = []
-    protocol._subscriptions["topic"] = {"qos": 1, "callback": lambda t, m: called.append((t, m))}
+    callback = lambda t, m: called.append((t, m))
+    protocol._subscriptions["topic"] = (0, callback)  # (qos, callback) 튜플 형태
     msg = type("msg", (), {"topic": "topic", "payload": b"data"})
     protocol._on_message(None, None, msg)
     assert called[0] == ("topic", b"data")
@@ -116,33 +115,24 @@ def test_on_message_callback(protocol):
 
 def test_on_message_with_exception(protocol):
     """MQTTProtocol._on_message 예외 발생 테스트."""
-    protocol._subscriptions["topic"] = {"qos": 1, "callback": lambda t, m: 1 / 0}
+    error_callback = lambda t, m: 1 / 0
+    protocol._subscriptions["topic"] = (0, error_callback)  # (qos, callback) 튜플 형태
     msg = type("msg", (), {"topic": "topic", "payload": b"data"})
     protocol._on_message(None, None, msg)  # 예외 발생해도 죽지 않아야 함
 
 
-def test_attempt_reconnection(protocol, mock_client):
-    """MQTTProtocol._attempt_reconnection 성공 시나리오 테스트."""
-    protocol._subscriptions["topic"] = {"qos": 1, "callback": lambda t, m: None}
-    protocol._publish_queue.put(("topic", "msg", 1))
-    assert protocol._attempt_reconnection()
-    assert protocol._publish_queue.empty()
+def test_on_connect_callback(protocol, mock_client):
+    """MQTTProtocol._on_connect 콜백 테스트."""
+    callback = lambda t, m: None
+    protocol._subscriptions["topic"] = (0, callback)  # (qos, callback) 튜플 형태
+    mock_client.subscribe.return_value = (0, 1)  # 성공 반환
+    protocol._on_connect(mock_client, None, None, 0)
+    mock_client.subscribe.assert_called_once_with("topic", 0)
 
 
-def test_flush_publish_queue(protocol, mock_client):
-    """MQTTProtocol._flush_publish_queue 성공 시나리오 테스트."""
-    protocol._is_connected = True
-    mock_client.is_connected.return_value = True
-    protocol._publish_queue.put(("topic", "msg", 1))
-    protocol._flush_publish_queue()
-    assert protocol._publish_queue.empty()
-
-
-def test_recover_subscriptions(protocol, mock_client):
-    """MQTTProtocol._recover_subscriptions 성공 시나리오 테스트."""
-    protocol._subscriptions = {"topic": {"qos": 1, "callback": lambda t, m: None}}
-    protocol._recover_subscriptions()
-    mock_client.subscribe.assert_called_once_with("topic", 1)
+def test_on_disconnect_callback(protocol, mock_client):
+    """MQTTProtocol._on_disconnect 콜백 테스트."""
+    protocol._on_disconnect(mock_client, None, 1)  # rc != 0이면 unexpected disconnection
 
 
 def test_is_connected_property(protocol, mock_client):
@@ -152,18 +142,4 @@ def test_is_connected_property(protocol, mock_client):
     assert protocol.is_connected is True
 
 
-def test_start_and_stop_heartbeat_monitor(protocol):
-    """MQTTProtocol._start_heartbeat_monitor와 _stop_heartbeat_monitor가 정상 동작하는지 테스트"""
-    protocol._start_heartbeat_monitor()
-    assert protocol._heartbeat_thread.is_alive()
-    protocol._stop_heartbeat_monitor()
-    assert not protocol._heartbeat_thread.is_alive()
 
-
-def test_heartbeat_monitor_loop(protocol):
-    """MQTTProtocol._heartbeat_monitor를 한 번 실행하고 종료 이벤트로 빠르게 빠져나오는 경로 테스트"""
-    # 설정: 연결된 상태, 이벤트 즉시 종료
-    protocol._is_connected = True
-    protocol._heartbeat_stop_event.set()
-    # 강제로 한 번만 실행하도록 호출
-    protocol._heartbeat_monitor()

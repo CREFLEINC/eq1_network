@@ -30,12 +30,12 @@ class Params:
             return v
         try:
             return int(v)
-        except ValueError as e:
+        except ValueError:
             pass
 
         try:
             return float(v)
-        except ValueError as e:
+        except ValueError:
             pass
 
         if v.upper() == "TRUE":

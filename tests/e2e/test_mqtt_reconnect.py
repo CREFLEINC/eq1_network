@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-MQTT 재연결 기능 테스트
-- 브로커 연결 해제 후 자동 재연결 확인
-"""
-
 import time
 import signal
 import sys
@@ -18,7 +12,7 @@ def signal_handler(sig, frame):
 
 def run_reconnect_test():
     config = MQTTConfig(
-        broker_address="test.mosquitto.org",
+        broker_address="broker.emqx.io",
         port=1883,
         mode="non-blocking"
     )

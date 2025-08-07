@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-"""
-실제 MQTT 서버와 통신하는 테스트
-- 로컬 mosquitto 브로커
-- 퍼블릭 테스트 브로커
-- 실시간 양방향 통신 테스트
-"""
-
 import time
 import threading
 import json
@@ -13,7 +5,7 @@ from datetime import datetime
 from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
 
 class MQTTServerTest:
-    def __init__(self, broker_address="test.mosquitto.org", port=1883):
+    def __init__(self, broker_address="broker.emqx.io", port=1883):
         config = MQTTConfig(
             broker_address=broker_address,
             port=port,
@@ -138,23 +130,16 @@ class MQTTServerTest:
             self.mqtt.disconnect()
             print(f"\n📊 테스트 완료 - 총 {len(self.received_messages)}개 메시지 수신")
 
-def test_mosquitto_broker():
-    """Mosquitto 퍼블릭 브로커 테스트"""
-    print("=== Mosquitto 퍼블릭 브로커 테스트 ===")
-    test = MQTTServerTest("test.mosquitto.org", 1883)
+def test_emqx_broker():
+    """Emqx 퍼블릭 브로커 테스트"""
+    print("=== Emqx 퍼블릭 브로커 테스트 ===")
+    test = MQTTServerTest("broker.emqx.io", 1883)
     test.run_test(20)
-
-def test_public_broker():
-    """퍼블릭 브로커 테스트"""
-    print("=== 퍼블릭 MQTT 브로커 테스트 ===")
-    # Eclipse 퍼블릭 브로커 사용
-    test = MQTTServerTest("test.mosquitto.org", 1883)
-    test.run_test(15)
 
 def interactive_test():
     """대화형 테스트"""
     print("=== 대화형 MQTT 테스트 ===")
-    broker = input("브로커 주소 (기본: test.mosquitto.org): ").strip() or "test.mosquitto.org"
+    broker = input("브로커 주소 (기본: broker.emqx.io): ").strip() or "broker.emqx.io"
     port = input("포트 (기본: 1883): ").strip() or "1883"
     
     test = MQTTServerTest(broker, int(port))
@@ -165,18 +150,16 @@ def interactive_test():
 
 if __name__ == "__main__":
     print("🔧 MQTT 실제 서버 통신 테스트")
-    print("1. Mosquitto 퍼블릭 브로커 테스트")
+    print("1. Emqx 브로커 테스트")
     print("2. 퍼블릭 브로커 테스트") 
     print("3. 대화형 테스트")
     
     choice = input("선택 (1-3): ").strip()
     
     if choice == "1":
-        test_mosquitto_broker()
+        test_emqx_broker()
     elif choice == "2":
-        test_public_broker()
-    elif choice == "3":
         interactive_test()
     else:
-        print("기본값으로 Mosquitto 브로커 테스트 실행")
-        test_mosquitto_broker()
+        print("기본값으로 Emqx 브로커 테스트 실행")
+        test_emqx_broker()

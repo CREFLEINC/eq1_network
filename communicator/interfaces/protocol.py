@@ -14,6 +14,9 @@ class BaseProtocol(ABC):
     def connect(self) -> bool:
         """서버 또는 브로커와의 네트워크 연결을 시도합니다.
 
+        Args:
+            None
+
         Returns:
             bool: 연결에 성공하면 True, 실패하면 False를 반환합니다.
         """
@@ -48,6 +51,9 @@ class ReqResProtocol(BaseProtocol):
     def read(self) -> Tuple[bool, Optional[bytes]]:
         """장치로부터 데이터를 수신합니다. 블로킹 없이 즉시 반환되어야 합니다.
 
+        Args:
+            None
+
         Returns:
             Tuple[bool, Optional[bytes]]:
                 - 첫 번째 요소: 수신 성공 여부 (bool)
@@ -75,7 +81,6 @@ class PubSubProtocol(BaseProtocol):
         
         Returns:
             bool: 발행 성공 시 True
->>>>>>> Stashed changes
         """
         pass
 

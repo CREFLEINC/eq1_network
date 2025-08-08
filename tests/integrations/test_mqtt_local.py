@@ -3,9 +3,10 @@ import time
 import threading
 import subprocess
 import socket
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 
+@pytest.mark.integration
 def is_port_open(host, port):
     """포트가 열려있는지 확인"""
     try:
@@ -17,6 +18,7 @@ def is_port_open(host, port):
         return False
 
 
+@pytest.mark.integration
 @pytest.fixture(scope="session")
 def local_broker():
     """로컬 브로커 시작 (있는 경우)"""
@@ -25,10 +27,12 @@ def local_broker():
     yield
     
 
+
+@pytest.mark.integration
 @pytest.fixture
 def local_config():
     """로컬 MQTT 브로커 설정"""
-    return MQTTConfig(
+    return BrokerConfig(
         broker_address="localhost",
         port=1883,
         mode="non-blocking",
@@ -36,14 +40,17 @@ def local_config():
     )
 
 
+@pytest.mark.integration
 @pytest.fixture
 def protocol(local_config, local_broker):
     """로컬 MQTT 프로토콜 인스턴스"""
-    protocol = MQTTProtocol(local_config)
+    client_config = ClientConfig()
+    protocol = MQTTProtocol(local_config, client_config)
     yield protocol
     protocol.disconnect()
 
 
+@pytest.mark.integration
 def test_local_mqtt_basic_functionality(protocol):
     """로컬 MQTT 브로커 기본 기능 테스트"""
     received_messages = []
@@ -72,6 +79,7 @@ def test_local_mqtt_basic_functionality(protocol):
     assert received_messages[0] == (test_topic, test_message)
 
 
+@pytest.mark.integration
 def test_local_mqtt_multiple_messages(protocol):
     """로컬 MQTT 브로커 다중 메시지 테스트"""
     received_messages = []
@@ -102,6 +110,7 @@ def test_local_mqtt_multiple_messages(protocol):
         assert msg in received_messages
 
 
+@pytest.mark.integration
 def test_local_mqtt_qos_levels(protocol):
     """로컬 MQTT 브로커 QoS 레벨 테스트"""
     received_messages = []

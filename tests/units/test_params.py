@@ -7,7 +7,7 @@ from communicator.common.params import Params
 @pytest.fixture
 def sample_config():
     """
-    테스트를 위한 샘플 설정 데이터.
+    테스트를 위한 샘플 설정 데이터
     """
     return {
         "int_value": "10",

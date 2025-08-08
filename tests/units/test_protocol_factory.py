@@ -10,7 +10,7 @@ from communicator.manager.protocol_factory import (
 
 class DummyParams(Params):
     """
-    테스트용 파라미터 클래스.
+    테스트용 파라미터 클래스
     dict 기반으로 동작하며, Params 인터페이스를 구현합니다.
     """
     def __init__(self, data: dict):

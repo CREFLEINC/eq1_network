@@ -1,13 +1,13 @@
 import pytest
 import time
 import threading
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 
 @pytest.fixture
 def mqtt_config():
     """EMQX 브로커 연결을 위한 설정"""
-    return MQTTConfig(
+    return BrokerConfig(
         broker_address="broker.emqx.io",
         port=1883,
         mode="non-blocking",
@@ -18,7 +18,8 @@ def mqtt_config():
 @pytest.fixture
 def protocol(mqtt_config):
     """실제 MQTT 프로토콜 인스턴스"""
-    protocol = MQTTProtocol(mqtt_config)
+    client_config = ClientConfig()
+    protocol = MQTTProtocol(mqtt_config, client_config)
     yield protocol
     protocol.disconnect()
 

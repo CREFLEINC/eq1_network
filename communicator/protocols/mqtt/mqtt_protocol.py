@@ -131,7 +131,7 @@ class MQTTProtocol(PubSubProtocol):
             else:
                 logging.info(f"[{self.client_id}] 새로운 세션으로 연결되었습니다.")
 
-        def handle_connect_fail(self, rc: int):
+        def handle_connect_failure(self, rc: int):
             """
             연결 실패 시 핸들링
 

@@ -7,7 +7,7 @@ MQTT 프로토콜 실제 사용 예제
 
 import time
 import threading
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig
 
 def message_handler(topic: str, payload: bytes):
     """메시지 수신 콜백"""
@@ -16,7 +16,7 @@ def message_handler(topic: str, payload: bytes):
 def run_mqtt_example():
     """MQTT 프로토콜 예제 실행"""
     # 로컬 MQTT 브로커 사용 (mosquitto)
-    config = MQTTConfig(
+    config = BrokerConfig(
         broker_address="localhost",
         port=1883,
         mode="non-blocking"

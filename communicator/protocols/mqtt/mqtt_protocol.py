@@ -187,14 +187,13 @@ class MQTTProtocol(PubSubProtocol):
                         except Exception as e:
                             logging.error(f"[{self.name}] - [{self.client_id}] {topic} 콜백 실행 중 오류 발생: {e}")
 
-        def handler_flush_publish_queue(self, publish_func: Callable[[str, str, int, bool], bool]):
+        def handler_flush_publish_queue(self, publish_func):
             """
             재연결 후 큐에 남아 있던 메시지를 다시 발행
             이 메서드는 연결이 복구된 후, 큐에 남아 있는 메시지를 발행합니다.
 
             Args:
-                client_id (str): MQTT 클라이언트 ID
-                publish_function (Callable): 메시지를 발행하는 함수
+                publish_func: MQTT 클라이언트의 publish 메서드
 
             Returns:
                 None
@@ -203,8 +202,8 @@ class MQTTProtocol(PubSubProtocol):
             while not self.parent._publish_queue.empty():
                 try:
                     topic, message, qos, retain = self.parent._publish_queue.get_nowait()
-                    success = publish_func(topic=topic, message=message, qos=qos, retain=retain)
-                    if not success:
+                    result = publish_func(topic, message, qos, retain)
+                    if result.rc != 0:
                         logging.error(f"[{self.name}] - [{self.client_id}] 재발행 실패 - {topic}")
                 except Exception as e:
                     logging.error(f"[{self.name}] - [{self.client_id}] 큐 발행 중 예외 발생: {e}")
@@ -246,10 +245,10 @@ class MQTTProtocol(PubSubProtocol):
             # 데이터 유실 방지 - 재연결 후 큐에 남아 있던 메시지를 다시 발행
             if not self._publish_queue.empty():
                 logging.info("재연결 후 큐에 남아 있던 메시지를 발행합니다.")
-            userdata.handler_flush_publish_queue(publish_func=client.publish)
+            userdata.handler_flush_publish_queue(client.publish)
 
         else:
-            userdata.handle_connect_fail(rc=rc)
+            userdata.handle_connect_failure(rc=rc)
 
 
     def _on_disconnect(self, client, userdata, rc):

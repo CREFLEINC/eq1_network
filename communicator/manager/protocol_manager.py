@@ -1,5 +1,74 @@
-from typing import Dict, Type
-from communicator.interfaces.protocol import ReqResProtocol, PubSubProtocol
+from typing import Dict, Type, List, Union
+from communicator.interfaces.protocol import ReqResProtocol, PubSubProtocol, BaseProtocol
+
+
+class ProtocolManager:
+    """
+    모든 프로토콜을 통합 관리하는 매니저
+    """
+    
+    def __init__(self):
+        self._reqres_protocols: Dict[str, ReqResProtocol] = {}
+        self._pubsub_protocols: Dict[str, PubSubProtocol] = {}
+    
+    def register_protocol(self, name: str, protocol: BaseProtocol) -> None:
+        """
+        프로토콜 인스턴스를 등록합니다.
+        
+        Args:
+            name: 프로토콜 이름
+            protocol: 프로토콜 인스턴스
+        """
+        name = name.lower()
+        if isinstance(protocol, PubSubProtocol):
+            self._pubsub_protocols[name] = protocol
+        elif isinstance(protocol, ReqResProtocol):
+            self._reqres_protocols[name] = protocol
+        else:
+            raise ValueError(f"지원하지 않는 프로토콜 타입: {type(protocol)}")
+    
+    def get_protocol(self, name: str) -> Union[ReqResProtocol, PubSubProtocol]:
+        """
+        등록된 프로토콜 인스턴스를 반환합니다.
+        
+        Args:
+            name: 프로토콜 이름
+            
+        Returns:
+            프로토콜 인스턴스
+        """
+        name = name.lower()
+        if name in self._pubsub_protocols:
+            return self._pubsub_protocols[name]
+        elif name in self._reqres_protocols:
+            return self._reqres_protocols[name]
+        else:
+            raise ValueError(f"'{name}' 프로토콜이 등록되지 않았습니다.")
+    
+    def list_available_protocols(self) -> List[str]:
+        """
+        사용 가능한 프로토콜 목록을 반환합니다.
+        
+        Returns:
+            프로토콜 이름 목록
+        """
+        all_protocols = list(self._pubsub_protocols.keys()) + list(self._reqres_protocols.keys())
+        return sorted(all_protocols)
+    
+    def remove_protocol(self, name: str) -> None:
+        """
+        등록된 프로토콜을 제거합니다.
+        
+        Args:
+            name: 제거할 프로토콜 이름
+        """
+        name = name.lower()
+        if name in self._pubsub_protocols:
+            del self._pubsub_protocols[name]
+        elif name in self._reqres_protocols:
+            del self._reqres_protocols[name]
+        else:
+            raise ValueError(f"'{name}' 프로토콜이 등록되지 않았습니다.")
 
 
 class ReqResManager:
@@ -106,4 +175,4 @@ class PubSubManager:
 
     @classmethod
     def disconnect(cls, name: str):
-                cls.get(name).disconnect()
+        cls.get(name).disconnect()

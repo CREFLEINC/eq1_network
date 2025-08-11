@@ -95,6 +95,11 @@ class MQTTProtocol(PubSubProtocol):
         
         self._publish_queue = Queue.Queue()
         self._publish_lock = threading.Lock()
+        
+        # 자동 재연결 관련
+        self._auto_reconnect = True
+        self._reconnect_thread = None
+        self._stop_reconnect = threading.Event()
 
 
     @property
@@ -269,6 +274,10 @@ class MQTTProtocol(PubSubProtocol):
                 None
             """
             userdata.handle_disconnect(rc=rc)
+            
+            # 예기치 못한 연결 해제 시 자동 재연결 시작
+            if rc != 0 and self._auto_reconnect:
+                self._start_reconnect_thread()
 
     def _on_message(self, client, userdata, msg):
         """
@@ -339,6 +348,12 @@ class MQTTProtocol(PubSubProtocol):
         Raises:
             ProtocolError: 연결 해제 중 오류 발생
         """
+        self._auto_reconnect = False
+        self._stop_reconnect.set()
+        
+        if self._reconnect_thread and self._reconnect_thread.is_alive():
+            self._reconnect_thread.join(timeout=1)
+        
         if self.broker_config.mode == "non-blocking":
             self.client.loop_stop()
         self.client.disconnect()
@@ -443,6 +458,49 @@ class MQTTProtocol(PubSubProtocol):
         except Exception as e:
             logging.error(f"Unsubscribe error: {e}")
             raise ProtocolValidationError(f"[{self.client_config.client_id}] 구독 해제 오류: {e}")
+
+    def _start_reconnect_thread(self):
+        """재연결 스레드 시작"""
+        if self._reconnect_thread and self._reconnect_thread.is_alive():
+            return
+        
+        self._stop_reconnect.clear()
+        self._reconnect_thread = threading.Thread(target=self._reconnect_loop, daemon=True)
+        self._reconnect_thread.start()
+        logging.info(f"[{self.client_config.client_id}] 자동 재연결 스레드 시작")
+
+    def _reconnect_loop(self):
+        """재연결 루프 (지수 백오프)"""
+        delay = 1
+        max_delay = 60
+        
+        while not self._stop_reconnect.is_set() and self._auto_reconnect:
+            if self._is_connected:
+                break
+                
+            try:
+                logging.info(f"[{self.client_config.client_id}] 재연결 시도... (대기시간: {delay}초)")
+                self.client.reconnect()
+                
+                if self.broker_config.mode == "non-blocking":
+                    self.client.loop_start()
+                    
+                # 연결 확인
+                for _ in range(10):
+                    if self._is_connected:
+                        logging.info(f"[{self.client_config.client_id}] 재연결 성공")
+                        return
+                    time.sleep(0.5)
+                    
+            except Exception as e:
+                logging.warning(f"[{self.client_config.client_id}] 재연결 실패: {e}")
+            
+            # 지수 백오프
+            if self._stop_reconnect.wait(delay):
+                break
+            delay = min(delay * 2, max_delay)
+        
+        logging.info(f"[{self.client_config.client_id}] 재연결 스레드 종료")
 
 if __name__ == "__main__":
     import logging

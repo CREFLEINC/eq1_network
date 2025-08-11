@@ -42,7 +42,7 @@ from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig
 # 인증 설정
 broker_config = BrokerConfig(
     broker_address="broker.example.com",
-    port=1883,
+    port=1883,                  # 기본값: 1883
     username="mqtt_username",   # 기본값: None
     password="mqtt_password",   # 기본값: None
     keepalive=60                # 기본값: 60
@@ -94,6 +94,7 @@ mqtt.connect()
 - QoS 0, 1, 2 지원 메시지 발행 (기본값: QoS 0)
 - 재연결 시 구독 자동 복구
 - 연결 상태 확인 기능 (is_connected 프로퍼티)
+- 의도치 않은 연결 실패 시, 자동 재연결
 
 #### 고급 기능
 - **메시지 큐잉**: 연결 단절 시 메시지를 큐에 저장하고 재연결 시 자동 발송
@@ -152,7 +153,8 @@ class MQTTProtocol(PubSubProtocol):
 
 ## 4. 고급 동작 방식
 ### 자동 재연결 및 구독 복구
-- 연결 끊김 감지 → 수동 재연결 가능
+- 예기치 못한 연결 끊김 감지 → 자동 재연결 시작
+- 지수 백오프 재시도 (1초 → 2초 → 4초 → ... 최대 60초)
 - 재연결 성공 → 기존 구독 정보 자동 복구
 - 발행 실패 시 → False 반환
 
@@ -288,6 +290,7 @@ pytest -m "integration" -v
 - Keep-alive 메커니즘
 - Username/Password 인증
 - Retained Messages
+- **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)
 - 재연결 시 구독 복구
 - **연결 실패 시 메시지 큐잉** (데이터 유실 방지)
 - **다중 콜백 지원** (토픽당 여러 콜백 등록 가능)
@@ -299,7 +302,6 @@ pytest -m "integration" -v
 - TLS/SSL 보안 연결
 - Will Message (Last Will and Testament)
 - MQTT v5.0 기능들 (Shared Subscriptions, Message Expiry 등)
-- 자동 재연결 (수동 재연결만 지원)
 - 비동기 콜백 (async/await 패턴)
 
 ## 8. 참고 자료

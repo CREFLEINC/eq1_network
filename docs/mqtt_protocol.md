@@ -41,11 +41,11 @@ from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig
 
 # 인증 설정
 broker_config = BrokerConfig(
-    broker_address="test.mosquitto.org",
+    broker_address="broker.example.com",
     port=1883,
-    username="mqtt_username",
-    password="mqtt_password",
-    keepalive=60
+    username="mqtt_username",   # 기본값: None
+    password="mqtt_password",   # 기본값: None
+    keepalive=60                # 기본값: 60
 )
 client_config = ClientConfig()
 
@@ -68,9 +68,9 @@ client_config = ClientConfig()  # 자동 생성된 client_id 사용
 
 # 커스텀 클라이언트 ID 설정
 client_config = ClientConfig(
-    client_id="my-device-001",
+    client_id="Device-A",
     clean_session=True,  # 새로운 세션으로 시작
-    userdata={"device_type": "sensor", "location": "room1"}
+    userdata={"device_type": "Sensor", "location": "Space-A"}
 )
 
 mqtt = MQTTProtocol(broker_config, client_config)
@@ -85,8 +85,7 @@ mqtt.connect()
     - 메인 스레드에서 자유롭게 작업 가능
 - **blocking**
     - `loop_forever()` 기반
-    - 별도 스레드에서 통신 루프 실행
-    - 메인 스레드는 블록되지 않음
+    - 메인 스레드 블록됨
 
 ### 주요 기능
 #### 기본 MQTT 기능

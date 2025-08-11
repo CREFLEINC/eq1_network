@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
-from communicator.manager.protocol_manager import ReqResManager, PubSubManager
+from communicator.manager.protocol_manager import ReqResManager, PubSubManager, ProtocolManager
+from communicator.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 
 @pytest.fixture
@@ -173,3 +174,87 @@ def test_pubsub_disconnect(mock_pubsub_plugin):
     PubSubManager.load("mqtt", mock_pubsub_plugin)
     PubSubManager.disconnect("mqtt")
     mock_pubsub_plugin.disconnect.assert_called_once()
+
+
+# ProtocolManager 테스트 추가
+@pytest.fixture
+def mock_pubsub_protocol():
+    mock = MagicMock(spec=PubSubProtocol)
+    return mock
+
+
+@pytest.fixture
+def mock_reqres_protocol():
+    mock = MagicMock(spec=ReqResProtocol)
+    return mock
+
+
+@pytest.mark.unit
+def test_protocol_manager_register_pubsub(mock_pubsub_protocol):
+    """PubSub 프로토콜 등록 테스트"""
+    manager = ProtocolManager()
+    manager.register_protocol("mqtt", mock_pubsub_protocol)
+    assert manager.get_protocol("mqtt") is mock_pubsub_protocol
+
+
+@pytest.mark.unit
+def test_protocol_manager_register_reqres(mock_reqres_protocol):
+    """ReqRes 프로토콜 등록 테스트"""
+    manager = ProtocolManager()
+    manager.register_protocol("tcp", mock_reqres_protocol)
+    assert manager.get_protocol("tcp") is mock_reqres_protocol
+
+
+@pytest.mark.unit
+def test_protocol_manager_register_invalid_protocol():
+    """잘못된 프로토콜 타입 등록 시 예외 발생 테스트"""
+    manager = ProtocolManager()
+    invalid_protocol = MagicMock()
+    with pytest.raises(ValueError, match="지원하지 않는 프로토콜 타입"):
+        manager.register_protocol("invalid", invalid_protocol)
+
+
+@pytest.mark.unit
+def test_protocol_manager_get_missing():
+    """등록되지 않은 프로토콜 조회 시 예외 발생 테스트"""
+    manager = ProtocolManager()
+    with pytest.raises(ValueError, match="'missing' 프로토콜이 등록되지 않았습니다"):
+        manager.get_protocol("missing")
+
+
+@pytest.mark.unit
+def test_protocol_manager_list_protocols(mock_pubsub_protocol, mock_reqres_protocol):
+    """프로토콜 목록 조회 테스트"""
+    manager = ProtocolManager()
+    manager.register_protocol("mqtt", mock_pubsub_protocol)
+    manager.register_protocol("tcp", mock_reqres_protocol)
+    protocols = manager.list_available_protocols()
+    assert sorted(protocols) == ["mqtt", "tcp"]
+
+
+@pytest.mark.unit
+def test_protocol_manager_remove_pubsub(mock_pubsub_protocol):
+    """PubSub 프로토콜 제거 테스트"""
+    manager = ProtocolManager()
+    manager.register_protocol("mqtt", mock_pubsub_protocol)
+    manager.remove_protocol("mqtt")
+    with pytest.raises(ValueError):
+        manager.get_protocol("mqtt")
+
+
+@pytest.mark.unit
+def test_protocol_manager_remove_reqres(mock_reqres_protocol):
+    """ReqRes 프로토콜 제거 테스트"""
+    manager = ProtocolManager()
+    manager.register_protocol("tcp", mock_reqres_protocol)
+    manager.remove_protocol("tcp")
+    with pytest.raises(ValueError):
+        manager.get_protocol("tcp")
+
+
+@pytest.mark.unit
+def test_protocol_manager_remove_missing():
+    """등록되지 않은 프로토콜 제거 시 예외 발생 테스트"""
+    manager = ProtocolManager()
+    with pytest.raises(ValueError, match="'missing' 프로토콜이 등록되지 않았습니다"):
+        manager.remove_protocol("missing")

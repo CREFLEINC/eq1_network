@@ -28,19 +28,20 @@ pip install -r requirements.txt
 
 ### 기본 MQTT 사용법
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 1. 설정 객체 생성
-config = MQTTConfig(
+broker_config = BrokerConfig(
     broker_address="broker.example.com",
     port=1883,
-    keepalive=60    # 별도의 설정 가능
+    keepalive=60
 )
+client_config = ClientConfig()
 
 # 2. MQTT 프로토콜 인스턴스 생성
-mqtt = MQTTProtocol(config)
+mqtt = MQTTProtocol(broker_config, client_config)
 
-# 3. 연결
+# 3. 연결 (명시적 호출 필요)
 mqtt.connect()
 
 # 4. 메시지 콜백 정의
@@ -59,18 +60,19 @@ mqtt.disconnect()
 
 ### 인증 연결
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 인증 설정
-config = MQTTConfig(
+broker_config = BrokerConfig(
     broker_address="broker.example.com",
     port=1883,
     username="mqtt_username",
     password="mqtt_password",
     keepalive=60
 )
+client_config = ClientConfig()
 
-mqtt = MQTTProtocol(config)
+mqtt = MQTTProtocol(broker_config, client_config)
 mqtt.connect()
 
 # Retained Message 발행
@@ -96,14 +98,17 @@ mqtt.disconnect()
     - 재연결 시 구독 자동 복구 및 메시지 큐 처리
     - 예외 처리 및 로깅
     - 스레드 안전한 API
-
-### 계획된 기능
-- **플러그인 기반 확장:**
-    - TCP, Serial, Modbus 등 새로운 프로토콜 추가 예정
+    - **명시적 연결 필요**: connect() 메서드를 반드시 호출해야 함
 - **추상화된 인터페이스:**
     - `ReqRes(요청/응답), PubSub(발행/구독)` 인터페이스
+
+### 🔄 미구현 기능
+- **플러그인 기반 확장:**
+    - TCP, Serial, Modbus 등 새로운 프로토콜 추가 예정
 - **보안 강화:**
     - TLS/SSL 지원, Will Message 등
+- **MQTT v5.0 기능들:**
+    - Shared Subscriptions, Message Expiry 등
 
 ## 프로젝트 구조
 ```
@@ -122,7 +127,7 @@ communicator/
 
 ## 시스템 요구사항
 - Python 3.10.18 (권장)
-- OS: macOS Sonoma
+- OS: Windows
 - 설치 전 가상환경(venv) 사용을 권장합니다.
 
 ## 의존성
@@ -148,7 +153,7 @@ pip install -r requirements.txt
     - `PubSubProtocol` 인터페이스 구현
     - paho-mqtt 라이브러리 기반
     - 기본 MQTT 기능 지원
-- **MQTTConfig**
+- **BrokerConfig & ClientConfig**
     - MQTT 연결 설정을 위한 데이터 클래스
     - 브로커 주소, 포트, 인증 정보 등
 

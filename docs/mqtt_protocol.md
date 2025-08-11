@@ -18,7 +18,7 @@ client_config = ClientConfig()
 # 2. 프로토콜 객체 생성
 mqtt = MQTTProtocol(broker_config, client_config)
 
-# 3. 브로커 연결
+# 3. 브로커 연결 (명시적 호출 필요)
 mqtt.connect()
 
 # 4. 메시지 콜백 함수 정의
@@ -42,10 +42,10 @@ from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig
 # 인증 설정
 broker_config = BrokerConfig(
     broker_address="broker.example.com",
-    port=1883,                  # 기본값: 1883
-    username="mqtt_username",   # 기본값: None
-    password="mqtt_password",   # 기본값: None
-    keepalive=60                # 기본값: 60
+    port=1883,                  
+    username="mqtt_username",  
+    password="mqtt_password",  
+    keepalive=60             
 )
 client_config = ClientConfig()
 
@@ -298,7 +298,7 @@ pytest -m "integration" -v
 - **스레드 안전성** (내부 동기화 및 락 처리)
 - 예외 처리 및 로깅
 
-### 🔄 미지원
+### 🔄 미구현 기능
 - TLS/SSL 보안 연결
 - Will Message (Last Will and Testament)
 - MQTT v5.0 기능들 (Shared Subscriptions, Message Expiry 등)

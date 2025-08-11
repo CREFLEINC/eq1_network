@@ -940,13 +940,14 @@ def test_on_connect_partial_subscription_recovery(protocol_factory, mode):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_on_disconnect_callback(protocol_factory, mode):
+def test_on_disconnect_callback(protocol_factory, mode, monkeypatch):
     """
     _on_disconnect 콜백 테스트
     
     Args:
         protocol_factory: MQTTProtocol 인스턴스를 생성하는 팩토리 함수
         mode: "non-blocking" 또는 "blocking" 모드
+        monkeypatch: pytest의 monkeypatch fixture
     
     Returns:
         None
@@ -956,8 +957,12 @@ def test_on_disconnect_callback(protocol_factory, mode):
     """
     protocol, client = protocol_factory(mode)
     protocol._is_connected = True
+    mock_start_reconnect = MagicMock()
+    monkeypatch.setattr(protocol, "_start_reconnect_thread", mock_start_reconnect)
+    
     protocol._on_disconnect(client, protocol.handler, 1)
     assert protocol._is_connected is False
+    mock_start_reconnect.assert_called_once()
 
 
 @pytest.mark.unit
@@ -1189,3 +1194,218 @@ def test_handler_flush_publish_queue_failure(protocol_factory, mode):
     def mock_publish_func(topic, message, qos, retain):
         return False
     protocol.handler.handler_flush_publish_queue(mock_publish_func)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
+def test_auto_reconnect_on_unexpected_disconnect(protocol_factory, mode, monkeypatch):
+    """
+    예기치 못한 연결 해제 시 자동 재연결 시작 테스트
+    
+    Args:
+        protocol_factory: MQTTProtocol 인스턴스를 생성하는 팩토리 함수
+        mode: "non-blocking" 또는 "blocking" 모드
+        monkeypatch: pytest의 monkeypatch fixture
+    
+    Returns:
+        None
+    
+    Asserts:
+        None: 예기치 못한 연결 해제 시 재연결 스레드가 시작되어야 합니다.
+    """
+    protocol, client = protocol_factory(mode)
+    mock_start_reconnect = MagicMock()
+    monkeypatch.setattr(protocol, "_start_reconnect_thread", mock_start_reconnect)
+    
+    # 예기치 못한 연결 해제 (rc != 0)
+    protocol._on_disconnect(client, protocol.handler, 1)
+    mock_start_reconnect.assert_called_once()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
+def test_no_auto_reconnect_on_normal_disconnect(protocol_factory, mode, monkeypatch):
+    """
+    정상 연결 해제 시 자동 재연결 시작하지 않음 테스트
+    
+    Args:
+        protocol_factory: MQTTProtocol 인스턴스를 생성하는 팩토리 함수
+        mode: "non-blocking" 또는 "blocking" 모드
+        monkeypatch: pytest의 monkeypatch fixture
+    
+    Returns:
+        None
+    
+    Asserts:
+        None: 정상 연결 해제 시 재연결 스레드가 시작되지 않아야 합니다.
+    """
+    protocol, client = protocol_factory(mode)
+    mock_start_reconnect = MagicMock()
+    monkeypatch.setattr(protocol, "_start_reconnect_thread", mock_start_reconnect)
+    
+    # 정상 연결 해제 (rc == 0)
+    protocol._on_disconnect(client, protocol.handler, 0)
+    mock_start_reconnect.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
+def test_disconnect_stops_auto_reconnect(protocol_factory, mode, monkeypatch):
+    """
+    disconnect 호출 시 자동 재연결 중단 테스트
+    
+    Args:
+        protocol_factory: MQTTProtocol 인스턴스를 생성하는 팩토리 함수
+        mode: "non-blocking" 또는 "blocking" 모드
+        monkeypatch: pytest의 monkeypatch fixture
+    
+    Returns:
+        None
+    
+    Asserts:
+        None: disconnect 호출 시 자동 재연결이 중단되어야 합니다.
+    """
+    protocol, client = protocol_factory(mode)
+    mock_thread = MagicMock()
+    mock_thread.is_alive.return_value = True
+    protocol._reconnect_thread = mock_thread
+    monkeypatch.setattr("time.sleep", lambda *_: None)
+    
+    protocol.disconnect()
+    
+    assert protocol._auto_reconnect is False
+    protocol._stop_reconnect.set.assert_called_once()
+    mock_thread.join.assert_called_once_with(timeout=1)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
+def test_start_reconnect_thread_already_running(protocol_factory, mode):
+    """
+    재연결 스레드가 이미 실행 중일 때 중복 시작 방지 테스트
+    
+    Args:
+        protocol_factory: MQTTProtocol 인스턴스를 생성하는 팩토리 함수
+        mode: "non-blocking" 또는 "blocking" 모드
+    
+    Returns:
+        None
+    
+    Asserts:
+        None: 재연결 스레드가 이미 실행 중일 때 새로운 스레드가 시작되지 않아야 합니다.
+    """
+    protocol, _ = protocol_factory(mode)
+    mock_thread = MagicMock()
+    mock_thread.is_alive.return_value = True
+    protocol._reconnect_thread = mock_thread
+    
+    protocol._start_reconnect_thread()
+    
+    # 기존 스레드가 그대로 유지되어야 함
+    assert protocol._reconnect_thread is mock_thread
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
+def test_reconnect_loop_success(protocol_factory, mode, monkeypatch):
+    """
+    재연결 루프 성공 테스트
+    
+    Args:
+        protocol_factory: MQTTProtocol 인스턴스를 생성하는 팩토리 함수
+        mode: "non-blocking" 또는 "blocking" 모드
+        monkeypatch: pytest의 monkeypatch fixture
+    
+    Returns:
+        None
+    
+    Asserts:
+        None: 재연결이 성공해야 하며, 루프가 종료되어야 합니다.
+    """
+    protocol, client = protocol_factory(mode)
+    monkeypatch.setattr("time.sleep", lambda *_: None)
+    
+    # 재연결 성공 시뮬레이션
+    def mock_reconnect():
+        protocol._is_connected = True
+    client.reconnect.side_effect = mock_reconnect
+    
+    protocol._reconnect_loop()
+    
+    client.reconnect.assert_called_once()
+    if mode == "non-blocking":
+        client.loop_start.assert_called_once()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
+def test_reconnect_loop_exponential_backoff(protocol_factory, mode, monkeypatch):
+    """
+    재연결 루프 지수 백오프 테스트
+    
+    Args:
+        protocol_factory: MQTTProtocol 인스턴스를 생성하는 팥토리 함수
+        mode: "non-blocking" 또는 "blocking" 모드
+        monkeypatch: pytest의 monkeypatch fixture
+    
+    Returns:
+        None
+    
+    Asserts:
+        None: 재연결 실패 시 지수 백오프가 적용되어야 합니다.
+    """
+    protocol, client = protocol_factory(mode)
+    wait_calls = []
+    
+    def mock_wait(delay):
+        wait_calls.append(delay)
+        if len(wait_calls) >= 3:  # 3번 시도 후 중단
+            protocol._stop_reconnect.set()
+        return False
+    
+    protocol._stop_reconnect.wait = mock_wait
+    client.reconnect.side_effect = Exception("연결 실패")
+    monkeypatch.setattr("time.sleep", lambda *_: None)
+    
+    protocol._reconnect_loop()
+    
+    # 지수 백오프 확인: 1, 2, 4초
+    assert wait_calls == [1, 2, 4]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
+def test_reconnect_loop_max_delay(protocol_factory, mode, monkeypatch):
+    """
+    재연결 루프 최대 지연 시간 테스트
+    
+    Args:
+        protocol_factory: MQTTProtocol 인스턴스를 생성하는 팩토리 함수
+        mode: "non-blocking" 또는 "blocking" 모드
+        monkeypatch: pytest의 monkeypatch fixture
+    
+    Returns:
+        None
+    
+    Asserts:
+        None: 재연결 지연 시간이 최대값을 초과하지 않아야 합니다.
+    """
+    protocol, client = protocol_factory(mode)
+    wait_calls = []
+    
+    def mock_wait(delay):
+        wait_calls.append(delay)
+        if len(wait_calls) >= 8:  # 8번 시도 후 중단
+            protocol._stop_reconnect.set()
+        return False
+    
+    protocol._stop_reconnect.wait = mock_wait
+    client.reconnect.side_effect = Exception("연결 실패")
+    monkeypatch.setattr("time.sleep", lambda *_: None)
+    
+    protocol._reconnect_loop()
+    
+    # 최대 60초를 초과하지 않아야 함
+    assert all(delay <= 60 for delay in wait_calls)
+    # 마지막 몇 개는 60초여야 함
+    assert wait_calls[-1] == 60

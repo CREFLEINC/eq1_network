@@ -92,6 +92,8 @@ mqtt.disconnect()
     - Retained Messages
     - 재연결 시 구독 자동 복구
 - **신뢰성:**
+    - **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)
+    - 재연결 시 구독 자동 복구 및 메시지 큐 처리
     - 예외 처리 및 로깅
     - 스레드 안전한 API
 
@@ -227,7 +229,7 @@ pytest tests/units/test_mqtt_protocol.py -v
 ### 단기 로드맵
 - TLS/SSL 보안 연결 지원
 - Will Message 기능 추가
-- 자동 재연결 기능 강화
+- 자동 재연결 기능 추가 개선 (재시도 횟수 제한, 상태 콜백 등)
 
 ### 장기 로드맵
 - TCP, Serial, Modbus 프로토콜 추가

@@ -70,7 +70,7 @@ flowchart TD
 | **F-02** | **ReqRes 인터페이스** | - `ReqResProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 대상과의 연결 수립 및 종료<br/>  - `send(data: bytes)`: 데이터 동기 전송<br/>  - `receive() -> bytes`: 응답 데이터 수신 (Blocking)<br/>  - `is_connected() -> bool`: 연결 상태 반환 |
 | **F-03** | **PubSub 인터페이스** | - `PubSubProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 브로커와의 연결 수립 및 종료<br/>  - `publish(topic: str, payload: bytes)`: 메시지 발행<br/>  - `subscribe(topic: str, callback: Callable)`: 토픽 구독 및 콜백 등록<br/>  - `unsubscribe(topic: str)`: 토픽 구독 취소 |
 | **F-04** | **PacketStructure** | - 모든 통신 데이터는 `PacketStructure` 추상 클래스를 상속하여 구현.<br/>- `build() -> bytes`: 패킷 객체를 전송 가능한 `bytes`로 직렬화.<br/>- `parse(bytes) -> PacketStructure`: 수신된 `bytes`를 패킷 객체로 역직렬화.<br/>- `frame_type`: 패킷의 종류나 명령을 식별하는 속성을 제공.<br/>- `payload`: 실제 데이터가 담기는 `bytes` 형식의 속성을 제공. |
-| **F-05** | **RFC 준수 MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리로 구현.<br/>- **RFC 준수 기능**: Username/Password 인증, TLS/SSL 보안, Will Message, Retained Messages<br/>- 연결 끊김 시 자동 재연결 및 구독 복구<br/>- QoS (0, 1, 2) 레벨 완전 지원<br/>- 상세한 RFC 준수 에러 처리 (rc 1-5) |
+| **F-05** | **RFC 준수 MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리로 구현.<br/>- **RFC 준수 기능**: Username/Password 인증, TLS/SSL 보안, Will Message, Retained Messages<br/>- **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)<br/>- 재연결 시 구독 자동 복구 및 메시지 큐 처리<br/>- QoS (0, 1, 2) 레벨 완전 지원<br/>- 상세한 RFC 준수 에러 처리 (rc 1-5) |
 | **F-06** | **Thread-safe 보장** | - publish, subscribe, unsubscribe, 큐 처리 등 모든 API가 thread-safe해야 함 |
 | **F-07** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
 
@@ -107,7 +107,8 @@ communicator/
     - TLS/SSL 암호화 연결
     - Will Message (Last Will and Testament)
     - Retained Messages
-    - 자동 재연결 및 구독 복구
+    - **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)
+    - 재연결 시 구독 복구 및 메시지 큐 처리
     - Thread-safe 설계
 - **에러 처리**
     - RFC 준수 상세 연결 실패 코드 처리

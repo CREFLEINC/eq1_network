@@ -1,6 +1,7 @@
 import pytest
 from typing import Optional, Tuple
-from communicator.interfaces.protocol import BaseProtocol, ReqResProtocol, PubSubProtocol
+from app.interfaces.protocol import BaseProtocol, ReqResProtocol, PubSubProtocol
+
 
 class MockReqResProtocol(ReqResProtocol):
     """
@@ -62,7 +63,9 @@ class MockPubSubProtocol(PubSubProtocol):
         """연결 상태를 False로 설정"""
         self.connected = False
 
-    def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
+    def publish(
+        self, topic: str, message: bytes, qos: int = 0, retain: bool = False
+    ) -> bool:
         """토픽, 메시지, QoS를 튜플로 저장"""
         if not isinstance(topic, str) or not isinstance(message, bytes):
             raise TypeError("Invalid publish parameters")
@@ -192,28 +195,40 @@ def test_pubsub_subscribe_with_non_callable():
 class ConcreteBaseProtocol(BaseProtocol):
     def connect(self) -> bool:
         return super().connect()
+
     def disconnect(self):
         return super().disconnect()
+
 
 class ConcreteReqResProtocol(ReqResProtocol):
     def connect(self) -> bool:
         return super().connect()
+
     def disconnect(self):
         return super().disconnect()
+
     def send(self, data: bytes) -> bool:
         return super().send(data)
+
     def read(self) -> Tuple[bool, Optional[bytes]]:
         return super().read()
+
 
 class ConcretePubSubProtocol(PubSubProtocol):
     def connect(self) -> bool:
         return super().connect()
+
     def disconnect(self):
         return super().disconnect()
-    def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
+
+    def publish(
+        self, topic: str, message: bytes, qos: int = 0, retain: bool = False
+    ) -> bool:
         return super().publish(topic, message, qos, retain)
+
     def subscribe(self, topic: str, callback):
         return super().subscribe(topic, callback)
+
 
 @pytest.mark.unit
 def test_base_protocol_pass_statements():
@@ -222,12 +237,14 @@ def test_base_protocol_pass_statements():
     assert proto.connect() is None
     assert proto.disconnect() is None
 
+
 @pytest.mark.unit
 def test_reqres_protocol_pass_statements():
     """ReqResProtocol의 pass 문들을 커버하는 테스트"""
     proto = ConcreteReqResProtocol()
     assert proto.send(b"test") is None
     assert proto.read() is None
+
 
 @pytest.mark.unit
 def test_pubsub_protocol_pass_statements():

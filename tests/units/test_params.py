@@ -1,7 +1,7 @@
 import pytest
 from pytest import approx
 
-from communicator.common.params import Params
+from app.common.params import Params
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def sample_config():
         "list_value": "1,2,3",
         "str_value": "hello",
         "mixed_list": "1,TRUE,3.5,FALSE,text",
-        "int_direct": 20
+        "int_direct": 20,
     }
 
 

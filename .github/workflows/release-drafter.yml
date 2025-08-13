@@ -2,8 +2,7 @@ name: Release Drafter
 
 on:
   push:
-    branches:
-      - dev
+    branches: [dev]
     issues:
       types: [opened, edited]
 
@@ -16,9 +15,9 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v5
+      - uses: release-drafter/release-drafter@v6
         with:
-          config-name: release.yml
+          config-name: release-drafter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -29,8 +28,9 @@ jobs:
     steps:
       - uses: github/issue-labeler@v3.4
         with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/labeler.yml
-          include-title: 1
-          sync-labels: 1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          include-title: true
+          include-body: true
+          sync-labels: true
+          enable-versioned-regex: true

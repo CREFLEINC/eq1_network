@@ -1,6 +1,6 @@
 from typing import List
-from communicator.common.params import Params
-from communicator.interfaces.protocol import ReqResProtocol, PubSubProtocol
+from app.common.params import Params
+from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
 
 
 def valid_params(params: Params, need_params: List[str]):
@@ -24,20 +24,25 @@ def valid_params(params: Params, need_params: List[str]):
     return True
 
 
-def create_mqtt_protocol(broker_address: str, port: int, timeout: int = 60) -> PubSubProtocol:
+def create_mqtt_protocol(
+    broker_address: str, port: int, keepalive: int = 60
+) -> PubSubProtocol:
     """
     MQTT 프로토콜 인스턴스를 생성합니다.
 
     Args:
         broker_address (str): MQTT 브로커 주소
         port (int): 포트 번호
-        timeout (int, optional): 연결 타임아웃 (기본값: 60)
+        keepalive (int, optional): 연결 유지 시간 (기본값: 60)
 
     Returns:
         PubSubProtocol: MQTT 프로토콜 객체
     """
-    from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol
-    return MQTTProtocol(broker_address, port, timeout)
+    from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+
+    broker_config = BrokerConfig(broker_address=broker_address, port=port, keepalive=keepalive)
+    client_config = ClientConfig()
+    return MQTTProtocol(broker_config, client_config)
 
 
 def create_protocol(params: Params) -> PubSubProtocol:
@@ -58,14 +63,14 @@ def create_protocol(params: Params) -> PubSubProtocol:
     if not params.include("method"):
         raise ValueError("Not found [method] value in Network Params")
 
-    method = params['method']
+    method = params["method"]
     if method == "mqtt":
         required = ["broker_address", "port"]
         valid_params(params, required)
         return create_mqtt_protocol(
             broker_address=params["broker_address"],
             port=params["port"],
-            timeout=params.get("timeout", 60)
+            keepalive=params.get("keepalive", 60),
         )
 
     else:

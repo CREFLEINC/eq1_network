@@ -7,6 +7,7 @@ class Params:
     - 미존재 키나 None 입력에 대한 안전 처리
     - dict-like 및 attribute-style 접근 동시 지원
     """
+
     def __init__(self, configure):
         """
         파라미터 딕셔너리를 받아 내부에 저장합니다.
@@ -44,7 +45,7 @@ class Params:
         if v.upper() == "FALSE":
             return False
 
-        if ',' in v:
+        if "," in v:
             return [self.cast_data_type(_v) for _v in v.split(",")]
 
         return v

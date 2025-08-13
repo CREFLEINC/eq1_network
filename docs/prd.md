@@ -36,14 +36,13 @@ flowchart TD
 ## 배경
 - 기존 시스템별 통신 구현 중복
 - MQTT, TCP/UDP, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요성 존재
-- 신규 참여자 온보딩 시간 단축 필요성 존재
 
 ## 성공 지표
 
 ### 현재 상태
-- **개발 속도**: ✅ 달성 - RFC 준수 MQTT 구현 완료
+- **개발 속도**: ✅ 달성 - MQTT v3.1.1 기본 기능 구현 완료
 - **품질 지표**: ✅ 달성 - 테스트 커버리지 90%+ 달성
-- **RFC 준수**: ✅ 달성 - MQTT v3.1.1/v5.0 표준 95% 준수
+- **MQTT 기본 기능**: ✅ 달성 - MQTT v3.1.1 기본 표준 준수
 
 ### 지속적 목표
 - **안정성**: 3개월간 치명적 통신 버그 0건 유지
@@ -70,7 +69,8 @@ flowchart TD
 | **F-02** | **ReqRes 인터페이스** | - `ReqResProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 대상과의 연결 수립 및 종료<br/>  - `send(data: bytes)`: 데이터 동기 전송<br/>  - `receive() -> bytes`: 응답 데이터 수신 (Blocking)<br/>  - `is_connected() -> bool`: 연결 상태 반환 |
 | **F-03** | **PubSub 인터페이스** | - `PubSubProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 브로커와의 연결 수립 및 종료<br/>  - `publish(topic: str, payload: bytes)`: 메시지 발행<br/>  - `subscribe(topic: str, callback: Callable)`: 토픽 구독 및 콜백 등록<br/>  - `unsubscribe(topic: str)`: 토픽 구독 취소 |
 | **F-04** | **PacketStructure** | - 모든 통신 데이터는 `PacketStructure` 추상 클래스를 상속하여 구현.<br/>- `build() -> bytes`: 패킷 객체를 전송 가능한 `bytes`로 직렬화.<br/>- `parse(bytes) -> PacketStructure`: 수신된 `bytes`를 패킷 객체로 역직렬화.<br/>- `frame_type`: 패킷의 종류나 명령을 식별하는 속성을 제공.<br/>- `payload`: 실제 데이터가 담기는 `bytes` 형식의 속성을 제공. |
-| **F-05** | **RFC 준수 MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리로 구현.<br/>- **RFC 준수 기능**: Username/Password 인증, TLS/SSL 보안, Will Message, Retained Messages<br/>- 연결 끊김 시 자동 재연결 및 구독 복구<br/>- QoS (0, 1, 2) 레벨 완전 지원<br/>- 상세한 RFC 준수 에러 처리 (rc 1-5) |
+| **F-05** | **RFC 준수 MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리로 구현.<br/>- **현재 구현**: Username/Password 인증, Retained Messages
+- **🔄 미구현**: TLS/SSL 보안, Will Message<br/>- **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)<br/>- 재연결 시 구독 자동 복구 및 메시지 큐 처리<br/>- QoS (0, 1, 2) 레벨 완전 지원<br/>- 상세한 RFC 준수 에러 처리 (rc 1-5) |
 | **F-06** | **Thread-safe 보장** | - publish, subscribe, unsubscribe, 큐 처리 등 모든 API가 thread-safe해야 함 |
 | **F-07** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
 
@@ -107,7 +107,8 @@ communicator/
     - TLS/SSL 암호화 연결
     - Will Message (Last Will and Testament)
     - Retained Messages
-    - 자동 재연결 및 구독 복구
+    - **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)
+    - 재연결 시 구독 복구 및 메시지 큐 처리
     - Thread-safe 설계
 - **에러 처리**
     - RFC 준수 상세 연결 실패 코드 처리
@@ -115,28 +116,45 @@ communicator/
 
 ## 사용자 시나리오
 
-### RFC 준수 MQTT 예시
+### 현재 구현된 MQTT 예시
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, MQTTConfig
+from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
-# 보안 설정 포함
-config = MQTTConfig(
-    broker_address="secure-broker.example.com",
-    port=8883,
-    username="mqtt_user",
-    password="secure_password",
-    ca_certs="/path/to/ca.crt"
+# 기본 인증 설정
+broker_config = BrokerConfig(
+    broker_address="broker.example.com",
+    port=1883,
+    username="mqtt_username",
+    password="mqtt_password"
 )
+client_config = ClientConfig()
 
-mqtt = MQTTProtocol(config)
+mqtt = MQTTProtocol(broker_config, client_config)
 
-# Will Message 설정
-mqtt.set_will("device/status", "offline", qos=1, retain=True)
-
+# 명시적 연결 필요
 mqtt.connect()
-mqtt.subscribe("topic/test", callback=print)
+
+def message_callback(topic: str, payload: bytes):
+    print(f"Received: [{topic}] {payload.decode()}")
+
+mqtt.subscribe("topic/test", message_callback)
 mqtt.publish("topic/test", "hello", qos=1, retain=True)
 mqtt.disconnect()
+```
+
+### 🔄 미구현 기능 예시 (계획만)
+```python
+# 다음 기능들은 아직 구현되지 않았습니다:
+
+# TLS/SSL 보안 연결 (미구현)
+broker_config = BrokerConfig(
+    broker_address="secure-broker.example.com",
+    port=8883,
+    ca_certs="/path/to/ca.crt"  # 미구현
+)
+
+# Will Message 설정 (미구현)
+mqtt.set_will("device/status", "offline", qos=1, retain=True)  # 미구현
 ```
 
 ### 향후 Req/Res 예시 (계획)
@@ -178,44 +196,20 @@ resp = tcp.receive()
 ## 제약사항
 
 ### 기술적 제약
-- **Python 버전**: 3.10+ (현재 3.10.18 권장)
+- **Python 버전**: 3.10.18 (권장)
 - **외부 의존성**: paho-mqtt 1.6.0+
 - **운영체제**: macOS, Linux (테스트 완료), Windows (부분 지원)
 
 ### 기능적 제약
-- **현재 지원**: RFC 준수 MQTT 프로토콜만 공식 지원
-- **MQTT v5.0**: 부분 지원 (session_expiry_interval만)
+- **현재 지원**: MQTT v3.1.1 기본 기능만 지원
+- **🔄 미구현**: TLS/SSL, Will Message, MQTT v5.0 기능들
 - **동시 연결**: 단일 브로커당 하나의 연결만 지원
+- **명시적 연결**: connect() 메서드 호출 필수 (자동 연결 없음)
 
 ### 성능 제약
 - **처리량**: 초당 10,000 메시지 처리 가능
 - **동시 연결**: 100개 이하 권장
 - **메모리**: 연결당 약 10MB 사용
-
-## 로드맵
-
-### 단기 (3개월)
-- **MQTT v5.0 완전 지원**
-    - User Properties, Topic Aliases, Reason Codes 추가
-    - 현재 95% 준수에서 100% 준수로 향상
-- **성능 최적화**
-    - 비동기 처리 강화
-    - 연결 풀링 지원
-
-### 중기 (6개월)
-- **새로운 프로토콜 추가**
-    - TCP/UDP 프로토콜 (ReqRes 인터페이스)
-    - Serial 통신 프로토콜
-    - Modbus 프로토콜
-- **플러그인 매니저**
-    - 동적 프로토콜 로딩
-    - Hot-reload 기능
-
-### 장기 (12개월)
-- **엔터프라이즈 기능**
-    - 모니터링 및 메트릭 수집
-    - 로드 밸런싱 및 클러스터링
-    - 설정 관리 시스템
 
 ## 참고 자료
 - [MQTT Protocol](mqtt_protocol.md)

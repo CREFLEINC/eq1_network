@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  eq1-network:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eq1-network
+    environment:
+      - PYTHONPATH=/app
+      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-host.docker.internal}  # 핵심
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped

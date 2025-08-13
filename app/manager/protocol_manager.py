@@ -1,5 +1,5 @@
 from typing import Dict, Type
-from communicator.interfaces.protocol import ReqResProtocol, PubSubProtocol
+from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
 
 
 class ReqResManager:
@@ -58,6 +58,7 @@ class PubSubManager:
     """
     Pub/Sub 기반 프로토콜을 통합 관리하는 매니저
     """
+
     _plugins: Dict[str, PubSubProtocol] = {}
 
     @classmethod
@@ -106,4 +107,4 @@ class PubSubManager:
 
     @classmethod
     def disconnect(cls, name: str):
-                cls.get(name).disconnect()
+        cls.get(name).disconnect()

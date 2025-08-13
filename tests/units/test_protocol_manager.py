@@ -1,12 +1,12 @@
 import pytest
 from unittest.mock import MagicMock
-from communicator.manager.protocol_manager import ReqResManager, PubSubManager
+from app.manager.protocol_manager import ReqResManager, PubSubManager
 
 
 @pytest.fixture
 def mock_reqres_plugin():
     """
-    요청-응답 기반 플러그인(mock) 설정 fixture.
+    요청-응답 기반 플러그인(mock) 설정 fixture
     connect/send/receive 메서드에 기본 반환값을 설정합니다.
     """
     plugin = MagicMock()
@@ -85,7 +85,7 @@ def test_reqres_disconnect(mock_reqres_plugin):
 @pytest.fixture
 def mock_pubsub_plugin():
     """
-    MQTT 기반 플러그인(mock) 설정 fixture.
+    MQTT 기반 플러그인(mock) 설정 fixture
     connect/publish/subscribe/unsubscribe 메서드에 기본 반환값을 설정합니다.
     """
     plugin = MagicMock()

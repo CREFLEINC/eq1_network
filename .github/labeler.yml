@@ -1,0 +1,22 @@
+feature:
+  title:
+    - '/^\s*\[(feat|feature)\]/i'
+    - '/^\s*(feat|feature)\s*[:\-]/i'
+
+bug:
+  title:
+    - '/^\s*\[(fix|bug|hotfix)\]/i'
+    - '/^\s*(fix|bug|hotfix)\s*[:\-]/i'
+
+improvement:
+  title:
+    - '/^\s*\[(impr|improvement|perf|opt(?:imize|imization)?|usability)\]/i'
+    - '/^\s*(impr|improvement|perf|opt(?:imize|imization)?|usability)\s*[:\-]/i'
+
+refactoring:
+  - '/^\s*\[(refactor|refactoring)\]/i'
+  - '/^\s*(refactor|refactoring)\s*[:\-]/i'
+
+documentation:
+  - '/^\s*\[(docs?|documentation)\]/i'
+  - '/^\s*(docs?|documentation)\s*[:\-]/i'

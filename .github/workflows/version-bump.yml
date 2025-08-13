@@ -1,0 +1,86 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+    - name: Validate input
+      run: |
+        case "${{ github.event.inputs.version_type }}" in
+          patch|minor|major) echo "Valid version type: ${{ github.event.inputs.version_type }}" ;;
+          *) echo "Invalid version type" && exit 1 ;;
+        esac
+
+    - name: Bump version
+      id: bump
+      run: |
+        set -e
+        VERSION_TYPE="${{ github.event.inputs.version_type }}"
+        
+        # 현재 버전 가져오기
+        CURRENT_VERSION=$(python -c "import re; content=open('communicator/__init__.py').read(); print(re.search(r'__version__ = \"([^\"]+)\"', content).group(1))")
+        echo "Current version: ${CURRENT_VERSION}"
+        
+        # 버전 파싱
+        IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT_VERSION}"
+        
+        # 버전 증가
+        case "${VERSION_TYPE}" in
+          major) NEW_VERSION="$((MAJOR + 1)).0.0" ;;
+          minor) NEW_VERSION="${MAJOR}.$((MINOR + 1)).0" ;;
+          patch) NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))" ;;
+          *) echo "Invalid version type" && exit 1 ;;
+        esac
+        
+        # 파일 업데이트
+        sed -i "s/__version__ = \"[^\"]*\"/__version__ = \"${NEW_VERSION}\"/" communicator/__init__.py
+        sed -i "s/version = \"[^\"]*\"/version = \"${NEW_VERSION}\"/" pyproject.toml
+        
+        echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_OUTPUT
+        echo "Bumped version to: ${NEW_VERSION}"
+
+
+
+    - name: Commit changes
+      run: |
+        set -e
+        VERSION="${{ steps.bump.outputs.NEW_VERSION }}"
+        git add . || { echo "Git add failed"; exit 1; }
+        git commit -m "chore: bump version to ${VERSION}" || { echo "Git commit failed"; exit 1; }
+        git tag -a "v${VERSION}" -m "Release v${VERSION}" || { echo "Git tag failed"; exit 1; }
+
+    - name: Push changes
+      run: |
+        set -e
+        VERSION="${{ steps.bump.outputs.NEW_VERSION }}"
+        git push origin main || { echo "Failed to push to main"; exit 1; }
+        git push origin "v${VERSION}" || { echo "Failed to push tag"; exit 1; }
+        echo "Successfully pushed version ${VERSION}"

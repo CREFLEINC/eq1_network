@@ -1,19 +1,20 @@
 feature:
-  - '/^\s*\[(feat|feature)\]/i'
-  - '/^\s*(feat|feature)\s*[:\-]/i'
+  - '/^[\s\u200B]*[\[\uFF3B]\s*(?:feat|feature)\s*[\]\uFF3D]/iu'
+  - '/^[\s\u200B]*(?:feat|feature)\s*[:\-\uFF1A]/iu'
 
 bug:
-  - '/^\s*\[(fix|bug|hotfix)\]/i'
-  - '/^\s*(fix|bug|hotfix)\s*[:\-]/i'
+  - '/^[\s\u200B]*[\[\uFF3B]\s*(?:fix|bug|hotfix)\s*[\]\uFF3D]/iu'
+  - '/^[\s\u200B]*(?:fix|bug|hotfix)\s*[:\-\uFF1A]/iu'
+
 
 improvement:
-  - '/^\s*\[(impr|improvement|perf|opt(?:imize|imization)?|usability)\]/i'
-  - '/^\s*(impr|improvement|perf|opt(?:imize|imization)?|usability)\s*[:\-]/i'
+  - '/^[\s\u200B]*[\[\uFF3B]\s*(?:impr|improvement|perf)\s*[\]\uFF3D]/iu'
+  - '/^[\s\u200B]*(?:impr|improvement|perf)\s*[:\-\uFF1A]/iu'
 
 refactoring:
-  - '/^\s*\[(refactor|refactoring)\]/i'
-  - '/^\s*(refactor|refactoring)\s*[:\-]/i'
+  - '/^[\s\u200B]*[\[\uFF3B]\s*(?:refactor|refactoring)\s*[\]\uFF3D]/iu'
+  - '/^[\s\u200B]*(?:refactor|refactoring)\s*[:\-\uFF1A]/iu'
 
 documentation:
-  - '/^\s*\[(docs?|documentation)\]/i'
-  - '/^\s*(docs?|documentation)\s*[:\-]/i'
+  - '/^[\s\u200B]*[\[\uFF3B]\s*(?:docs?|documentation)\s*[\]\uFF3D]/iu'
+  - '/^[\s\u200B]*(?:docs?|documentation)\s*[:\-\uFF1A]/iu'

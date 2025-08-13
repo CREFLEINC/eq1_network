@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eq1-network"
-version = "1.0.0"
-description = "플러그인 기반 통신 프레임워크"
+version = "1.0.1"
+description = "Plugin-based Communication Framework"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [

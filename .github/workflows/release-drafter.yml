@@ -16,7 +16,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v6
+      - uses: release-drafter/release-drafter@v5
         with:
           config-name: release.yml
         env:
@@ -27,7 +27,7 @@ jobs:
       issues: write
     runs-on: ubuntu-latest
     steps:
-      - uses: github/issue-labeler@v3
+      - uses: github/issue-labeler@v5
         with:
           configuration-path: .github/labeler.yml
           include-title: 1

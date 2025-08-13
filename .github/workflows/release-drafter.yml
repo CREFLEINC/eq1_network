@@ -27,7 +27,7 @@ jobs:
       issues: write
     runs-on: ubuntu-latest
     steps:
-      - uses: github/issue-labeler@v5
+      - uses: github/issue-labeler@v3
         with:
           configuration-path: .github/labeler.yml
           include-title: 1

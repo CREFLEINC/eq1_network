@@ -36,28 +36,26 @@ class ReqResProtocol(BaseProtocol):
     """
 
     @abstractmethod
-    def send(self, data: bytes) -> bool:
-        """지정된 바이트 데이터를 대상 장치에 전송합니다.
+    def send(self, data: bytes) -> int:
+        """지정된 바이트 데이터를 대상 장치에 전송합니다. (부분 전송 방지)
 
         Args:
             data (bytes): 전송할 원시 바이트 데이터
 
         Returns:
-            bool: 전송 성공 시 True, 실패 시 False
+            int: 전송된 바이트 수 (성공 시 len(data))
         """
         pass
 
     @abstractmethod
-    def read(self) -> Tuple[bool, Optional[bytes]]:
-        """장치로부터 데이터를 수신합니다. 블로킹 없이 즉시 반환되어야 합니다.
+    def receive(self, buffer_size: int = 4096) -> bytes:
+        """장치로부터 데이터를 수신합니다.
 
         Args:
-            None
+            buffer_size (int): 수신 버퍼 크기 (기본값: 4096)
 
         Returns:
-            Tuple[bool, Optional[bytes]]:
-                - 첫 번째 요소: 수신 성공 여부 (bool)
-                - 두 번째 요소: 수신된 데이터 (bytes) 또는 실패 시 None
+            bytes: 수신된 데이터 (빈 바이트는 연결 종료를 의미할 수 있음)
         """
         pass
 

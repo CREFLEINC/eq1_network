@@ -45,7 +45,7 @@ def create_mqtt_protocol(
     return MQTTProtocol(broker_config, client_config)
 
 
-def create_protocol(params: Params) -> PubSubProtocol:
+def create_protocol(params: Params):
     """
     파라미터에 따라 적절한 Pub/Sub 프로토콜 인스턴스를 생성합니다.
 
@@ -55,7 +55,7 @@ def create_protocol(params: Params) -> PubSubProtocol:
             - broker_address, port 등 프로토콜별 필수 파라미터
 
     Returns:
-        PubSubProtocol: 생성된 프로토콜 객체
+        PubSubProtocol | ReqResProtocol: 생성된 프로토콜 객체
 
     Raises:
         ValueError: 지원하지 않는 프로토콜이거나 필수 값이 누락된 경우
@@ -72,6 +72,41 @@ def create_protocol(params: Params) -> PubSubProtocol:
             port=params["port"],
             keepalive=params.get("keepalive", 60),
         )
+    elif method == "tcp":
+        # TCP 요청/응답 프로토콜 (클라이언트/서버)
+        role = params.get("role", "client").lower()  # client | server
+        required = ["host", "port"]
+        valid_params(params, required)
+        async_mode = params.get("async_mode", False)
+        reconnect = params.get("reconnect", True)
+        reconnect_attempts = params.get("reconnect_attempts", 3)
+        reconnect_delay = params.get("reconnect_delay", 2.0)
+        timeout = params.get("timeout", 5.0)
 
+        from app.protocols.tcp.tcp_client import TCPClient
+        from app.protocols.tcp.tcp_server import TCPServer
+
+        if role == "client":
+            return TCPClient(
+                host=params["host"],
+                port=params["port"],
+                async_mode=async_mode,
+                reconnect=reconnect,
+                reconnect_attempts=reconnect_attempts,
+                reconnect_delay=reconnect_delay,
+                timeout=timeout,
+            )
+        elif role == "server":
+            return TCPServer(
+                host=params["host"],
+                port=params["port"],
+                async_mode=async_mode,
+                reconnect=reconnect,
+                reconnect_attempts=reconnect_attempts,
+                reconnect_delay=reconnect_delay,
+                timeout=timeout,
+            )
+        else:
+            raise ValueError(f"Unsupported TCP role: {role}")
     else:
         raise ValueError(f"Unsupported protocol method: {method}")

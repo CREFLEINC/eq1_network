@@ -55,3 +55,25 @@ class ProtocolAuthenticationError(ProtocolError):
 
     def __init__(self, message="프로토콜 패킷 인증에 실패했습니다."):
         super().__init__(message)
+
+
+# TCP 전용 예외 클래스
+class TCPConnectionError(ProtocolConnectionError):
+    """TCP 연결 관련 오류"""
+
+    def __init__(self, message="TCP 연결에 실패했습니다."):
+        super().__init__(message)
+
+
+class TCPTimeoutError(ProtocolTimeoutError):
+    """TCP 타임아웃 오류"""
+
+    def __init__(self, message="TCP 동작 시간이 초과되었습니다."):
+        super().__init__(message)
+
+
+class TCPTransmissionError(ProtocolError):
+    """TCP 전송/수신 관련 일반 오류"""
+
+    def __init__(self, message="TCP 전송/수신 중 오류가 발생했습니다."):
+        super().__init__(message)

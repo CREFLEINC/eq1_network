@@ -1,5 +1,7 @@
 enable:
-  issues: false
+  issues: true
+  pull_requests: false
+
 
 labels:
   'bug':

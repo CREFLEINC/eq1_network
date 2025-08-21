@@ -1,23 +1,21 @@
 name: Issue Labeler
+
 on:
   issues:
     types: [opened, edited, reopened]
 
-permissions:
-  issues: write
-  contents: read 
-
 jobs:
   label:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read 
+    
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: dev
-      - uses: github/issue-labeler@v3.4
+      - name: Checkout dev branch and checkout labels
+      -  id: labeler
+
+      - uses: jimschubert/labeler-action@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          configuration-path: .github/issue-labeler.yml
-          include-title: true
-          include-body: true
-          enable-versioned-regex: false
+          ref: dev

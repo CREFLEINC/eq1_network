@@ -4,24 +4,19 @@ enable:
 labels:
   'bug':
     include:
-      - '/^[\s\u200B]*[\[\uFF3B]\s*(?:fix|bug|hotfix)\s*[\]\uFF3D]/iu'
-      - '/^[\s\u200B]*(?:fix|bug|hotfix)\s*[:\-\uFF1A]/iu'
+      - '(?i)^\s*(?:\[\s*(?:fix|bug|hotfix)\s*\]|(?:fix|bug|hotfix)\s*[:\-])'
   'test':
     include:
       - '\btest\b'
   'feature':
     include:
-      - '/^\s*\[\s*feature\s*\]/i'
-      - '/^\s*(?:feat|feature)\s*[:\-]/i'
+      - '(?i)^\s*(?:\[\s*feature\s*\]|(?:feat|feature)\s*[:\-])'
   'improvement':
     include:
-      - '/^[\s\u200B]*[\[\uFF3B]\s*(?:impr|improvement|perf)\s*[\]\uFF3D]/iu'
-      - '/^[\s\u200B]*(?:impr|improvement|perf)\s*[:\-\uFF1A]/iu'
+      - '(?i)^\s*(?:\[\s*(?:impr|improvement|perf)\s*\]|(?:impr|improvement|perf)\s*[:\-])'
   'refactoring':
     include:
-      - '/^[\s\u200B]*[\[\uFF3B]\s*(?:refactor|refactoring)\s*[\]\uFF3D]/iu'
-      - '/^[\s\u200B]*(?:refactor|refactoring)\s*[:\-\uFF1A]/iu'
+      - '(?i)^\s*(?:\[\s*(?:refactor|refactoring)\s*\]|(?:refactor|refactoring)\s*[:\-])'
   'documentation':
     include:
-      - '/^[\s\u200B]*[\[\uFF3B]\s*(?:docs?|documentation)\s*[\]\uFF3D]/iu'
-      - '/^[\s\u200B]*(?:docs?|documentation)\s*[:\-\uFF1A]/iu'
+      - '(?i)^\s*(?:\[\s*(?:docs?|documentation)\s*\]|(?:docs?|documentation)\s*[:\-])'

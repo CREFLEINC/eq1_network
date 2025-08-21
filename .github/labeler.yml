@@ -5,9 +5,6 @@ labels:
   'bug':
     include:
       - '(?i)^\s*(?:\[\s*(?:fix|bug|hotfix)\s*\]|(?:fix|bug|hotfix)\s*[:\-])'
-  'test':
-    include:
-      - '\btest\b'
   'feature':
     include:
       - '(?i)^\s*(?:\[\s*feature\s*\]|(?:feat|feature)\s*[:\-])'

@@ -4,16 +4,16 @@ enable:
 labels:
   'bug':
     include:
-      - '\bfix\b'
+      - '(?i)^\s*(?:\[\s*(?:fix|bug|hotfix)\s*\]|(?:fix|bug|hotfix)\s*[:\-])'
   'feature':
     include:
-      - '\bfeat\b'
+      - '(?i)^\s*(?:\[\s*feature\s*\]|(?:feat|feature)\s*[:\-])'
   'improvement':
     include:
-      - '\bimprovement\b'
+      - '(?i)^\s*(?:\[\s*(?:impr|improvement|perf)\s*\]|(?:impr|improvement|perf)\s*[:\-])'
   'refactoring':
     include:
-      - '\brefactor\b'
+      - '(?i)^\s*(?:\[\s*(?:refactor|refactoring)\s*\]|(?:refactor|refactoring)\s*[:\-])'
   'documentation':
     include:
-      - '\bdocs\b'
+      - '(?i)^\s*(?:\[\s*(?:docs?|documentation)\s*\]|(?:docs?|documentation)\s*[:\-])'

@@ -3,6 +3,8 @@ name: Issue Labeler
 on:
   issues:
     types: [opened, edited, reopened]
+  pull_request:
+    types: [opened, edited, reopened]
 
 permissions:
   contents: read

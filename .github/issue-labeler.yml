@@ -18,3 +18,6 @@ refactoring:
 documentation:
   - '/^[\s\u200B]*[\[\uFF3B]\s*(?:docs?|documentation)\s*[\]\uFF3D]/iu'
   - '/^[\s\u200B]*(?:docs?|documentation)\s*[:\-\uFF1A]/iu'
+
+dependencies:
+  - '*'

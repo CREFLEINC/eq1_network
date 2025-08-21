@@ -1,6 +1,6 @@
 feature:
-  - '/^[\s\u200B]*[\[\uFF3B]\s*(?:feat|feature)\s*[\]\uFF3D]/iu'
-  - '/^[\s\u200B]*(?:feat|feature)\s*[:\-\uFF1A]/iu'
+  - '/^\s*\[\s*feature\s*\]/i'
+  - '/^\s*(?:feat|feature)\s*[:\-]/i'
 
 bug:
   - '/^[\s\u200B]*[\[\uFF3B]\s*(?:fix|bug|hotfix)\s*[\]\uFF3D]/iu'

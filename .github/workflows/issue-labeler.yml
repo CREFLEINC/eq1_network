@@ -20,4 +20,4 @@ jobs:
           configuration-path: .github/issue-labeler.yml
           include-title: true
           include-body: true
-
+          enable-versioned-regex: false

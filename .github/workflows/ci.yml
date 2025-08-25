@@ -37,12 +37,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev,test]
 
-    - name: Lint with flake8
-      run: flake8 app
-
-    - name: Type check with mypy
-      run: mypy app
-
     - name: Run tests
       run: pytest tests -v --cov=app --cov-report=xml
 

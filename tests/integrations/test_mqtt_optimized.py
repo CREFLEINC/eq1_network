@@ -13,9 +13,7 @@ from app.common.exception import (
 def protocol():
     """MQTTProtocol EMQX 테스트 인스턴스"""
     broker_config = BrokerConfig(
-        broker_address="broker.emqx.io",
-        port=1883,
-        mode="non-blocking"
+        broker_address="broker.emqx.io", port=1883, mode="non-blocking"
     )
     client_config = ClientConfig()
     protocol = MQTTProtocol(broker_config, client_config)
@@ -26,7 +24,7 @@ def protocol():
 @pytest.mark.integration
 class TestConnection:
     """연결 관련 테스트"""
-    
+
     @pytest.mark.integration
     @pytest.mark.integration
     def test_connect_success(self, protocol):
@@ -39,9 +37,7 @@ class TestConnection:
     @pytest.mark.integration
     def test_connect_failure(self):
         broker_config = BrokerConfig(
-            broker_address="invalid.broker.address",
-            port=9999,
-            mode="non-blocking"
+            broker_address="invalid.broker.address", port=9999, mode="non-blocking"
         )
         client_config = ClientConfig()
         protocol = MQTTProtocol(broker_config, client_config)
@@ -60,7 +56,7 @@ class TestConnection:
 @pytest.mark.integration
 class TestPublish:
     """발행 관련 테스트"""
-    
+
     @pytest.mark.integration
     def test_publish_success(self, protocol):
         protocol.connect()
@@ -93,7 +89,7 @@ class TestPublish:
 @pytest.mark.integration
 class TestSubscribe:
     """구독 관련 테스트"""
-    
+
     @pytest.mark.integration
     def test_subscribe_success(self, protocol):
         protocol.connect()
@@ -234,7 +230,7 @@ class TestSubscribe:
         # 구독하지 않은 토픽 구독 해제 시도 (성공으로 처리됨)
         result = protocol.unsubscribe("test/nonexistent/topic")
         assert result is True  # MQTT 브로커는 존재하지 않는 토픽도 성공으로 처리
-    
+
     @pytest.mark.integration
     def test_unsubscribe_when_disconnected(self, protocol):
         # 연결되지 않은 상태에서 unsubscribe 시도
@@ -245,10 +241,11 @@ class TestSubscribe:
             # 연결되지 않은 상태에서 unsubscribe 시 예외 발생 가능
             pass
 
+
 @pytest.mark.integration
 class TestMessageHandling:
     """메시지 처리 테스트"""
-    
+
     @pytest.mark.integration
     def test_on_message_callback(self, protocol):
         protocol.connect()
@@ -297,7 +294,7 @@ class TestMessageHandling:
 @pytest.mark.integration
 class TestReconnection:
     """재연결 관련 테스트"""
-    
+
     @pytest.mark.integration
     def test_connection_status(self, protocol):
         protocol.connect()
@@ -389,10 +386,11 @@ class TestReconnection:
                 assert f"topic_{i}" in received_messages
                 assert f"recovery_msg_{i}" in received_messages[f"topic_{i}"]
 
+
 @pytest.mark.integration
 class TestSequentialSubscriptionEdgeCases:
     """순차적 구독 엣지 케이스 테스트"""
-    
+
     @pytest.mark.integration
     def test_partial_subscription_failure(self, protocol):
         """일부 구독 실패 시 다른 구독에 영향 없음 확인"""
@@ -544,7 +542,7 @@ class TestSequentialSubscriptionEdgeCases:
 
 class TestUnsubscribeStability:
     """구독 해제 안정성 테스트"""
-    
+
     @pytest.mark.integration
     def test_unsubscribe_during_sequential_operations(self, protocol):
         """순차적 작업 중 구독 해제 테스트"""
@@ -654,7 +652,7 @@ class TestUnsubscribeStability:
 @pytest.mark.integration
 class TestMultipleMessageStability:
     """다중 메시지 안정성 테스트"""
-    
+
     @pytest.mark.integration
     def test_burst_message_handling(self, protocol):
         """버스트 메시지 처리 테스트"""
@@ -698,6 +696,7 @@ class TestMultipleMessageStability:
         def make_callback(topic_id):
             def callback(topic, payload):
                 received_messages.setdefault(topic_id, []).append(payload.decode())
+
             return callback
 
         base_topic = f"test/concurrent/{int(time.time())}"
@@ -714,7 +713,10 @@ class TestMultipleMessageStability:
         message_per_topic = 5  # 메시지 수 줄여서 안정성 확보
         for round_num in range(message_per_topic):
             for i, topic in enumerate(topics):
-                assert protocol.publish(topic, f"concurrent_msg_{i}_{round_num}", qos=2) is True
+                assert (
+                    protocol.publish(topic, f"concurrent_msg_{i}_{round_num}", qos=2)
+                    is True
+                )
                 time.sleep(0.1)  # 간격 더 늘림
 
         # 네트워크/브로커 지연 고려 여유 대기

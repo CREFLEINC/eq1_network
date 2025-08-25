@@ -58,19 +58,19 @@ def list_protocols() -> None:
     try:
         reqres_protocols = list(ReqResManager._plugins.keys())
         pubsub_protocols = list(PubSubManager._plugins.keys())
-        
+
         print("사용 가능한 프로토콜:")
-        
+
         if reqres_protocols:
             print("  [Request-Response]:")
             for protocol_name in reqres_protocols:
                 print(f"    - {protocol_name}")
-        
+
         if pubsub_protocols:
             print("  [Publish-Subscribe]:")
             for protocol_name in pubsub_protocols:
                 print(f"    - {protocol_name}")
-        
+
         if not reqres_protocols and not pubsub_protocols:
             print("사용 가능한 프로토콜이 없습니다.")
 

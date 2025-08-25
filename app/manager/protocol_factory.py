@@ -38,9 +38,15 @@ def create_mqtt_protocol(
     Returns:
         PubSubProtocol: MQTT 프로토콜 객체
     """
-    from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+    from app.protocols.mqtt.mqtt_protocol import (
+        MQTTProtocol,
+        BrokerConfig,
+        ClientConfig,
+    )
 
-    broker_config = BrokerConfig(broker_address=broker_address, port=port, keepalive=keepalive)
+    broker_config = BrokerConfig(
+        broker_address=broker_address, port=port, keepalive=keepalive
+    )
     client_config = ClientConfig()
     return MQTTProtocol(broker_config, client_config)
 

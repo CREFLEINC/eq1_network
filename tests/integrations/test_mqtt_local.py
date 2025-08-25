@@ -27,16 +27,12 @@ def local_broker():
     yield
 
 
-
 @pytest.mark.integration
 @pytest.fixture
 def local_config():
     """로컬 MQTT 브로커 설정"""
     return BrokerConfig(
-        broker_address="localhost",
-        port=1883,
-        mode="non-blocking",
-        keepalive=10
+        broker_address="localhost", port=1883, mode="non-blocking", keepalive=10
     )
 
 

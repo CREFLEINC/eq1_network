@@ -23,11 +23,13 @@ class RequesterEvent(abc.ABC):
 
 
 class Requester(threading.Thread):
-    def __init__(self,
-                 event_callback: RequesterEvent,
-                 protocol: Protocol,
-                 request_queue: queue.Queue,
-                 conf_file_path: str = "./public/network.ini",):
+    def __init__(
+        self,
+        event_callback: RequesterEvent,
+        protocol: Protocol,
+        request_queue: queue.Queue,
+        conf_file_path: str = "./public/network.ini",
+    ):
         super().__init__()
         self._network_config_file_path = conf_file_path
         self._protocol = protocol
@@ -64,9 +66,7 @@ class Requester(threading.Thread):
                     continue
 
                 result = self._protocol.send(
-                    PacketStructure.to_packet(
-                        send_data.to_bytes()
-                    )
+                    PacketStructure.to_packet(send_data.to_bytes())
                 )
 
                 if result:

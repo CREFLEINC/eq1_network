@@ -8,6 +8,7 @@ from app.common.exception import (
 )
 import app.protocols.mqtt.mqtt_protocol as mqtt_mod
 
+
 @pytest.fixture
 def mock_client(monkeypatch):
     """
@@ -15,8 +16,7 @@ def mock_client(monkeypatch):
     """
     mock_client = MagicMock()
     monkeypatch.setattr(
-        "app.protocols.mqtt.mqtt_protocol.Client",
-        lambda *a, **k: mock_client
+        "app.protocols.mqtt.mqtt_protocol.Client", lambda *a, **k: mock_client
     )
     return mock_client
 
@@ -27,9 +27,7 @@ def non_blocking_protocol(mock_client):
     MQTTProtocol의 테스트용 non-blocking 모드 인스턴스를 생성합니다.
     """
     config = BrokerConfig(
-        broker_address="broker.emqx.io",
-        port=1883,
-        mode="non-blocking"
+        broker_address="broker.emqx.io", port=1883, mode="non-blocking"
     )
     client_config = ClientConfig()
     return MQTTProtocol(config, client_config)
@@ -40,11 +38,7 @@ def blocking_protocol(mock_client):
     """
     MQTTProtocol의 테스트용 blocking 모드 인스턴스를 생성합니다.
     """
-    config = BrokerConfig(
-        broker_address="broker.emqx.io",
-        port=1883,
-        mode="blocking"
-    )
+    config = BrokerConfig(broker_address="broker.emqx.io", port=1883, mode="blocking")
     client_config = ClientConfig()
     return MQTTProtocol(config, client_config)
 
@@ -54,14 +48,15 @@ def protocol_factory(monkeypatch):
     """
     mode와 client side_effect를 받아 MQTTProtocol을 만드는 팩토리 함수입니다.
     """
+
     def _factory(mode="non-blocking", client_customizer=None):
         mock_client = MagicMock()
         if client_customizer:
             client_customizer(mock_client)
-        monkeypatch.setattr(mqtt_mod, "Client",
-                            lambda *a, **k: mock_client)
+        monkeypatch.setattr(mqtt_mod, "Client", lambda *a, **k: mock_client)
         cfg = BrokerConfig(broker_address="broker.emqx.io", mode=mode)
         return MQTTProtocol(cfg, ClientConfig()), mock_client
+
     return _factory
 
 
@@ -78,6 +73,7 @@ def test_mqtt_client_creation_error(monkeypatch):
     """
     클라이언트 생성 실패 테스트
     """
+
     def mock_client_error(*args, **kwargs):
         """Mock 클라이언트 생성 실패 함수"""
         raise ProtocolError("클라이언트 생성 실패")
@@ -99,7 +95,9 @@ def test_mqtt_auth_error(monkeypatch):
     mock_client.username_pw_set.side_effect = Exception("Auth failed")
     monkeypatch.setattr(mqtt_mod, "Client", lambda *a, **k: mock_client)
 
-    config = BrokerConfig(broker_address="broker.emqx.io", username="user", password="pass")
+    config = BrokerConfig(
+        broker_address="broker.emqx.io", username="user", password="pass"
+    )
     client_config = ClientConfig()
     with pytest.raises(ProtocolError):
         MQTTProtocol(config, client_config)
@@ -132,12 +130,19 @@ def test_connect_success(protocol_factory, mode):
     """
     연결 성공 테스트
     """
-    protocol, client = protocol_factory(mode, client_customizer=lambda c: setattr(c, "connect", MagicMock(return_value=0)))
+    protocol, client = protocol_factory(
+        mode,
+        client_customizer=lambda c: setattr(c, "connect", MagicMock(return_value=0)),
+    )
     # 루프 동작 모의
     if mode == "non-blocking":
-        client.loop_start.side_effect = lambda: protocol._on_connect(client, protocol.handler, {}, 0)
+        client.loop_start.side_effect = lambda: protocol._on_connect(
+            client, protocol.handler, {}, 0
+        )
     else:
-        client.loop_forever.side_effect = lambda: setattr(protocol, "_is_connected", True)
+        client.loop_forever.side_effect = lambda: setattr(
+            protocol, "_is_connected", True
+        )
 
     assert protocol.connect() is True
     client.connect.assert_called_once()
@@ -180,12 +185,15 @@ def test_disconnect_success(protocol_factory, mode):
     """
     연결 해제 성공 테스트
     """
-    protocol, client = protocol_factory(mode, client_customizer=lambda c: setattr(c, "disconnect", MagicMock(return_value=0)))
+    protocol, client = protocol_factory(
+        mode,
+        client_customizer=lambda c: setattr(c, "disconnect", MagicMock(return_value=0)),
+    )
     protocol.disconnect()
     if mode == "non-blocking":
         client.loop_stop.assert_called_once()
     else:
-        client.loop_stop.assert_not_called() # blocking 모드는 loop_stop를 호출하지 않음
+        client.loop_stop.assert_not_called()  # blocking 모드는 loop_stop를 호출하지 않음
 
     client.disconnect.assert_called_once()
 
@@ -209,11 +217,14 @@ def test_disconnect_connection_wait_timeout(protocol_factory, mode, monkeypatch)
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-@pytest.mark.parametrize("rc,raises,expected", [
-    (0, None, True),                      # 성공
-    (1, None, False),                     # rc 실패
-    (None, Exception("발행 오류"), False),  # 예외
-])
+@pytest.mark.parametrize(
+    "rc,raises,expected",
+    [
+        (0, None, True),  # 성공
+        (1, None, False),  # rc 실패
+        (None, Exception("발행 오류"), False),  # 예외
+    ],
+)
 def test_publish_variants(protocol_factory, mode, rc, raises, expected):
     """
     발행 테스트
@@ -321,7 +332,7 @@ def test_subscribe_duplicate_callbacks_allowed(protocol_factory, mode):
     """
     protocol, client = protocol_factory(mode)
     client.subscribe.return_value = (0, 1)
-    cb = lambda t,m: None
+    cb = lambda t, m: None
     protocol.subscribe("topic", cb)
     protocol.subscribe("topic", cb)
     assert len(protocol._subscriptions["topic"]) == 2
@@ -373,7 +384,7 @@ def test_unsubscribe_all_callbacks_failure_keeps_local_state(protocol_factory, m
     모든 콜백 해제 실패 시 로컬 상태 유지 테스트
     """
     protocol, client = protocol_factory(mode)
-    cb = lambda t,m: None
+    cb = lambda t, m: None
     protocol._subscriptions["topic"] = [cb]
     client.unsubscribe.return_value = (1, None)
     with pytest.raises(ProtocolValidationError):
@@ -531,11 +542,13 @@ def test_on_connect_partial_subscription_recovery(protocol_factory, mode):
     """
     protocol, client = protocol_factory(mode)
     protocol._subscriptions = {
-        "ok": [lambda t,m: None],
-        "bad": [lambda t,m: None],
+        "ok": [lambda t, m: None],
+        "bad": [lambda t, m: None],
     }
+
     def sub_side_effect(*args, **kwargs):
         return (0, 1) if kwargs.get("topic") == "ok" else (1, None)
+
     client.subscribe.side_effect = sub_side_effect
 
     protocol._on_connect(client, protocol.handler, {}, 0)
@@ -681,8 +694,10 @@ def test_handler_flush_publish_queue_failure(protocol_factory, mode):
     """
     protocol, _ = protocol_factory(mode)
     protocol._publish_queue.put(("topic", "message", 0, False))
+
     def mock_publish_func(topic, message, qos, retain):
         return False
+
     protocol.handler.handler_flush_publish_queue(mock_publish_func)
 
 
@@ -768,6 +783,7 @@ def test_reconnect_loop_success(protocol_factory, mode, monkeypatch):
     # 재연결 성공 시뮬레이션
     def mock_reconnect():
         protocol._is_connected = True
+
     client.reconnect.side_effect = mock_reconnect
 
     protocol._reconnect_loop()
@@ -891,7 +907,9 @@ def test_start_reconnect_thread_creates_new_thread(protocol_factory, mode, monke
 
     protocol._start_reconnect_thread()
 
-    mock_thread_class.assert_called_once_with(target=protocol._reconnect_loop, daemon=True)
+    mock_thread_class.assert_called_once_with(
+        target=protocol._reconnect_loop, daemon=True
+    )
     mock_thread.start.assert_called_once()
     assert protocol._reconnect_thread is mock_thread
 
@@ -1083,6 +1101,7 @@ def test_reconnect_loop_connection_check_timeout(protocol_factory, mode, monkeyp
 
     # 한 번만 시도하고 중단하도록 설정
     call_count = 0
+
     def mock_wait(delay):
         nonlocal call_count
         call_count += 1
@@ -1105,6 +1124,7 @@ def test_connect_with_custom_bind_address(protocol_factory, mode):
     """
     사용자 정의 바인드 주소로 연결 테스트
     """
+
     def custom_factory(mode):
         mock_client = MagicMock()
         mock_client.connect.return_value = 0
@@ -1113,13 +1133,18 @@ def test_connect_with_custom_bind_address(protocol_factory, mode):
         else:
             mock_client.loop_forever.side_effect = lambda: None
 
-        from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
+        from app.protocols.mqtt.mqtt_protocol import (
+            BrokerConfig,
+            ClientConfig,
+            MQTTProtocol,
+        )
         import unittest.mock
 
-        with unittest.mock.patch("app.protocols.mqtt.mqtt_protocol.Client", return_value=mock_client):
+        with unittest.mock.patch(
+            "app.protocols.mqtt.mqtt_protocol.Client", return_value=mock_client
+        ):
             config = BrokerConfig(
-                broker_address="test.broker.com",
-                bind_address="192.168.1.100"
+                broker_address="test.broker.com", bind_address="192.168.1.100"
             )
             protocol = MQTTProtocol(config, ClientConfig())
             return protocol, mock_client
@@ -1131,10 +1156,7 @@ def test_connect_with_custom_bind_address(protocol_factory, mode):
 
     assert result is True
     client.connect.assert_called_once_with(
-        host="test.broker.com",
-        port=1883,
-        keepalive=60,
-        bind_address="192.168.1.100"
+        host="test.broker.com", port=1883, keepalive=60, bind_address="192.168.1.100"
     )
 
 
@@ -1243,6 +1265,7 @@ def test_handler_flush_queue_with_mixed_results(protocol_factory, mode):
         protocol._publish_queue.put(msg)
 
     call_count = 0
+
     def mock_publish_func(topic, message, qos, retain):
         nonlocal call_count
         call_count += 1
@@ -1269,7 +1292,7 @@ def test_reconnect_loop_with_blocking_mode_specific(protocol_factory, mode):
     """
     blocking 모드에서 재연결 루프 테스트
     """
-    if mode == "blocking":        
+    if mode == "blocking":
         protocol, client = protocol_factory(mode)
         protocol._is_connected = False
 
@@ -1307,6 +1330,7 @@ def test_connect_with_blocking_mode_specific(protocol_factory, mode):
         client.loop_forever.assert_called_once()
         client.loop_start.assert_not_called()
 
+
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
 def test_start_reconnect_thread_already_alive_thread(protocol_factory, mode):
@@ -1329,7 +1353,9 @@ def test_start_reconnect_thread_already_alive_thread(protocol_factory, mode):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_reconnect_loop_successful_reconnection_and_exit(protocol_factory, mode, monkeypatch):
+def test_reconnect_loop_successful_reconnection_and_exit(
+    protocol_factory, mode, monkeypatch
+):
     """
     재연결 성공 후 루프 종료 테스트 (라인 508-520 커버)
     """
@@ -1414,7 +1440,9 @@ def test_on_connect_with_queue_flush_on_reconnect(protocol_factory, mode):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_reconnect_loop_exponential_backoff_with_max_delay_reached(protocol_factory, mode, monkeypatch):
+def test_reconnect_loop_exponential_backoff_with_max_delay_reached(
+    protocol_factory, mode, monkeypatch
+):
     """
     지수 백오프에서 최대 지연 시간 도달 테스트 (라인 508-520 커버)
     """
@@ -1450,7 +1478,9 @@ def test_reconnect_loop_exponential_backoff_with_max_delay_reached(protocol_fact
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_reconnect_loop_connection_check_with_partial_success(protocol_factory, mode, monkeypatch):
+def test_reconnect_loop_connection_check_with_partial_success(
+    protocol_factory, mode, monkeypatch
+):
     """
     재연결 후 연결 확인 중 일부 성공 테스트
     """
@@ -1488,7 +1518,9 @@ def test_reconnect_loop_connection_check_with_partial_success(protocol_factory, 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_start_reconnect_thread_with_dead_thread_replacement(protocol_factory, mode, monkeypatch):
+def test_start_reconnect_thread_with_dead_thread_replacement(
+    protocol_factory, mode, monkeypatch
+):
     """
     죽은 재연결 스레드를 새로운 스레드로 교체하는 테스트
     """
@@ -1508,14 +1540,18 @@ def test_start_reconnect_thread_with_dead_thread_replacement(protocol_factory, m
     protocol._start_reconnect_thread()
 
     # 새로운 스레드가 생성되고 시작되어야 함
-    mock_thread_class.assert_called_once_with(target=protocol._reconnect_loop, daemon=True)
+    mock_thread_class.assert_called_once_with(
+        target=protocol._reconnect_loop, daemon=True
+    )
     new_thread.start.assert_called_once()
     assert protocol._reconnect_thread is new_thread
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_reconnect_loop_with_multiple_failed_attempts(protocol_factory, mode, monkeypatch):
+def test_reconnect_loop_with_multiple_failed_attempts(
+    protocol_factory, mode, monkeypatch
+):
     """
     여러 번의 재연결 실패 후 성공하는 테스트
     """
@@ -1525,6 +1561,7 @@ def test_reconnect_loop_with_multiple_failed_attempts(protocol_factory, mode, mo
 
     # 처음 3번은 실패, 4번째에 성공
     reconnect_attempts = 0
+
     def mock_reconnect():
         nonlocal reconnect_attempts
         reconnect_attempts += 1
@@ -1536,6 +1573,7 @@ def test_reconnect_loop_with_multiple_failed_attempts(protocol_factory, mode, mo
     client.reconnect.side_effect = mock_reconnect
 
     wait_calls = []
+
     def mock_wait(delay):
         wait_calls.append(delay)
         if len(wait_calls) >= 3:  # 3번 실패 후 성공
@@ -1555,7 +1593,9 @@ def test_reconnect_loop_with_multiple_failed_attempts(protocol_factory, mode, mo
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_handler_flush_queue_with_publish_failure_and_success_mix(protocol_factory, mode):
+def test_handler_flush_queue_with_publish_failure_and_success_mix(
+    protocol_factory, mode
+):
     """
     큐 플러시 시 발행 성공/실패 혼합 테스트
     """
@@ -1573,6 +1613,7 @@ def test_handler_flush_queue_with_publish_failure_and_success_mix(protocol_facto
         protocol._publish_queue.put(msg)
 
     publish_calls = []
+
     def mock_publish_func(topic, message, qos, retain):
         publish_calls.append((topic, message, qos, retain))
         result = MagicMock()

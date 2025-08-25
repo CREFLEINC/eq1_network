@@ -22,10 +22,12 @@ class ListenerEvent(abc.ABC):
 
 class Listener(threading.Thread):
 
-    def __init__(self,
-                 event_callback: ListenerEvent,
-                 packet_structure_impl: PacketStructureInterface, 
-                 protocol: Protocol):
+    def __init__(
+        self,
+        event_callback: ListenerEvent,
+        packet_structure_impl: PacketStructureInterface,
+        protocol: Protocol,
+    ):
         super().__init__()
         self._protocol = protocol
         self._stop_flag = threading.Event()
@@ -60,12 +62,11 @@ class Listener(threading.Thread):
 
                 for packet in packets:
                     self._event_callback.on_received(
-                        ReceivedData.from_bytes(
-                            PacketStructure.from_packet(packet)
-                        )
+                        ReceivedData.from_bytes(PacketStructure.from_packet(packet))
                     )
             except Exception as e:
                 import traceback
+
                 traceback.print_exc()
 
         self._protocol.disconnect()

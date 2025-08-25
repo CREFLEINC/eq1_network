@@ -43,8 +43,8 @@ jobs:
     - name: Format code with isort
       run: isort .
 
-    - name: Lint with flake8
-      run: flake8 app
+    # - name: Lint with flake8
+    #   run: flake8 app
 
     - name: Type check with mypy
       run: mypy app

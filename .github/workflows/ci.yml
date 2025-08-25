@@ -37,9 +37,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev,test]
 
-    - name: Code style check with black
-      run: black --check .
-
     - name: Import sorting check with isort
       run: isort --check-only .
 

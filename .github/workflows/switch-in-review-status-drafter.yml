@@ -1,8 +1,8 @@
-name: Switch In Review Status PR Drafter
+name: Label Ready To Use Issues
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review, edited, synchronize]
+    types: [closed]
 
 permissions:
   contents: read
@@ -10,102 +10,44 @@ permissions:
   pull-requests: read
 
 jobs:
-  set_in_review_on_pr:
+  label_issues:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Set linked issues to In Review (Projects v2)
+      - name: Add READY TO USE label to linked issues
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const ORG_LOGIN = 'CREFLEINC';
-            const PROJECT_NUMBER = 4;
-            const STATUS_TO_SET = 'In Review'
-
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
             const prNum = context.payload.pull_request.number;
 
+            // PR과 연결된 이슈 조회 (자동 종료 키워드 대신 참조만 할 경우에도 closingIssuesReferences에 잡힙니다)
             const q = await github.graphql(`
-              query($owner:String!, $repo:String!, $pr:Int!, $org:String!, $pnum:Int!) {
+              query($owner:String!, $repo:String!, $pr:Int!) {
                 repository(owner:$owner, name:$repo) {
                   pullRequest(number:$pr) {
-                    id
-                    isDraft
-                    # "Fixes #123" 등으로 닫히는 이슈
-                    closingIssuesReferences(first: 50) { nodes { id number } }
-                    # 단순 참조된 이슈(본문에 링크 등)
-                    referencedByIssues(first: 50) { nodes { id number } }
-                  }
-                }
-                organization(login:$org) {
-                  projectV2(number:$pnum) {
-                    id
-                    fields(first: 50) {
-                      nodes {
-                        id
-                        name
-                        dataType
-                        ... on ProjectV2SingleSelectField { options { id name } }
-                      }
+                    closingIssuesReferences(first: 50) {
+                      nodes { id number }
                     }
                   }
                 }
               }
-            `, { owner, repo, pr: prNum, org: ORG_LOGIN, pnum: PROJECT_NUMBER });
+            `, { owner, repo, pr: prNum });
 
-            const pr = q.repository?.pullRequest;
-            const project = q.organization?.projectV2;
-            if (!pr || !project) {
-              core.setFailed('PR 또는 Project 정보를 찾지 못했습니다.');
+            const issues = q.repository.pullRequest.closingIssuesReferences.nodes;
+            if (issues.length === 0) {
+              core.notice('연결된 이슈가 없습니다.');
               return;
             }
 
-            if (pr.isDraft && context.payload.action !== 'ready_for_review') {
-              core.notice('Draft PR입니다. ready_for_review 시점에 처리합니다.');
-              return;
-            }
-
-            const statusField = project.fields.nodes.find(f => f.name === 'Status' && f.dataType === 'SINGLE_SELECT');
-            if (!statusField) {
-              core.setFailed("프로젝트에 'Status' 단일선택 필드가 없습니다.");
-              return;
-            }
-            const targetOpt = statusField.options.find(o => o.name === STATUS_TO_SET);
-            if (!targetOpt) {
-              core.setFailed(`'Status' 옵션에 '${STATUS_TO_SET}' 가 없습니다. 현재 옵션: ${statusField.options.map(o=>o.name).join(', ')}`);
-              return;
-            }
-
-            const issues = new Map();
-            (pr.closingIssuesReferences?.nodes || []).forEach(i => issues.set(i.number, i));
-            (pr.referencedByIssues?.nodes || []).forEach(i => issues.set(i.number, i));
-
-            if (issues.size === 0) {
-              core.notice('연결된 이슈가 없습니다. PR 본문에 "Fixes #123" 등으로 연결하세요.');
-              return;
-            }
-
-            for (const issue of issues.values()) {
-              const addRes = await github.graphql(`
-                mutation($pid:ID!, $cid:ID!) {
-                  addProjectV2ItemById(input:{projectId:$pid, contentId:$cid}) {
-                    item { id }
-                  }
-                }`,
-                { pid: project.id, cid: issue.id }
-              );
-              const itemId = addRes.addProjectV2ItemById.item.id;
-
-              await github.graphql(`
-                mutation($pid:ID!, $item:ID!, $field:ID!, $opt:String!) {
-                  updateProjectV2ItemFieldValue(input:{
-                    projectId:$pid, itemId:$item, fieldId:$field,
-                    value:{ singleSelectOptionId:$opt }
-                  }) { projectV2Item { id } }
-                }`,
-                { pid: project.id, item: itemId, field: statusField.id, opt: targetOpt.id }
-              );
-
-              core.notice(`Issue #${issue.number} → Status='${STATUS_TO_SET}' 설정 완료`);
+            for (const issue of issues) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issue.number,
+                labels: ["READY TO USE"],
+              });
+              core.notice(`Issue #${issue.number} → READY TO USE 라벨 추가 완료`);
             }

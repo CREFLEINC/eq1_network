@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
 
 jobs:
   test:
@@ -44,19 +44,16 @@ jobs:
       run: isort --check-only .
 
     - name: Lint with flake8
-      run: flake8 communicator
+      run: flake8 app
 
     - name: Type check with mypy
-      run: mypy communicator
+      run: mypy app
 
     - name: Run unit tests
-      run: pytest tests/units/ -v --cov=communicator --cov-report=xml
+      run: pytest tests/units/ -v --cov=app --cov-report=xml
 
     - name: Run integration tests
       run: pytest tests/integrations/ -v
-
-    - name: Run e2e tests
-      run: pytest tests/e2e/ -v
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

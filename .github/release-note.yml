@@ -1,6 +1,6 @@
 name-template: 'EQ-1 Network v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
-commitish: main
+commitish: dev
 categories:
     - title: '🆕 새로운 기능이 추가되었어요!'
       labels: 'feature'

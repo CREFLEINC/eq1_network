@@ -4,10 +4,10 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, edited, labeled, unlabeled, closed]
     branches:
-      - dev
+      - main
   push:
     branches:
-      - dev
+      - main
 
 permissions:
   contents: write

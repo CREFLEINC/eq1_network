@@ -1,34 +1,20 @@
-import dataclasses
-from typing import List
+import abc
+from abc import abstractmethod
+from typing import Self
 
 
-@dataclasses.dataclass(frozen=True)
-class ReceivedData:
-    cmd: str
-    data: List[str]
-
+class ReceivedData(abc.ABC):
     @classmethod
-    def from_bytes(cls, data: bytes):
-        data = data.decode("utf-8")
-        split_data = data.split("#")
+    @abstractmethod
+    def from_bytes(cls, data: bytes) -> Self:
+        """패킷(bytes)을 데이터로 역직렬화"""
+        ...
 
-        if len(split_data) == 1:
-            return cls(cmd=split_data[0], data=[])
-
-        return cls(cmd=split_data[0], data=split_data[1:])
-
-
-@dataclasses.dataclass(frozen=True)
-class SendData:
-    cmd: str
-    data: List[str] = dataclasses.field(default_factory=list)
-
+class SendData(abc.ABC):
+    @abstractmethod
     def to_bytes(self) -> bytes:
-        result = self.cmd
-        for datum in self.data:
-            result += f"#{datum}"
-
-        return result.encode("utf-8")
+        """데이터를 패킷(bytes)으로 직렬화"""
+        ...
 
 
 class PacketStructure:

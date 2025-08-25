@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main, develop ]
 
 jobs:
   test:
@@ -37,8 +37,23 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev,test]
 
-    - name: Run tests
-      run: pytest tests -v --cov=app --cov-report=xml
+    - name: Code style check with black
+      run: black --check .
+
+    - name: Import sorting check with isort
+      run: isort --check-only .
+
+    - name: Lint with flake8
+      run: flake8 app
+
+    - name: Type check with mypy
+      run: mypy app
+
+    - name: Run unit tests
+      run: pytest tests/units/ -v --cov=app --cov-report=xml
+
+    - name: Run integration tests
+      run: pytest tests/integrations/ -v
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

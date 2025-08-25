@@ -1,8 +1,8 @@
 site_name: EQ1 Network Docs
 nav:
-  - Home: README.md
-  - PRD: prd.md
-  - MQTT Protocol: mqtt_protocol.md
+  - Home: docs/README.md
+  - PRD: docs/prd.md
+  - MQTT Protocol: docs/mqtt_protocol.md
 docs_dir: docs
 theme:
   name: material

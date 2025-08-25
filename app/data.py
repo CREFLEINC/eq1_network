@@ -10,6 +10,7 @@ class ReceivedData(abc.ABC):
         """패킷(bytes)을 데이터로 역직렬화"""
         ...
 
+
 class SendData(abc.ABC):
     @abstractmethod
     def to_bytes(self) -> bytes:

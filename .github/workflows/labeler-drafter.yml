@@ -15,10 +15,10 @@ jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout dev
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: dev
 
       - name: Run labeler
         id: labeler

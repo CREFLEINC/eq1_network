@@ -1,11 +1,12 @@
 import abc
-import time
 import queue
 import threading
+import time
 import traceback
 from typing import Optional
+
+from lib.communication.data import PacketStructure, SendData
 from lib.communication.protocol.interface import Protocol
-from lib.communication.data import SendData, PacketStructure
 
 
 class RequesterEvent(abc.ABC):

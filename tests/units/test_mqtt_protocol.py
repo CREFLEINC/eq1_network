@@ -1,12 +1,14 @@
-import pytest
 from unittest.mock import MagicMock
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+
+import pytest
+
+import app.protocols.mqtt.mqtt_protocol as mqtt_mod
 from app.common.exception import (
     ProtocolConnectionError,
-    ProtocolValidationError,
     ProtocolError,
+    ProtocolValidationError,
 )
-import app.protocols.mqtt.mqtt_protocol as mqtt_mod
+from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.fixture
@@ -1133,12 +1135,13 @@ def test_connect_with_custom_bind_address(protocol_factory, mode):
         else:
             mock_client.loop_forever.side_effect = lambda: None
 
+        import unittest.mock
+
         from app.protocols.mqtt.mqtt_protocol import (
             BrokerConfig,
             ClientConfig,
             MQTTProtocol,
         )
-        import unittest.mock
 
         with unittest.mock.patch(
             "app.protocols.mqtt.mqtt_protocol.Client", return_value=mock_client

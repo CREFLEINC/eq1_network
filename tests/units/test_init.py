@@ -1,20 +1,20 @@
 import sys
 from unittest.mock import patch
 
-from app.manager.protocol_manager import ReqResManager, PubSubManager
+from app.common.exception import (
+    ProtocolAuthenticationError,
+    ProtocolConnectionError,
+    ProtocolDecodeError,
+    ProtocolError,
+    ProtocolTimeoutError,
+    ProtocolValidationError,
+)
 from app.interfaces.protocol import (
     BaseProtocol,
     PubSubProtocol,
     ReqResProtocol,
 )
-from app.common.exception import (
-    ProtocolError,
-    ProtocolConnectionError,
-    ProtocolValidationError,
-    ProtocolTimeoutError,
-    ProtocolDecodeError,
-    ProtocolAuthenticationError,
-)
+from app.manager.protocol_manager import PubSubManager, ReqResManager
 
 
 class TestAppInit:
@@ -80,6 +80,7 @@ class TestAppInit:
             },
         ):
             import importlib
+
             import app
 
             importlib.reload(app)

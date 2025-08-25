@@ -1,7 +1,9 @@
-import pytest
-import time
 import threading
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+import time
+
+import pytest
+
+from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.fixture

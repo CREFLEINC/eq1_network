@@ -1,11 +1,12 @@
-import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
 import sys
 from io import StringIO
+from unittest.mock import MagicMock, PropertyMock, patch
 
+import pytest
+
+import app.cli
 from app.cli import create_parser, list_protocols, main
 from app.cli import test_mqtt as cli_test_mqtt
-import app.cli
 
 
 class TestCLI:

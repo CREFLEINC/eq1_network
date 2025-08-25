@@ -1,12 +1,14 @@
-import pytest
-import time
 import threading
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+import time
+
+import pytest
+
 from app.common.exception import (
     ProtocolConnectionError,
-    ProtocolValidationError,
     ProtocolError,
+    ProtocolValidationError,
 )
+from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.fixture

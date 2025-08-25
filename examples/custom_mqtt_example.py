@@ -5,9 +5,10 @@ MQTT 프로토콜 커스터마이징 예제
 - 다양한 설정 옵션 활용
 """
 
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig
 import time
 import uuid
+
+from communicator.protocols.mqtt.mqtt_protocol import BrokerConfig, MQTTProtocol
 
 
 def create_custom_mqtt():

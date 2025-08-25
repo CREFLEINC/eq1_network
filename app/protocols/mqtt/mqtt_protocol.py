@@ -1,19 +1,19 @@
-from paho.mqtt.client import Client, MQTT_ERR_SUCCESS
-from uuid import uuid4
-from dataclasses import dataclass, field
-
-import threading
-from typing import Optional, Callable, Any
-from dataclasses import dataclass
 import logging
-import time
 import queue as Queue
-from app.interfaces.protocol import PubSubProtocol
+import threading
+import time
+from dataclasses import dataclass, field
+from typing import Any, Callable, Optional
+from uuid import uuid4
+
+from paho.mqtt.client import MQTT_ERR_SUCCESS, Client
+
 from app.common.exception import (
     ProtocolConnectionError,
-    ProtocolValidationError,
     ProtocolError,
+    ProtocolValidationError,
 )
+from app.interfaces.protocol import PubSubProtocol
 
 
 @dataclass

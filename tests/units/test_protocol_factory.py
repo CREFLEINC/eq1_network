@@ -1,10 +1,12 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from app.common.params import Params
 from app.manager.protocol_factory import (
-    valid_params,
     create_mqtt_protocol,
     create_protocol,
+    valid_params,
 )
 
 

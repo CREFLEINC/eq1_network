@@ -1,6 +1,7 @@
 from typing import List
+
 from app.common.params import Params
-from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
+from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 
 def valid_params(params: Params, need_params: List[str]):
@@ -39,9 +40,9 @@ def create_mqtt_protocol(
         PubSubProtocol: MQTT 프로토콜 객체
     """
     from app.protocols.mqtt.mqtt_protocol import (
-        MQTTProtocol,
         BrokerConfig,
         ClientConfig,
+        MQTTProtocol,
     )
 
     broker_config = BrokerConfig(

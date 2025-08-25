@@ -1,9 +1,11 @@
-import pytest
-import time
-import threading
-import subprocess
 import socket
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+import subprocess
+import threading
+import time
+
+import pytest
+
+from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.mark.integration

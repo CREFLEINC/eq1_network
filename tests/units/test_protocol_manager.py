@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import MagicMock
-from app.manager.protocol_manager import ReqResManager, PubSubManager
+
+import pytest
+
+from app.manager.protocol_manager import PubSubManager, ReqResManager
 
 
 @pytest.fixture

@@ -1,6 +1,8 @@
 import time
+
 import pytest
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+
+from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.mark.integration

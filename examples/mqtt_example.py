@@ -5,9 +5,10 @@ MQTT 프로토콜 실제 사용 예제
 - 메시지 발행/구독 테스트
 """
 
-import time
 import threading
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig
+import time
+
+from communicator.protocols.mqtt.mqtt_protocol import BrokerConfig, MQTTProtocol
 
 
 def message_handler(topic: str, payload: bytes):

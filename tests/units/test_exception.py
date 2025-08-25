@@ -1,11 +1,12 @@
 import pytest
+
 from app.common.exception import (
-    ProtocolError,
-    ProtocolConnectionError,
-    ProtocolTimeoutError,
-    ProtocolDecodeError,
-    ProtocolValidationError,
     ProtocolAuthenticationError,
+    ProtocolConnectionError,
+    ProtocolDecodeError,
+    ProtocolError,
+    ProtocolTimeoutError,
+    ProtocolValidationError,
 )
 
 

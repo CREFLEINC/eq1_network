@@ -1,8 +1,9 @@
 import abc
-import time
 import threading
+import time
+
+from lib.communication.data import PacketStructure, ReceivedData
 from lib.communication.protocol.interface import Protocol
-from lib.communication.data import ReceivedData, PacketStructure
 from src.logger import AppLogger  # TODO : src 의존성 제거하기
 
 

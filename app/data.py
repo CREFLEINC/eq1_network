@@ -1,6 +1,7 @@
-import re
 import dataclasses
+import re
 from typing import List, Union
+
 from src.utils import Numeric
 
 

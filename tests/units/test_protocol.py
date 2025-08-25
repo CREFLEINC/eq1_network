@@ -1,6 +1,8 @@
-import pytest
 from typing import Optional, Tuple
-from app.interfaces.protocol import BaseProtocol, ReqResProtocol, PubSubProtocol
+
+import pytest
+
+from app.interfaces.protocol import BaseProtocol, PubSubProtocol, ReqResProtocol
 
 
 class MockReqResProtocol(ReqResProtocol):

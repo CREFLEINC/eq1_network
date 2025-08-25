@@ -8,7 +8,7 @@ import sys
 from typing import List, Optional
 
 from app import __version__
-from app.manager.protocol_manager import ReqResManager, PubSubManager
+from app.manager.protocol_manager import PubSubManager, ReqResManager
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -82,12 +82,13 @@ def list_protocols() -> None:
 def test_mqtt(broker: str, port: int, topic: str) -> None:
     """MQTT 연결 테스트"""
     try:
+        import time
+
         from app.protocols.mqtt.mqtt_protocol import (
-            MQTTProtocol,
             BrokerConfig,
             ClientConfig,
+            MQTTProtocol,
         )
-        import time
 
         print(f"MQTT 브로커 연결 테스트: {broker}:{port}")
 

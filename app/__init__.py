@@ -19,16 +19,16 @@ _FALLBACK_ALL = [
 ]
 
 try:
-    from app.manager.protocol_manager import ReqResManager, PubSubManager
-    from app.interfaces.protocol import BaseProtocol, PubSubProtocol, ReqResProtocol
     from app.common.exception import (
-        ProtocolError,
-        ProtocolConnectionError,
-        ProtocolValidationError,
-        ProtocolTimeoutError,
-        ProtocolDecodeError,
         ProtocolAuthenticationError,
+        ProtocolConnectionError,
+        ProtocolDecodeError,
+        ProtocolError,
+        ProtocolTimeoutError,
+        ProtocolValidationError,
     )
+    from app.interfaces.protocol import BaseProtocol, PubSubProtocol, ReqResProtocol
+    from app.manager.protocol_manager import PubSubManager, ReqResManager
 
     __all__ = [
         "ReqResManager",

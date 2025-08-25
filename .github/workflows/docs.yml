@@ -3,10 +3,12 @@ name: Documentation
 on:
   push:
     branches:
-      - [ main, dev ]
+      - main
+      - dev
   pull_request:
     branches:
-      - [ main, dev ]
+      - main
+      - dev
 
 jobs:
   build-docs:
@@ -32,7 +34,7 @@ jobs:
   deploy-docs:
     needs: build-docs
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python

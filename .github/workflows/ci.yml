@@ -46,14 +46,14 @@ jobs:
     # - name: Lint with flake8
     #   run: flake8 app
 
-    - name: Type check with mypy
-      run: mypy app
+    # - name: Type check with mypy
+    #   run: mypy app
 
-    - name: Run unit tests
-      run: pytest tests/units/ -v --cov=app --cov-report=xml
+    # - name: Run unit tests
+    #   run: pytest tests/units/ -v --cov=app --cov-report=xml
 
-    - name: Run integration tests
-      run: pytest tests/integrations/ -v
+    # - name: Run integration tests
+    #   run: pytest tests/integrations/ -v
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

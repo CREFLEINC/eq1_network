@@ -7,6 +7,7 @@ from typing import Optional
 
 from lib.communication.data import PacketStructure, SendData
 from lib.communication.protocol.interface import Protocol
+from app.interfaces.packet import PacketStructureInterface
 
 
 class RequesterEvent(abc.ABC):
@@ -30,6 +31,7 @@ class Requester(threading.Thread):
         protocol: Protocol,
         request_queue: queue.Queue,
         conf_file_path: str = "./public/network.ini",
+        packet_structure_interface: Type[PacketStructureInterface] = PacketStructure,
     ):
         super().__init__()
         self._network_config_file_path = conf_file_path
@@ -37,7 +39,7 @@ class Requester(threading.Thread):
         self._stop_flag = threading.Event()
         self._event_callback = event_callback
         self._request_queue = request_queue
-
+        self._packet_structure_interface = packet_structure_interface
     def stop(self):
         self._stop_flag.set()
 
@@ -67,7 +69,7 @@ class Requester(threading.Thread):
                     continue
 
                 result = self._protocol.send(
-                    PacketStructure.to_packet(send_data.to_bytes())
+                    self._packet_structure_interface.to_packet(send_data.to_bytes())
                 )
 
                 if result:

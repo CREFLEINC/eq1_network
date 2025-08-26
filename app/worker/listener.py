@@ -5,6 +5,7 @@ import time
 from lib.communication.data import PacketStructure, ReceivedData
 from lib.communication.protocol.interface import Protocol
 from src.logger import AppLogger  # TODO : src 의존성 제거하기
+from app.interfaces.packet import PacketStructureInterface
 
 
 class ListenerEvent(abc.ABC):
@@ -26,14 +27,14 @@ class Listener(threading.Thread):
     def __init__(
         self,
         event_callback: ListenerEvent,
-        packet_structure_impl: PacketStructureInterface,
+        packet_structure_interface: Type[PacketStructureInterface] = PacketStructure,
         protocol: Protocol,
     ):
         super().__init__()
         self._protocol = protocol
         self._stop_flag = threading.Event()
         self._event_callback = event_callback
-        self._packet_structure = packet_structure_impl
+        self._packet_structure_interface = packet_structure_interface
 
     def stop(self):
         AppLogger.write_debug(self, "Set Stop flag for Tcp Listener")
@@ -56,14 +57,14 @@ class Listener(threading.Thread):
                 elif bytes_data is None:
                     time.sleep(0.01)
                     continue
-                elif not self._packet_structure.is_valid(bytes_data):
-                    packets = PacketStructure.split_packet(bytes_data)
+                elif not self._packet_structure_interface.is_valid(bytes_data):
+                    packets = self._packet_structure_interface.split_packet(bytes_data)
                 else:
                     packets = [bytes_data]
 
                 for packet in packets:
                     self._event_callback.on_received(
-                        ReceivedData.from_bytes(PacketStructure.from_packet(packet))
+                        ReceivedData.from_bytes(self._packet_structure_interface.from_packet(packet))
                     )
             except Exception as e:
                 import traceback

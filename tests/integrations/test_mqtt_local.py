@@ -1,9 +1,11 @@
-import pytest
-import time
-import threading
-import subprocess
 import socket
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+import subprocess
+import threading
+import time
+
+import pytest
+
+from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.mark.integration
@@ -27,16 +29,12 @@ def local_broker():
     yield
 
 
-
 @pytest.mark.integration
 @pytest.fixture
 def local_config():
     """로컬 MQTT 브로커 설정"""
     return BrokerConfig(
-        broker_address="localhost",
-        port=1883,
-        mode="non-blocking",
-        keepalive=10
+        broker_address="localhost", port=1883, mode="non-blocking", keepalive=10
     )
 
 

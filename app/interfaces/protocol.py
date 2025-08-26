@@ -1,5 +1,5 @@
-from typing import Tuple, Optional, Callable
 from abc import ABC, abstractmethod
+from typing import Callable, Optional, Tuple
 
 
 class BaseProtocol(ABC):

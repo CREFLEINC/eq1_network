@@ -1,15 +1,14 @@
 # 제품 요구사항 문서: EQ-1 Network
-
 EQ-1 Network는 다양한 산업 및 IoT 환경에서 사용할 수 있는 플러그인 기반 통신 프레임워크입니다.
 
 ## 문서 목적
-
 이 문서는 EQ-1 Network의 목적, 요구사항, 설계 방향, 제약사항을 명확히 정의하여 팀 내 공통된 이해를 돕습니다.
 
 ## 개요
 - MQTT를 시작으로 다양한 통신 프로토콜을 표준화된 인터페이스로 지원합니다.
 - 신규 프로토콜을 플러그인 방식으로 쉽게 확장할 수 있습니다.
 - 공통 ReqRes / PubSub 인터페이스와 일관된 직렬화 규칙을 제공합니다.
+- Core-Network 연동: PacketInterface 인터페이스를 통한 표준화된 패킷 처리 시스템을 제공합니다.
 
 ### 아키텍처 다이아그램
 ```mermaid
@@ -20,22 +19,28 @@ flowchart TD
 
     NET --> MANAGER["Protocol Manager"]
     MANAGER --> INTERFACES["ReqRes / PubSub Interfaces"]
-    INTERFACES --> PACKET["PacketStructure"]
+    INTERFACES --> PACKET["PacketInterface"]
     INTERFACES --> PROTOCOLS["Protocol Plugins"]
 
     PROTOCOLS --> MQTT["MQTTProtocol"]
     PROTOCOLS --> MODBUS[(Future) ModbusProtocol]
     PROTOCOLS --> TCPUDP[(Future) TCP/UDPProtocol]
+    
+    PACKET --> SENDDATA["SendData"]
+    PACKET --> RECEIVEDDATA["ReceivedData"]
+    PACKET --> NETWORKHANDLER["NetworkHandler"]
 ```
 
 ## 목표
 - 신규 프로토콜을 플러그인 형태로 쉽게 확장
 - 공통 인터페이스(ReqRes, PubSub) 제공
 - 일관된 패킷 직렬화/역직렬화 규칙 확립
+- Core-Network 연동: 표준화된 패킷 인터페이스를 통한 데이터 처리 통합
 
 ## 배경
 - 기존 시스템별 통신 구현 중복
 - MQTT, TCP/UDP, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요성 존재
+- Core-Network 연동 필요성: 다양한 데이터 타입(List, Dict 등)을 일관된 방식으로 처리할 수 있는 표준 인터페이스 필요
 
 ## 성공 지표
 
@@ -43,6 +48,7 @@ flowchart TD
 - **개발 속도**: ✅ 달성 - MQTT v3.1.1 기본 기능 구현 완료
 - **품질 지표**: ✅ 달성 - 테스트 커버리지 90%+ 달성
 - **MQTT 기본 기능**: ✅ 달성 - MQTT v3.1.1 기본 표준 준수
+- 기존 데이터 클래스: ✅ 구현됨 - SendData, ReceivedData, PacketStructure 클래스 구현 완료
 
 ### 지속적 목표
 - **안정성**: 3개월간 치명적 통신 버그 0건 유지
@@ -56,6 +62,10 @@ flowchart TD
 - 패킷 구조화 및 직렬화
 - MQTT 프로토콜 구현
 - 단위 테스트 및 샘플 예제
+- PacketInterface 인터페이스 구현
+- SendData/ReceivedData 클래스 PacketInterface 상속
+- NetworkHandler 클래스 PacketInterface 지원 추가
+- PacketStructure 의존성 제거 및 worker 모듈 개선
 
 ### 제외 사항
 - UI (GUI, Web)
@@ -70,9 +80,14 @@ flowchart TD
 | **F-03** | **PubSub 인터페이스** | - `PubSubProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 브로커와의 연결 수립 및 종료<br/>  - `publish(topic: str, payload: bytes)`: 메시지 발행<br/>  - `subscribe(topic: str, callback: Callable)`: 토픽 구독 및 콜백 등록<br/>  - `unsubscribe(topic: str)`: 토픽 구독 취소 |
 | **F-04** | **PacketStructure** | - 모든 통신 데이터는 `PacketStructure` 추상 클래스를 상속하여 구현.<br/>- `build() -> bytes`: 패킷 객체를 전송 가능한 `bytes`로 직렬화.<br/>- `parse(bytes) -> PacketStructure`: 수신된 `bytes`를 패킷 객체로 역직렬화.<br/>- `frame_type`: 패킷의 종류나 명령을 식별하는 속성을 제공.<br/>- `payload`: 실제 데이터가 담기는 `bytes` 형식의 속성을 제공. |
 | **F-05** | **RFC 준수 MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리로 구현.<br/>- **현재 구현**: Username/Password 인증, Retained Messages
-- **🔄 미구현**: TLS/SSL 보안, Will Message<br/>- **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)<br/>- 재연결 시 구독 자동 복구 및 메시지 큐 처리<br/>- QoS (0, 1, 2) 레벨 완전 지원<br/>- 상세한 RFC 준수 에러 처리 (rc 1-5) |
+- **미구현**: TLS/SSL 보안, Will Message<br/>- **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)<br/>- 재연결 시 구독 자동 복구 및 메시지 큐 처리<br/>- QoS (0, 1, 2) 레벨 완전 지원<br/>- 상세한 RFC 준수 에러 처리 (rc 1-5) |
 | **F-06** | **Thread-safe 보장** | - publish, subscribe, unsubscribe, 큐 처리 등 모든 API가 thread-safe해야 함 |
 | **F-07** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
+| **F-08** | **PacketInterface 인터페이스** | - `abc.ABC` 기반의 `PacketInterface` 추상 클래스 구현<br/>- `to_bytes() -> bytes`: 객체를 전송 가능한 바이트로 직렬화<br/>- `from_bytes(bytes) -> PacketInterface`: 바이트 데이터를 객체로 역직렬화<br/>-|
+| **F-09** | **SendData 클래스 PacketInterface 상속** | - 기존 `SendData` 클래스가 `PacketInterface` 인터페이스를 상속받도록 수정<br/>- `to_bytes()` 및 `from_bytes()` 메서드 구현<br/>-|
+| **F-10** | **ReceivedData 클래스 PacketInterface 상속** | - 기존 `ReceivedData` 클래스가 `PacketInterface` 인터페이스를 상속받도록 수정<br/>- `to_bytes()` 및 `from_bytes()` 메서드 구현<br/>-|
+| **F-11** | **NetworkHandler 클래스 PacketInterface 지원** | - `send`, `receive` 메서드가 포함된 클래스 구축<br/>- PacketInterface 지원 추가<br/>-|
+| **F-12** | **PacketStructure 의존성 제거** | - PacketStructure 의존성 제거 및 PacketInterface 기반으로 변경<br/>- worker 모듈들(Listener, Requester)의 PacketStructure 의존성 제거<br/>-|
 
 ## 비기능 요구사항
 | ID | 요구사항 | 상세 |
@@ -88,9 +103,10 @@ flowchart TD
 ```
 communicator/
 ├── common/         # 예외, 로깅
-├── interfaces/     # Protocol 인터페이스
+├── interfaces/     # Protocol 인터페이스, PacketInterface
 ├── protocols/      # MQTTProtocol 등
 ├── manager/        # 프로토콜 로딩 및 관리
+├── worker/         # Listener, Requester (PacketStructure 의존성 제거 예정)
 ├── tests/          # 단위 테스트
 └── requirements.txt
 ```
@@ -99,6 +115,16 @@ communicator/
 - **인터페이스 레이어**
     - `ReqResProtocol` / `PubSubProtocol`: 통신 유형별 표준 인터페이스
     - `BaseProtocol`: 모든 프로토콜의 공통 기반 인터페이스
+    - **`PacketInterface`**: 패킷 직렬화/역직렬화 표준 인터페이스
+- **데이터 클래스**
+    - **`SendData`**: 전송 데이터 클래스 (PacketInterface 상속 예정)
+    - **`ReceivedData`**: 수신 데이터 클래스 (PacketInterface 상속 예정)
+    - **`PacketStructure`**: 기존 패킷 구조화 클래스 (의존성 제거 예정)
+- **네트워크 핸들러**
+    - **`NetworkHandler`**: 네트워크 통신 핸들러 (PacketInterface 지원 추가 예정)
+- **워커 모듈**
+    - **`Listener`**: 수신 처리 스레드 (PacketStructure 의존성 제거 예정)
+    - **`Requester`**: 송신 처리 스레드 (PacketStructure 의존성 제거 예정)
 - **RFC 준수 MQTT 구현**
     - `MQTTProtocol`: paho-mqtt 기반 RFC 준수 구현
     - `MQTTConfig`: 설정 관리를 위한 데이터 클래스
@@ -142,7 +168,7 @@ mqtt.publish("topic/test", "hello", qos=1, retain=True)
 mqtt.disconnect()
 ```
 
-### 🔄 미구현 기능 예시 (계획만)
+### 미구현 기능 예시 (계획만)
 ```python
 # 다음 기능들은 아직 구현되지 않았습니다:
 
@@ -166,13 +192,41 @@ tcp.send(b"PING")
 resp = tcp.receive()
 ```
 
+### PacketInterface 사용 예시 (계획)
+```python
+# PacketInterface를 통한 표준화된 데이터 처리
+from app.interfaces.packet_interface import PacketInterface
+
+# SendData 클래스 사용
+send_data = SendData(cmd="TEST", data=["1", "2", "3", "4", "5"])
+packet_bytes = send_data.to_bytes()  # List를 바이트로 직렬화
+
+# ReceivedData 클래스 사용
+received_data = ReceivedData.from_bytes(packet_bytes)  # 바이트를 객체로 역직렬화
+data_list = received_data.data  # 원본 List 데이터 복원
+
+# NetworkHandler 사용
+network_handler = NetworkHandler(network_config, event_callback)
+network_handler.send_data(send_data)  # PacketInterface 기반 전송
+
+# 테스트 클래스 사용
+test_packet = ListTestPacket(data=[10, 20, 30])
+serialized = test_packet.to_bytes()
+deserialized = ListTestPacket.from_bytes(serialized)
+assert test_packet.data == deserialized.data
+```
+
 ## 테스트 전략
 - 단위 테스트 (Unit Test)
     - pytest 기반으로 각 프로토콜과 PacketStructure 단위 테스트 진행
     - Mock 객체를 이용한 독립적인 동작 검증
+    - PacketInterface 인터페이스 단위 테스트 추가
+    - NetworkHandler 클래스 단위 테스트 추가
 - 통합 테스트 (Integration Test)
     - 실제 MQTT 브로커 환경에서 publish/subscribe 기능 검증
     - 향후 Modbus, TCP/UDP 등 다른 프로토콜 추가 시 동일한 시나리오 확장
+    - SendData/ReceivedData 클래스 통합 테스트 추가
+    - PacketInterface 기반 통신 통합 테스트 추가
 - 자동화
     - CI 파이프라인에서 자동 실행되도록 설정
     - 코드 커버리지 측정을 통해 목표 커버리지 90% 이상 유지
@@ -183,6 +237,8 @@ resp = tcp.receive()
 | **외부 라이브러리 의존성** | 중간 | 높음 | - 라이브러리 핵심 기능을 직접 호출하지 않고, 어댑터(Adapter) 클래스로 한 번 더 감싸서 구현합니다.<br/>- 이를 통해 문제 발생 시 다른 라이브러리(예: gmqtt)로 최소한의 코드 수정으로 교체할 수 있습니다. |
 | **플러그인 아키텍처의 한계** | 중간 | 높음 | - 초기 인터페이스 설계 시 TCP/IP 기반의 요청/응답 시나리오를 미리 고려하여 `ReqResProtocol` 인터페이스를 정의합니다.<br/>- Modbus 프로토콜 추가 단계에서 PoC(Proof of Concept)를 먼저 진행하여 아키텍처의 확장성을 검증합니다. |
 | **낮은 내부 채택률** | 높음 | 중간 | - 상세한 `README.md`와 예제 코드를 제공하여 사용 장벽을 낮춥니다.<br/>- 주요 사용 예상 팀을 대상으로 초기 버전 데모 및 피드백 세션을 진행하여 요구사항을 반영하고 참여를 유도합니다. |
+| **PacketInterface 설계 복잡성** | 중간 | 중간 | - 간단하고 직관적인 인터페이스 설계로 복잡성 최소화<br/>- 기존 SendData/ReceivedData 클래스와의 호환성 보장<br/>- 충분한 테스트 케이스 작성으로 안정성 확보 |
+| **기존 코드 호환성** | 높음 | 높음 | - 단계적 마이그레이션으로 기존 코드와의 호환성 보장<br/>- PacketStructure와 PacketInterface 병행 지원 기간 설정<br/>- 충분한 테스트를 통한 안정성 검증 |
 
 ## 배포 및 재사용
 - 패키지화
@@ -202,7 +258,7 @@ resp = tcp.receive()
 
 ### 기능적 제약
 - **현재 지원**: MQTT v3.1.1 기본 기능만 지원
-- **🔄 미구현**: TLS/SSL, Will Message, MQTT v5.0 기능들
+- **미구현**: TLS/SSL, Will Message, MQTT v5.0 기능들
 - **동시 연결**: 단일 브로커당 하나의 연결만 지원
 - **명시적 연결**: connect() 메서드 호출 필수 (자동 연결 없음)
 

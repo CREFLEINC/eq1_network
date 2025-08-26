@@ -1,19 +1,18 @@
 import time
+
 import pytest
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+
+from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.mark.integration
 def test_connection():
     """연결 기능 테스트"""
     print("=== 연결 기능 테스트 ===")
-    broker_config = BrokerConfig(
-        broker_address="broker.emqx.io",
-        port=1883
-    )
+    broker_config = BrokerConfig(broker_address="broker.emqx.io", port=1883)
     client_config = ClientConfig()
     mqtt = MQTTProtocol(broker_config, client_config)
-    
+
     mqtt.connect()
     time.sleep(2)
 
@@ -30,14 +29,11 @@ def test_connection():
 def test_publish_subscribe():
     """메시지 전송 테스트"""
     print("=== 메시지 전송 테스트 ===")
-    
-    broker_config = BrokerConfig(
-        broker_address="broker.emqx.io",
-        port=1883
-    )
+
+    broker_config = BrokerConfig(broker_address="broker.emqx.io", port=1883)
     client_config = ClientConfig()
     mqtt = MQTTProtocol(broker_config, client_config)
-    
+
     received_messages = []
 
     def message_handler(topic: str, payload: bytes):
@@ -77,13 +73,10 @@ def test_publish_subscribe():
 def test_connection_speed():
     """연결 속도 테스트"""
     print("=== 연결 속도 테스트 ===")
-    
-    broker_config = BrokerConfig(
-        broker_address="broker.emqx.io",
-        port=1883
-    )
+
+    broker_config = BrokerConfig(broker_address="broker.emqx.io", port=1883)
     client_config = ClientConfig()
-    
+
     start_time = time.time()
     mqtt = MQTTProtocol(broker_config, client_config)
     mqtt.connect()
@@ -106,14 +99,11 @@ def test_connection_speed():
 def test_queue_functionality():
     """큐 기능 테스트"""
     print("=== 큐 기능 테스트 ===")
-    
-    broker_config = BrokerConfig(
-        broker_address="broker.emqx.io",
-        port=1883
-    )
+
+    broker_config = BrokerConfig(broker_address="broker.emqx.io", port=1883)
     client_config = ClientConfig()
     mqtt = MQTTProtocol(broker_config, client_config)
-    
+
     # 연결되지 않은 상태에서 메시지 발행
     result = mqtt.publish("test/queue", "queued message")
 

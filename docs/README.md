@@ -242,5 +242,5 @@ pytest tests/units/test_mqtt_protocol.py -v
 - 성능 최적화 및 비동기 처리 강화
 
 ## 참고 자료
-- [MQTT Protocol](docs/mqtt_protocol.md) - MQTT 프로토콜 상세 가이드
-- [PRD.md](docs/prd.md) - 프로젝트 요구사항 및 설계 문서
+- [MQTT Protocol](mqtt_protocol.md) - MQTT 프로토콜 상세 가이드
+- [PRD.md](prd.md) - 프로젝트 요구사항 및 설계 문서

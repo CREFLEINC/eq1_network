@@ -1,0 +1,89 @@
+name: labeling_issue_from_pr
+
+on:
+  pull_request:
+    types: 
+      - closed
+    branches:
+      - dev
+      - test
+
+jobs:
+  add-review-label:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      pull-requests: read
+
+    steps:
+      - name: Add "READY TO USE" label to linked issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            try {
+              const issueRegex = /(?:close|closes|closed|fixed|fix|fixes|resolve|resolves|resolved)\s*#(\d+)/gi;
+              const prBody = context.payload.pull_request.body || '';
+              const prTitle = context.payload.pull_request.title || '';
+              const searchText = `${prTitle} ${prBody}`;
+  
+              const matches = [...searchText.matchAll(issueRegex)];
+  
+              if (matches.length == 0) {
+                console.log(`연결된 ISSUE를 찾을 수 없습니다. 이후 동작을 생략합니다.`);
+                return;
+              }
+  
+              const labelToAdd = "READY TO USE";
+              const processedIssues = [];
+
+              for (const match of matches) {
+                const issueNumber = parseInt(match[1], 10);
+
+                if (processedIssues.includes(issueNumber)) {
+                  console.log(`Issue #${issueNumber} 이미 처리되었습니다. 생략`);
+                  continue;
+                }
+
+                console.log(`처리할 이슈 : #${issueNumber}`);
+                
+                try {
+                  const { data: issue } = await github.rest.issues.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber
+                  });
+
+                  const existingLabels = issue.labels.map(label => typeof label == 'string' ? label : label.name);
+
+                  if (existingLabels.includes(labelToAdd)) {
+                    console.log(`Issue #${issueNumber} 이미 라벨을 가지고 있습니다. 생략`);
+                    processedIssues.push(issueNumber);
+                    continue;
+                  }
+
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber,
+                    labels: [labelToAdd]
+                  });
+
+                  console.log(`성공적으로 처리되었습니다.`);
+                  processedIssues.push(issueNumber);
+                } catch (issueError) {
+                  console.error(`에러 발생 : Issue #${issueNumber} 처리 실패`);
+                  console.error(issueError);
+                }
+              }
+
+              if (processedIssues.length > 0) {
+                console.log(`Total issues processed: ${processedIssues.length}`);
+                console.log(`Processed issues: #${processedIssues.join(', #')}`);
+              }
+            } catch (error) {
+              console.error('Workflow failed:', error.message);
+            }
+            

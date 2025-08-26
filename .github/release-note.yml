@@ -1,0 +1,38 @@
+name-template: 'EQ-1 Network v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+commitish: dev
+categories:
+    - title: '🆕 새로운 기능이 추가되었어요!'
+      labels: 'feature'
+    - title: '🐞 자잘한 버그를 수정했습니다.'
+      labels: 'bug'
+    - title: '🫶🏻 앱 사용성 개선에 힘썼습니다.'
+      labels: 'improvement'
+    - title: '🛠️ 더 나은 코드를 위해 노력하고 있습니다.'
+      labels: 'refactoring'
+    - title: '📄 프로젝트에 대한 상세 자료는 아래를 참조하세요.'
+      labels: 'documentation'
+    - title: Others
+      labels: '*'
+change-template: '* $TITLE (#$NUMBER) by @$AUTHOR'
+change-title-escapes: '\<*_&#@`'
+exclude-labels:
+  - 'duplicate'
+  - 'good first issue'
+  - 'help wanted'
+  - 'invalid'
+  - 'wontfix'
+  - 'question'
+version-resolver:
+  major:
+    labels:
+      - 'Major'
+  minor:
+    labels:
+      - 'Minor'
+  patch:
+    labels:
+      - 'Patch'
+  default: patch
+template: |
+  $CHANGES

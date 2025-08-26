@@ -1,0 +1,53 @@
+name: Label Ready To Use Issues
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  label_issues:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add READY TO USE label to linked issues
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const prNum = context.payload.pull_request.number;
+
+            // PR과 연결된 이슈 조회 (자동 종료 키워드 대신 참조만 할 경우에도 closingIssuesReferences에 잡힙니다)
+            const q = await github.graphql(`
+              query($owner:String!, $repo:String!, $pr:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  pullRequest(number:$pr) {
+                    closingIssuesReferences(first: 50) {
+                      nodes { id number }
+                    }
+                  }
+                }
+              }
+            `, { owner, repo, pr: prNum });
+
+            const issues = q.repository.pullRequest.closingIssuesReferences.nodes;
+            if (issues.length === 0) {
+              core.notice('연결된 이슈가 없습니다.');
+              return;
+            }
+
+            for (const issue of issues) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issue.number,
+                labels: ["READY TO USE"],
+              });
+              core.notice(`Issue #${issue.number} → READY TO USE 라벨 추가 완료`);
+            }

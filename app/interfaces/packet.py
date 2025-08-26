@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class PacketInterface(ABC):
+class PacketStructureInterface(ABC):
     @classmethod
     @abstractmethod
     def to_packet(cls, data: bytes) -> bytes:

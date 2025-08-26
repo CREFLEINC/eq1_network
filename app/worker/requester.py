@@ -3,78 +3,107 @@ import queue
 import threading
 import time
 import traceback
-from typing import Optional
+from typing import Callable, Generic, Optional, Type, TypeVar, Union, runtime_checkable
 
-from lib.communication.data import PacketStructure, SendData
-from lib.communication.protocol.interface import Protocol
+from app.data import PacketStructure, SendData
+from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
+from app.interfaces.packet import PacketStructureInterface
+from app.common.exception import ProtocolError, ProtocolConnectionError, ProtocolTimeoutError, ProtocolDecodeError, ProtocolValidationError, ProtocolAuthenticationError
+
+ProtocolLike = Union[ReqResProtocol, PubSubProtocol]
+TSend = TypeVar("TSend", bound=SendData)
 
 
-class RequesterEvent(abc.ABC):
+class RequesterEvent(Generic[TSend], abc.ABC):
     @abc.abstractmethod
-    def on_sent(self, data: SendData):
-        pass
+    def on_sent(self, data: TSend) -> None:
+        """데이터 전송 성공"""
+        ...
 
     @abc.abstractmethod
-    def on_failed_send(self, data: SendData):
-        pass
+    def on_failed_send(self, data: TSend) -> None:
+        """데이터 전송 실패"""
+        ...
 
     @abc.abstractmethod
-    def on_disconnected(self, data: SendData):
-        pass
+    def on_disconnected(self, data: TSend) -> None:
+        """연결 해제"""
+        ...
 
 
-class Requester(threading.Thread):
+class Requester(Generic[TSend], threading.Thread):
     def __init__(
         self,
-        event_callback: RequesterEvent,
-        protocol: Protocol,
-        request_queue: queue.Queue,
-        conf_file_path: str = "./public/network.ini",
+        *,
+        event_callback: RequesterEvent[TSend],
+        protocol: ProtocolLike,
+        request_queue: Optional[queue.Queue[TSend]] = None,
+        packet_structure_interface: Type[PacketStructureInterface] = PacketStructure,
+        name: str = "Requester",
+        daemon: bool = True,
+        queue_wait_time: float = 0.1,
     ):
-        super().__init__()
-        self._network_config_file_path = conf_file_path
-        self._protocol = protocol
-        self._stop_flag = threading.Event()
+        super().__init__(name=name, daemon=daemon)
         self._event_callback = event_callback
-        self._request_queue = request_queue
+        self._protocol = protocol
+        self._request_queue: queue.Queue[TSend] = request_queue or queue.Queue()
+        self._packet_structure_interface = packet_structure_interface
+        self._stop_flag = threading.Event()
+        self._queue_wait_time = queue_wait_time
 
     def stop(self):
+        """
+        스레드 종료 요청
+        """
         self._stop_flag.set()
 
-    def next(self) -> Optional[SendData]:
-        try:
-            data = self._request_queue.get_nowait()
-            if isinstance(data, SendData):
-                return data
-        except queue.Empty:
-            pass
-        except Exception as e:
-            traceback.format_exc()
+    def put(self, data: TSend) -> None:
+        """
+        외부에서 TSend를 직접 주입
+        """
+        self._request_queue.put(data)
 
     def run(self) -> None:
-        if not isinstance(self._protocol, Protocol):
+        """
+        스레드 실행
+        """
+        if not isinstance(self._protocol, (ReqResProtocol, PubSubProtocol)):
             raise ValueError(f"Protocol is not initialized in {self}")
 
         if not isinstance(self._event_callback, RequesterEvent):
             raise ValueError(f"Event callback is not initialized in {self}")
 
-        while not self._stop_flag.is_set():
-            time.sleep(0.0001)
-            try:
-                send_data = self.next()
-
-                if send_data is None:
+        try:
+            while not self._stop_flag.is_set():
+                try:
+                    data = self._request_queue.get(timeout=self._queue_wait_time)
+                except queue.Empty:
                     continue
 
-                result = self._protocol.send(
-                    PacketStructure.to_packet(send_data.to_bytes())
-                )
+                try:
+                    payload = data.to_bytes()
+                    packet = self._packet_structure_interface.to_packet(payload)
+                    ok = self._protocol.send(packet)
 
-                if result:
-                    self._event_callback.on_sent(send_data)
-                else:
-                    self._event_callback.on_failed_send(send_data)
-                    self._event_callback.on_disconnected(send_data)
+                    if ok is True:
+                        self._event_callback.on_sent(data)
+                    elif ok is False:
+                        self._event_callback.on_failed_send(data)
+                    else:
+                        self._event_callback.on_failed_send(data)
 
-            except Exception as e:
+                except ProtocolConnectionError:
+                    self._event_callback.on_disconnected(data)
+
+                except (ProtocolTimeoutError, ProtocolDecodeError,
+                        ProtocolValidationError, ProtocolAuthenticationError, ProtocolError):
+                    self._event_callback.on_failed_send(data)
+
+                except Exception:
+                    traceback.print_exc()
+                    self._event_callback.on_failed_send(data)
+        finally:
+            try:
+                self._protocol.disconnect()
+            except Exception:
                 traceback.print_exc()

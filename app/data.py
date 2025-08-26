@@ -12,9 +12,8 @@ class ReceivedData(abc.ABC):
 
 
 class SendData(abc.ABC):
-    @classmethod
     @abstractmethod
-    def to_bytes(cls) -> bytes:
+    def to_bytes(self) -> bytes:
         """데이터를 패킷(bytes)으로 직렬화"""
         ...
 

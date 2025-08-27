@@ -1,8 +1,5 @@
 import dataclasses
-import re
-from typing import List, Union
-
-from src.utils import Numeric
+from typing import List
 
 
 @dataclasses.dataclass(frozen=True)

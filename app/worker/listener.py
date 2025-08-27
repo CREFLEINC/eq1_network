@@ -3,17 +3,19 @@ import queue
 import threading
 import time
 import traceback
+import logging
 from typing import Callable, Generic, Optional, Type, TypeVar, Union, runtime_checkable
 
 from app.data import PacketStructure, SendData, ReceivedData
 from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
 from app.interfaces.packet import PacketStructureInterface
 from app.common.exception import ProtocolError, ProtocolConnectionError, ProtocolTimeoutError, ProtocolDecodeError, ProtocolValidationError, ProtocolAuthenticationError
-from src.logger import AppLogger
 
 ProtocolLike = Union[ReqResProtocol, PubSubProtocol]
 TSend = TypeVar("TSend", bound=SendData)
 TRecv = TypeVar("TRecv", bound=ReceivedData)
+
+logger = logging.getLogger(__name__)
 
 
 class ListenerEvent(Generic[TRecv], abc.ABC):
@@ -51,10 +53,12 @@ class Listener(Generic[TRecv], threading.Thread):
         self._received_data_class = received_data_class
 
     def stop(self):
-        AppLogger.write_debug(self, "Set Stop flag for Tcp Listener")
+        """스레드 중지"""
+        logger.debug(f"Set Stop flag for {self.__class__.__name__}")
         self._stop_flag.set()
 
     def run(self) -> None:
+        """스레드 실행"""
         if not isinstance(self._protocol, (ReqResProtocol, PubSubProtocol)):
             raise ValueError(f"Protocol is not initialized in {self}")
 
@@ -65,6 +69,7 @@ class Listener(Generic[TRecv], threading.Thread):
             try:
                 is_ok, bytes_data = self._protocol.read()
                 packets = []
+                
                 if not is_ok:
                     self._event_callback.on_failed_recv(bytes_data)
                     self._event_callback.on_disconnected(bytes_data)
@@ -72,22 +77,32 @@ class Listener(Generic[TRecv], threading.Thread):
                     time.sleep(0.01)
                     continue
                 elif not self._packet_structure_interface.is_valid(bytes_data):
-                    packets = PacketStructure.split_packet(bytes_data)
+                    packets = self._packet_structure_interface.split_packet(bytes_data)
                 else:
                     packets = [bytes_data]
 
                 for packet in packets:
-                    raw_data = self._packet_structure_interface.from_packet(packet)
-                    if self._received_data_class:
-                        received_data = self._received_data_class.from_bytes(raw_data)
-                    else:
-                        # 기본 구현체가 없는 경우 bytes를 그대로 전달
-                        received_data = raw_data
-                    self._event_callback.on_received(received_data)
+                    try:
+                        raw_data = self._packet_structure_interface.from_packet(packet)
+                        if self._received_data_class:
+                            received_data = self._received_data_class.from_bytes(raw_data)
+                        else:
+                            received_data = raw_data
+                        self._event_callback.on_received(received_data)
+                    except (ProtocolDecodeError, ProtocolValidationError) as e:
+                        logger.warning(f"Packet decode/validation error: {e}")
+                        self._event_callback.on_failed_recv(packet)
+                    except Exception as e:
+                        logger.error(f"Error processing packet in {self.__class__.__name__}: {e}")
+                        self._event_callback.on_failed_recv(packet)
+                        
             except Exception as e:
-                import traceback
-
+                logger.error(f"Error in {self.__class__.__name__}: {e}")
                 traceback.print_exc()
 
-        self._protocol.disconnect()
-        AppLogger.write_debug(self, "Terminated Tcp Listener Thread")
+        try:
+            self._protocol.disconnect()
+            logger.debug(f"Terminated {self.__class__.__name__} Thread")
+        except Exception as e:
+            logger.error(f"Error disconnecting protocol in {self.__class__.__name__}: {e}")
+            traceback.print_exc()

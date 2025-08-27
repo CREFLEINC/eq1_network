@@ -3,6 +3,7 @@ import queue
 import threading
 import time
 import traceback
+import logging
 from typing import Callable, Generic, Optional, Type, TypeVar, Union, runtime_checkable
 
 from app.data import PacketStructure, SendData
@@ -12,6 +13,8 @@ from app.common.exception import ProtocolError, ProtocolConnectionError, Protoco
 
 ProtocolLike = Union[ReqResProtocol, PubSubProtocol]
 TSend = TypeVar("TSend", bound=SendData)
+
+logger = logging.getLogger(__name__)
 
 
 class RequesterEvent(Generic[TSend], abc.ABC):
@@ -52,21 +55,15 @@ class Requester(Generic[TSend], threading.Thread):
         self._queue_wait_time = queue_wait_time
 
     def stop(self):
-        """
-        스레드 종료 요청
-        """
+        """스레드 종료 요청"""
         self._stop_flag.set()
 
     def put(self, data: TSend) -> None:
-        """
-        외부에서 TSend를 직접 주입
-        """
+        """외부에서 TSend를 직접 주입"""
         self._request_queue.put(data)
 
     def run(self) -> None:
-        """
-        스레드 실행
-        """
+        """스레드 실행"""
         if not isinstance(self._protocol, (ReqResProtocol, PubSubProtocol)):
             raise ValueError(f"Protocol is not initialized in {self}")
 
@@ -99,11 +96,13 @@ class Requester(Generic[TSend], threading.Thread):
                         ProtocolValidationError, ProtocolAuthenticationError, ProtocolError):
                     self._event_callback.on_failed_send(data)
 
-                except Exception:
-                    traceback.print_exc()
+                except Exception as e:
+                    logger.error(f"Error in {self.__class__.__name__}: {e}")
                     self._event_callback.on_failed_send(data)
         finally:
             try:
                 self._protocol.disconnect()
-            except Exception:
+                logger.debug(f"Terminated {self.__class__.__name__} Thread")
+            except Exception as e:
                 traceback.print_exc()
+                logger.error(f"Error in {self.__class__.__name__}: {e}")

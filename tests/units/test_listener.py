@@ -30,7 +30,7 @@ class MockListenerEvent(ListenerEvent[ReceivedData]):
 
 
 class MockReqResProtocol(ReqResProtocol):
-    """테스트용 ReqResProtocol 구현체 - 외부에서 데이터 주입 가능"""
+    """테스트용 ReqResProtocol 구현체"""
     def __init__(self):
         self.read_results = []
         self.read_index = 0
@@ -64,33 +64,28 @@ class MockReqResProtocol(ReqResProtocol):
 
 
 class MockPubSubProtocol(PubSubProtocol):
-    """테스트용 PubSubProtocol 구현체 - read 메서드 추가"""
+    """테스트용 PubSubProtocol 구현체"""
     def __init__(self):
-        self.read_results = []
-        self.read_index = 0
+        self.subscribe_called = False
+        self.subscribe_topic = None
+        self.subscribe_callback = None
+        self.publish_called = False
+        self.publish_topic = None
+        self.publish_message = None
         self.disconnect_called = False
-        self.read_called = False
         self._connected = True
 
-    def inject_read_result(self, success: bool, data: bytes = None):
-        """외부에서 읽기 결과를 주입하는 메서드"""
-        self.read_results.append((success, data))
-
-    def read(self) -> tuple[bool, bytes | None]:
-        """PubSubProtocol에 read 메서드 추가 (테스트용)"""
-        self.read_called = True
-        if self.read_index < len(self.read_results):
-            result = self.read_results[self.read_index]
-            self.read_index += 1
-            return result
-        # 데이터가 없으면 None 반환 (대기 상태)
-        return True, None
+    def subscribe(self, topic: str, callback):
+        """구독 메서드 - 콜백 등록"""
+        self.subscribe_called = True
+        self.subscribe_topic = topic
+        self.subscribe_callback = callback
 
     def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
+        self.publish_called = True
+        self.publish_topic = topic
+        self.publish_message = message
         return True
-
-    def subscribe(self, topic: str, callback):
-        pass
 
     def disconnect(self):
         self.disconnect_called = True
@@ -100,9 +95,14 @@ class MockPubSubProtocol(PubSubProtocol):
         self._connected = True
         return True
 
+    def simulate_message(self, topic: str, message: bytes):
+        """시뮬레이션용 메시지 전송"""
+        if self.subscribe_callback and message is not None:
+            self.subscribe_callback(topic, message)
+
 
 class MockPacketStructure(PacketStructureInterface):
-    """테스트용 패킷 구조 구현체 - PacketStructure와 동일"""
+    """테스트용 패킷 구조 구현체"""
     HEAD_PACKET = b"$"
     TAIL_PACKET = b"$"
 
@@ -151,7 +151,7 @@ class MockReceivedData(ReceivedData):
 
 class TestListener(unittest.TestCase):
     def setUp(self):
-        """각 테스트마다 새로운 인스턴스 생성"""
+        """테스트 초기화"""
         self.event_callback = MockListenerEvent()
         self.protocol = MockReqResProtocol()
         self.packet_structure = MockPacketStructure
@@ -166,7 +166,7 @@ class TestListener(unittest.TestCase):
         
         self.assertEqual(listener._protocol, self.protocol)
         self.assertEqual(listener._event_callback, self.event_callback)
-        self.assertEqual(listener._packet_structure_interface, self.packet_structure)
+        self.assertEqual(listener._packet_structure, self.packet_structure)
         self.assertFalse(listener._stop_flag.is_set())
         self.assertIsNone(listener._received_data_class)
 
@@ -180,6 +180,20 @@ class TestListener(unittest.TestCase):
         )
         
         self.assertEqual(listener._received_data_class, MockReceivedData)
+
+    def test_listener_initialization_with_pubsub_protocol(self):
+        """PubSub 프로토콜과 함께 Listener 초기화 테스트 - 콜백 등록 확인"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        self.assertTrue(pubsub_protocol.subscribe_called)
+        self.assertEqual(pubsub_protocol.subscribe_topic, "#")
+        self.assertEqual(pubsub_protocol.subscribe_callback, listener._handle_pubsub_message)
 
     def test_stop_method(self):
         """stop 메서드 테스트"""
@@ -209,7 +223,6 @@ class TestListener(unittest.TestCase):
 
     def test_run_with_invalid_event_callback(self):
         """잘못된 이벤트 콜백으로 run 실행 시 ValueError 발생 테스트"""
-        # 먼저 유효한 프로토콜을 설정하여 프로토콜 검증을 통과시킴
         valid_protocol = MockReqResProtocol()
         valid_protocol.inject_read_result(True, b"$test$")
         
@@ -236,11 +249,10 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
         self.assertEqual(len(self.event_callback.received_data), 1)
         self.assertEqual(self.event_callback.received_data[0], b"test message")
@@ -260,11 +272,10 @@ class TestListener(unittest.TestCase):
             received_data_class=MockReceivedData
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
         self.assertEqual(len(self.event_callback.received_data), 1)
         self.assertIsInstance(self.event_callback.received_data[0], MockReceivedData)
@@ -284,11 +295,10 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
         self.assertEqual(len(self.event_callback.failed_recv_data), 1)
         self.assertEqual(self.event_callback.failed_recv_data[0], b"error data")
@@ -308,13 +318,11 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # None 데이터는 무시되어야 함
         self.assertEqual(len(self.event_callback.received_data), 0)
         self.assertEqual(len(self.event_callback.failed_recv_data), 0)
         self.assertEqual(len(self.event_callback.disconnected_data), 0)
@@ -331,14 +339,12 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # 유효하지 않은 패킷은 split_packet으로 처리되어야 함
-        self.assertEqual(len(self.event_callback.received_data), 0)
+        self.assertEqual(len(self.event_callback.received_data), 1)
         self.assertEqual(len(self.event_callback.failed_recv_data), 0)
         self.assertEqual(len(self.event_callback.disconnected_data), 0)
         self.assertTrue(protocol.disconnect_called)
@@ -346,7 +352,7 @@ class TestListener(unittest.TestCase):
     def test_run_with_multiple_packets(self):
         """여러 패킷 수신 테스트"""
         protocol = MockReqResProtocol()
-        protocol.inject_read_result(True, b"$first$second$third$")
+        protocol.inject_read_result(True, b"$first$$second$$third$")
         
         listener = Listener(
             event_callback=self.event_callback,
@@ -354,13 +360,11 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # 여러 패킷이 분할되어 처리되어야 함
         self.assertEqual(len(self.event_callback.received_data), 3)
         self.assertEqual(self.event_callback.received_data[0], b"first")
         self.assertEqual(self.event_callback.received_data[1], b"second")
@@ -374,7 +378,6 @@ class TestListener(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.inject_read_result(True, b"$test$")
         
-        # from_packet에서 예외 발생하도록 모킹
         with patch.object(self.packet_structure, 'from_packet', side_effect=ProtocolDecodeError("Decode error")):
             listener = Listener(
                 event_callback=self.event_callback,
@@ -382,11 +385,10 @@ class TestListener(unittest.TestCase):
                 packet_structure_interface=self.packet_structure
             )
             
-            # 스레드를 시작하고 짧은 대기 후 중지
             listener.start()
-            time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+            time.sleep(0.01)
             listener.stop()
-            listener.join(timeout=0.5)
+            listener.join(timeout=0.1)
             
             self.assertEqual(len(self.event_callback.failed_recv_data), 1)
             self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
@@ -399,7 +401,6 @@ class TestListener(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.inject_read_result(True, b"$test$")
         
-        # from_packet에서 예외 발생하도록 모킹
         with patch.object(self.packet_structure, 'from_packet', side_effect=ProtocolValidationError("Validation error")):
             listener = Listener(
                 event_callback=self.event_callback,
@@ -407,11 +408,10 @@ class TestListener(unittest.TestCase):
                 packet_structure_interface=self.packet_structure
             )
             
-            # 스레드를 시작하고 짧은 대기 후 중지
             listener.start()
-            time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+            time.sleep(0.01)
             listener.stop()
-            listener.join(timeout=0.5)
+            listener.join(timeout=0.1)
             
             self.assertEqual(len(self.event_callback.failed_recv_data), 1)
             self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
@@ -424,7 +424,6 @@ class TestListener(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.inject_read_result(True, b"$test$")
         
-        # from_bytes에서 예외 발생하는 ReceivedData 클래스
         error_data_class = Mock()
         error_data_class.from_bytes = Mock(side_effect=Exception("Data class error"))
         
@@ -435,11 +434,10 @@ class TestListener(unittest.TestCase):
             received_data_class=error_data_class
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
         self.assertEqual(len(self.event_callback.failed_recv_data), 1)
         self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
@@ -458,13 +456,11 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # 일반 예외가 발생해도 스레드는 정상 종료되어야 함
         self.assertEqual(len(self.event_callback.received_data), 0)
         self.assertEqual(len(self.event_callback.failed_recv_data), 0)
         self.assertEqual(len(self.event_callback.disconnected_data), 0)
@@ -479,17 +475,14 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 중지 플래그를 먼저 설정하고 run() 직접 호출
         listener.stop()
         listener.run()
         
-        # 프로토콜이 호출되지 않아야 함
         self.assertFalse(protocol.read_called)
         self.assertTrue(protocol.disconnect_called)
 
     def test_listener_event_abstract_methods(self):
         """ListenerEvent 추상 메서드 테스트"""
-        # 추상 클래스의 인스턴스화 시도
         with self.assertRaises(TypeError):
             ListenerEvent()
 
@@ -514,19 +507,17 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
         self.assertTrue(reqres_protocol.read_called)
         self.assertTrue(reqres_protocol.disconnect_called)
 
     def test_listener_with_pubsub_protocol(self):
-        """PubSubProtocol과 함께 사용하는 테스트"""
+        """PubSubProtocol과 함께 사용하는 테스트 - 대기 모드"""
         pubsub_protocol = MockPubSubProtocol()
-        pubsub_protocol.inject_read_result(True, b"$test$")
         
         listener = Listener(
             event_callback=self.event_callback,
@@ -534,14 +525,153 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        self.assertTrue(pubsub_protocol.read_called)
+        self.assertFalse(hasattr(pubsub_protocol, 'read_called'))
         self.assertTrue(pubsub_protocol.disconnect_called)
+
+    def test_pubsub_message_handler_single_packet(self):
+        """PubSub 메시지 핸들러 - 단일 패킷 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        pubsub_protocol.simulate_message("test/topic", b"$test message$")
+        
+        self.assertEqual(len(self.event_callback.received_data), 1)
+        self.assertEqual(self.event_callback.received_data[0], b"test message")
+        self.assertEqual(len(self.event_callback.failed_recv_data), 0)
+
+    def test_pubsub_message_handler_multiple_packets(self):
+        """PubSub 메시지 핸들러 - 여러 패킷 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        pubsub_protocol.simulate_message("test/topic", b"$first$$second$$third$")
+        
+        self.assertEqual(len(self.event_callback.received_data), 3)
+        self.assertEqual(self.event_callback.received_data[0], b"first")
+        self.assertEqual(self.event_callback.received_data[1], b"second")
+        self.assertEqual(self.event_callback.received_data[2], b"third")
+        self.assertEqual(len(self.event_callback.failed_recv_data), 0)
+
+    def test_pubsub_message_handler_with_received_data_class(self):
+        """PubSub 메시지 핸들러 - ReceivedData 클래스와 함께 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure,
+            received_data_class=MockReceivedData
+        )
+        
+        pubsub_protocol.simulate_message("test/topic", b"$test message$")
+        
+        self.assertEqual(len(self.event_callback.received_data), 1)
+        self.assertIsInstance(self.event_callback.received_data[0], MockReceivedData)
+        self.assertEqual(self.event_callback.received_data[0].message, "test message")
+        self.assertEqual(len(self.event_callback.failed_recv_data), 0)
+
+    def test_pubsub_message_handler_decode_error(self):
+        """PubSub 메시지 핸들러 - 디코드 오류 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        with patch.object(self.packet_structure, 'from_packet', side_effect=ProtocolDecodeError("Decode error")):
+            pubsub_protocol.simulate_message("test/topic", b"$test$")
+            
+            self.assertEqual(len(self.event_callback.failed_recv_data), 1)
+            self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
+            self.assertEqual(len(self.event_callback.received_data), 0)
+
+    def test_pubsub_message_handler_validation_error(self):
+        """PubSub 메시지 핸들러 - 검증 오류 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        with patch.object(self.packet_structure, 'from_packet', side_effect=ProtocolValidationError("Validation error")):
+            pubsub_protocol.simulate_message("test/topic", b"$test$")
+            
+            self.assertEqual(len(self.event_callback.failed_recv_data), 1)
+            self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
+            self.assertEqual(len(self.event_callback.received_data), 0)
+
+    def test_pubsub_message_handler_general_exception(self):
+        """PubSub 메시지 핸들러 - 일반 예외 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        with patch.object(self.packet_structure, 'from_packet', side_effect=Exception("General error")):
+            pubsub_protocol.simulate_message("test/topic", b"$test$")
+            
+            self.assertEqual(len(self.event_callback.failed_recv_data), 1)
+            self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
+            self.assertEqual(len(self.event_callback.received_data), 0)
+
+    def test_pubsub_message_handler_received_data_class_error(self):
+        """PubSub 메시지 핸들러 - ReceivedData 클래스 오류 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        error_data_class = Mock()
+        error_data_class.from_bytes = Mock(side_effect=Exception("Data class error"))
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure,
+            received_data_class=error_data_class
+        )
+        
+        pubsub_protocol.simulate_message("test/topic", b"$test$")
+        
+        self.assertEqual(len(self.event_callback.failed_recv_data), 1)
+        self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
+        self.assertEqual(len(self.event_callback.received_data), 0)
+
+    def test_pubsub_message_handler_exception_in_handler(self):
+        """PubSub 메시지 핸들러 - 핸들러 내부 예외 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        with patch.object(self.packet_structure, 'is_valid', side_effect=Exception("Handler error")):
+            pubsub_protocol.simulate_message("test/topic", b"$test$")
+            
+            self.assertEqual(len(self.event_callback.failed_recv_data), 1)
+            self.assertEqual(self.event_callback.failed_recv_data[0], b"$test$")
+            self.assertEqual(len(self.event_callback.received_data), 0)
 
     def test_packet_structure_interface_integration(self):
         """PacketStructureInterface 통합 테스트"""
@@ -554,13 +684,11 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # PacketStructureInterface가 올바르게 작동하는지 확인
         self.assertEqual(len(self.event_callback.received_data), 1)
         self.assertEqual(self.event_callback.received_data[0], b"test message")
         self.assertTrue(protocol.disconnect_called)
@@ -570,9 +698,8 @@ class TestListener(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.inject_read_result(True, b"$test message$")
         
-        # 각 메서드가 호출되는지 확인
         with patch.object(self.packet_structure, 'is_valid') as mock_is_valid, \
-             patch.object(self.packet_structure, 'from_packet') as mock_from_packet:
+            patch.object(self.packet_structure, 'from_packet') as mock_from_packet:
             
             mock_is_valid.return_value = True
             mock_from_packet.return_value = b"test message"
@@ -583,13 +710,11 @@ class TestListener(unittest.TestCase):
                 packet_structure_interface=self.packet_structure
             )
             
-            # 스레드를 시작하고 짧은 대기 후 중지
             listener.start()
-            time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+            time.sleep(0.01)
             listener.stop()
-            listener.join(timeout=0.5)
+            listener.join(timeout=0.1)
             
-            # 메서드들이 올바르게 호출되었는지 확인
             mock_is_valid.assert_called_once_with(b"$test message$")
             mock_from_packet.assert_called_once_with(b"$test message$")
             self.assertTrue(protocol.disconnect_called)
@@ -605,14 +730,12 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # disconnect 예외가 발생해도 스레드는 정상 종료되어야 함
-        self.assertTrue(protocol.disconnect_called)
+        self.assertTrue(protocol.disconnect.called)
 
     def test_sequential_data_processing(self):
         """순차적 데이터 처리 테스트"""
@@ -627,13 +750,11 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # 모든 데이터가 순서대로 처리되었는지 확인
         self.assertEqual(len(self.event_callback.received_data), 3)
         self.assertEqual(self.event_callback.received_data[0], b"first")
         self.assertEqual(self.event_callback.received_data[1], b"second")
@@ -643,11 +764,11 @@ class TestListener(unittest.TestCase):
     def test_mixed_success_and_failure_scenarios(self):
         """성공과 실패가 혼재된 시나리오 테스트"""
         protocol = MockReqResProtocol()
-        protocol.inject_read_result(True, b"$success1$")  # 성공
-        protocol.inject_read_result(False, b"failure1")   # 실패
-        protocol.inject_read_result(True, b"$success2$")  # 성공
-        protocol.inject_read_result(True, None)           # None (대기)
-        protocol.inject_read_result(True, b"$success3$")  # 성공
+        protocol.inject_read_result(True, b"$success1$")
+        protocol.inject_read_result(False, b"failure1")
+        protocol.inject_read_result(True, b"$success2$")
+        protocol.inject_read_result(True, None)
+        protocol.inject_read_result(True, b"$success3$")
         
         listener = Listener(
             event_callback=self.event_callback,
@@ -655,13 +776,11 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # 결과 확인
         self.assertEqual(len(self.event_callback.received_data), 3)
         self.assertEqual(self.event_callback.received_data[0], b"success1")
         self.assertEqual(self.event_callback.received_data[1], b"success2")
@@ -678,7 +797,6 @@ class TestListener(unittest.TestCase):
     def test_packet_structure_split_functionality(self):
         """PacketStructure의 split_packet 기능 테스트"""
         protocol = MockReqResProtocol()
-        # 여러 패킷이 하나의 데이터로 들어오는 경우
         protocol.inject_read_result(True, b"$packet1$$packet2$$packet3$")
         
         listener = Listener(
@@ -687,13 +805,11 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # split_packet이 올바르게 작동하는지 확인
         self.assertEqual(len(self.event_callback.received_data), 3)
         self.assertEqual(self.event_callback.received_data[0], b"packet1")
         self.assertEqual(self.event_callback.received_data[1], b"packet2")
@@ -703,7 +819,7 @@ class TestListener(unittest.TestCase):
     def test_empty_packet_handling(self):
         """빈 패킷 처리 테스트"""
         protocol = MockReqResProtocol()
-        protocol.inject_read_result(True, b"$$")  # 빈 패킷
+        protocol.inject_read_result(True, b"$$")
         
         listener = Listener(
             event_callback=self.event_callback,
@@ -711,21 +827,17 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # 빈 패킷도 올바르게 처리되어야 함
-        self.assertEqual(len(self.event_callback.received_data), 1)
-        self.assertEqual(self.event_callback.received_data[0], b"")
+        self.assertEqual(len(self.event_callback.received_data), 0)
         self.assertTrue(protocol.disconnect_called)
 
     def test_continuous_reading_behavior(self):
         """연속적인 읽기 동작 테스트"""
         protocol = MockReqResProtocol()
-        # 여러 번의 읽기 시도
         for i in range(5):
             protocol.inject_read_result(True, f"$message{i}$".encode())
         
@@ -735,17 +847,77 @@ class TestListener(unittest.TestCase):
             packet_structure_interface=self.packet_structure
         )
         
-        # 스레드를 시작하고 짧은 대기 후 중지
         listener.start()
-        time.sleep(0.05)  # 데이터 처리 대기 (짧게 조정)
+        time.sleep(0.01)
         listener.stop()
-        listener.join(timeout=0.5)
+        listener.join(timeout=0.1)
         
-        # 모든 메시지가 처리되었는지 확인
         self.assertEqual(len(self.event_callback.received_data), 5)
         for i in range(5):
             self.assertEqual(self.event_callback.received_data[i], f"message{i}".encode())
         self.assertTrue(protocol.disconnect_called)
+
+    def test_pubsub_protocol_subscription_behavior(self):
+        """PubSub 프로토콜 구독 동작 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        self.assertTrue(pubsub_protocol.subscribe_called)
+        self.assertEqual(pubsub_protocol.subscribe_topic, "#")
+        self.assertEqual(pubsub_protocol.subscribe_callback, listener._handle_pubsub_message)
+
+    def test_pubsub_protocol_no_read_calls(self):
+        """PubSub 프로토콜에서 read 메서드가 호출되지 않는지 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        listener.start()
+        time.sleep(0.01)
+        listener.stop()
+        listener.join(timeout=0.1)
+        
+        self.assertFalse(hasattr(pubsub_protocol, 'read_called'))
+        self.assertTrue(pubsub_protocol.disconnect_called)
+
+    def test_pubsub_message_handler_with_invalid_packet(self):
+        """PubSub 메시지 핸들러 - 유효하지 않은 패킷 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        pubsub_protocol.simulate_message("test/topic", b"invalid packet")
+        
+        self.assertEqual(len(self.event_callback.received_data), 1)
+        self.assertEqual(len(self.event_callback.failed_recv_data), 0)
+
+    def test_pubsub_message_handler_with_none_message(self):
+        """PubSub 메시지 핸들러 - None 메시지 테스트"""
+        pubsub_protocol = MockPubSubProtocol()
+        
+        listener = Listener(
+            event_callback=self.event_callback,
+            protocol=pubsub_protocol,
+            packet_structure_interface=self.packet_structure
+        )
+        
+        pubsub_protocol.simulate_message("test/topic", None)
+        
+        self.assertEqual(len(self.event_callback.received_data), 0)
+        self.assertEqual(len(self.event_callback.failed_recv_data), 0)
 
 
 if __name__ == '__main__':

@@ -20,12 +20,12 @@ class BaseProtocol(ABC):
         Returns:
             bool: 연결에 성공하면 True, 실패하면 False를 반환합니다.
         """
-        pass
+        ...
 
     @abstractmethod
     def disconnect(self):
         """현재 활성화된 연결을 종료합니다."""
-        pass
+        ...
 
 
 class ReqResProtocol(BaseProtocol):
@@ -45,7 +45,7 @@ class ReqResProtocol(BaseProtocol):
         Returns:
             bool: 전송 성공 시 True, 실패 시 False
         """
-        pass
+        ...
 
     @abstractmethod
     def read(self) -> Tuple[bool, Optional[bytes]]:
@@ -59,7 +59,7 @@ class ReqResProtocol(BaseProtocol):
                 - 첫 번째 요소: 수신 성공 여부 (bool)
                 - 두 번째 요소: 수신된 데이터 (bytes) 또는 실패 시 None
         """
-        pass
+        ...
 
 
 class PubSubProtocol(BaseProtocol):
@@ -84,7 +84,7 @@ class PubSubProtocol(BaseProtocol):
         Returns:
             bool: 발행 성공 시 True
         """
-        pass
+        ...
 
     @abstractmethod
     def subscribe(self, topic: str, callback: Callable[[str, bytes], None]):
@@ -97,4 +97,4 @@ class PubSubProtocol(BaseProtocol):
                 - 인자: 수신된 토픽(str), 메시지(bytes)
                 - 반환값 없음
         """
-        pass
+        ...

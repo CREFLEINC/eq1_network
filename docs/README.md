@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 ### 기본 MQTT 사용법
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 1. 설정 객체 생성
 broker_config = BrokerConfig(
@@ -60,7 +60,7 @@ mqtt.disconnect()
 
 ### 인증 연결
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 인증 설정
 broker_config = BrokerConfig(
@@ -101,6 +101,10 @@ mqtt.disconnect()
     - **명시적 연결 필요**: connect() 메서드를 반드시 호출해야 함
 - **추상화된 인터페이스:**
     - `ReqRes(요청/응답), PubSub(발행/구독)` 인터페이스
+- **데이터 클래스:**
+    - `SendData`, `ReceivedData` 추상 클래스 구현
+    - `PacketStructure` 패킷 구조화 클래스
+    - `PacketStructureInterface` 패킷 인터페이스
 
 ### 🔄 미구현 기능
 - **플러그인 기반 확장:**
@@ -109,25 +113,27 @@ mqtt.disconnect()
     - TLS/SSL 지원, Will Message 등
 - **MQTT v5.0 기능들:**
     - Shared Subscriptions, Message Expiry 등
+- **PacketInterface 완전 구현:**
+    - SendData/ReceivedData 클래스의 PacketInterface 상속
+    - NetworkHandler 클래스의 PacketInterface 지원
 
 ## 프로젝트 구조
 ```
-communicator/
+app/
 ├── common/         # 공통 모듈 (예외, 로깅 등)
-├── interfaces/     # 추상 인터페이스 (Protocol 등)
+├── interfaces/     # 추상 인터페이스 (Protocol, Packet 등)
 ├── manager/        # 프로토콜 매니저
 ├── protocols/      # 실제 프로토콜 구현체 (MQTT 등)
 │   └── mqtt/       # MQTT 프로토콜 구현
-├── docs/           # 문서
-└── tests/          # 테스트
-    ├── units/      # 단위 테스트 (Mock 기반)
-    ├── integrations/ # 통합 테스트 (실제 브로커)
-    └── e2e/        # E2E 테스트
+├── worker/         # Listener, Requester 워커 모듈
+├── data.py         # SendData, ReceivedData, PacketStructure
+├── network.py      # NetworkHandler
+└── cli.py          # CLI 인터페이스
 ```
 
 ## 시스템 요구사항
-- Python 3.10.18 (권장)
-- OS: Windows
+- Python 3.10+ (권장)
+- OS: Windows, macOS, Linux
 - 설치 전 가상환경(venv) 사용을 권장합니다.
 
 ## 의존성
@@ -143,10 +149,10 @@ pip install -r requirements.txt
     - 추상 메소드: `connect()`, `disconnect()`
 - **ReqResProtocol (BaseProtocol 상속)**
     - 요청/응답 기반 통신 프로토콜 인터페이스
-    - 추상 메소드: `send()`, `receive()`
+    - 추상 메소드: `send()`, `read()`
 - **PubSubProtocol (BaseProtocol 상속)**
     - 발행/구독 기반 통신 프로토콜 인터페이스
-    - 추상 메소드: `publish()`, `subscribe()`
+    - 추상 메소드: `publish()`, `subscribe()`, `unsubscribe()`
 
 ### 현재 구현체
 - **MQTTProtocol**
@@ -157,17 +163,31 @@ pip install -r requirements.txt
     - MQTT 연결 설정을 위한 데이터 클래스
     - 브로커 주소, 포트, 인증 정보 등
 
+### 데이터 클래스
+- **SendData (ABC)**
+    - 전송 데이터 추상 클래스
+    - `to_bytes()` 메서드 구현 필요
+- **ReceivedData (ABC)**
+    - 수신 데이터 추상 클래스
+    - `from_bytes()` 클래스 메서드 구현 필요
+- **PacketStructure**
+    - 패킷 구조화 및 직렬화/역직렬화
+    - HEAD_PACKET, TAIL_PACKET 기반 프레이밍
+
 ### 예외 처리
 - **ProtocolConnectionError**: 연결 실패, 타임아웃
 - **ProtocolValidationError**: 메시지 발행/구독 실패
 - **ProtocolError**: 일반적인 프로토콜 오류
+- **ProtocolAuthenticationError**: 인증 실패
+- **ProtocolTimeoutError**: 타임아웃 오류
+- **ProtocolDecodeError**: 디코딩 오류
 
 ## 프레임워크 확장
 새로운 통신 프로토콜을 추가하려면 적절한 인터페이스를 상속받아 구현합니다.
 
 ### Req/Res 프로토콜 추가
 ```python
-from communicator.interfaces.protocol import ReqResProtocol
+from app.interfaces.protocol import ReqResProtocol
 
 class TCPProtocol(ReqResProtocol):
     def __init__(self, host: str, port: int):
@@ -187,14 +207,14 @@ class TCPProtocol(ReqResProtocol):
         # 데이터 전송 구현
         pass
     
-    def receive(self, buffer_size: int = 1024) -> bytes:
+    def read(self) -> Tuple[bool, Optional[bytes]]:
         # 데이터 수신 구현
         pass
 ```
 
 ### Pub/Sub 프로토콜 추가
 ```python
-from communicator.interfaces.protocol import PubSubProtocol
+from app.interfaces.protocol import PubSubProtocol
 
 class RedisProtocol(PubSubProtocol):
     def publish(self, topic: str, message: str, qos: int = 0, retain: bool = False) -> bool:
@@ -227,7 +247,7 @@ pytest tests/units/test_mqtt_protocol.py -v
 ```
 
 ### 테스트 커버리지
-현재 테스트 커버리지: **92%+** 달성
+현재 테스트 커버리지: **90%+** 달성
 
 ## 다음 단계
 

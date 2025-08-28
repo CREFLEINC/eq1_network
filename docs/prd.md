@@ -5,7 +5,7 @@ EQ-1 Network는 다양한 산업 및 IoT 환경에서 사용할 수 있는 플�
 이 문서는 EQ-1 Network의 목적, 요구사항, 설계 방향, 제약사항을 명확히 정의하여 팀 내 공통된 이해를 돕습니다.
 
 ## 개요
-- MQTT를 시작으로 다양한 통신 프로토콜을 표준화된 인터페이스로 지원합니다.
+- MQTT, TCP, Serial을 시작으로 다양한 통신 프로토콜을 표준화된 인터페이스로 지원합니다.
 - 신규 프로토콜을 플러그인 방식으로 쉽게 확장할 수 있습니다.
 - 공통 ReqRes / PubSub 인터페이스와 일관된 직렬화 규칙을 제공합니다.
 - Core-Network 연동: PacketStructureInterface 인터페이스를 통한 표준화된 패킷 처리 시스템을 제공합니다.
@@ -23,8 +23,9 @@ flowchart TD
     INTERFACES --> PROTOCOLS["Protocol Plugins"]
 
     PROTOCOLS --> MQTT["MQTTProtocol"]
+    PROTOCOLS --> TCP["TCPClient/TCPServer"]
+    PROTOCOLS --> SERIAL["SerialProtocol"]
     PROTOCOLS --> MODBUS[(Future) ModbusProtocol]
-    PROTOCOLS --> TCPUDP[(Future) TCP/UDPProtocol]
     
     PACKET --> SENDDATA["SendData"]
     PACKET --> RECEIVEDDATA["ReceivedData"]
@@ -39,36 +40,42 @@ flowchart TD
 
 ## 배경
 - 기존 시스템별 통신 구현 중복
-- MQTT, TCP/UDP, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요성 존재
+- MQTT, TCP/UDP, Serial, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요성 존재
 - Core-Network 연동 필요성: 다양한 데이터 타입(List, Dict 등)을 일관된 방식으로 처리할 수 있는 표준 인터페이스 필요
 
 ## 성공 지표
 
 ### 현재 상태
-- **개발 속도**: ✅ 달성 - MQTT v3.1.1 기본 기능 구현 완료
+- **개발 속도**: ✅ 달성 - MQTT v3.1.1, TCP, Serial 기본 기능 구현 완료
 - **품질 지표**: ✅ 달성 - 테스트 커버리지 90%+ 달성
 - **MQTT 기본 기능**: ✅ 달성 - MQTT v3.1.1 기본 표준 준수
+- **TCP 프로토콜**: ✅ 구현됨 - TCPClient/TCPServer 클래스 구현 완료
+- **Serial 프로토콜**: ✅ 구현됨 - SerialProtocol 클래스 구현 완료
 - **데이터 클래스**: ✅ 구현됨 - SendData, ReceivedData, PacketStructure 클래스 구현 완료
 - **인터페이스**: ✅ 구현됨 - BaseProtocol, ReqResProtocol, PubSubProtocol 인터페이스 구현
 - **예외 처리**: ✅ 구현됨 - ProtocolError 계층 구조 구현
 - **워커 모듈**: ✅ 구현됨 - Listener, Requester 스레드 기반 워커 구현
+- **매니저 시스템**: ✅ 구현됨 - ReqResManager, PubSubManager 구현 완료
 
 ### 지속적 목표
 - **안정성**: 3개월간 치명적 통신 버그 0건 유지
 - **성능**: 초당 10,000 메시지 처리 성능 유지
-- **확장성**: 6개월 내 TCP/Serial 프로토콜 추가
+- **확장성**: 6개월 내 Modbus 프로토콜 추가
 
 ## 범위
 
 ### 포함 사항
 - 통신 프로토콜 공통 인터페이스
 - 패킷 구조화 및 직렬화
-- MQTT 프로토콜 구현
+- MQTT 프로토콜 구현 (PubSub)
+- TCP 프로토콜 구현 (ReqRes) - 클라이언트/서버
+- Serial 프로토콜 구현 (ReqRes)
 - 단위 테스트 및 샘플 예제
 - PacketStructureInterface 인터페이스 구현
 - SendData/ReceivedData 클래스 구현
 - NetworkHandler 클래스 구현
 - Listener/Requester 워커 모듈 구현
+- ReqResManager/PubSubManager 구현
 
 ### 제외 사항
 - UI (GUI, Web)
@@ -83,13 +90,16 @@ flowchart TD
 | **F-03** | **PubSub 인터페이스** | - `PubSubProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 브로커와의 연결 수립 및 종료<br/>  - `publish(topic: str, message: str, qos: int, retain: bool)`: 메시지 발행<br/>  - `subscribe(topic: str, callback: Callable)`: 토픽 구독 및 콜백 등록<br/>  - `unsubscribe(topic: str, callback: Callable)`: 토픽 구독 취소 |
 | **F-04** | **PacketStructure** | - 모든 통신 데이터는 `PacketStructure` 클래스를 통해 처리.<br/>- `to_packet(data: bytes) -> bytes`: 데이터를 패킷으로 직렬화.<br/>- `from_packet(packet: bytes) -> bytes`: 패킷을 데이터로 역직렬화.<br/>- `is_valid(packet: bytes) -> bool`: 패킷 유효성 검사.<br/>- `split_packet(packet: bytes) -> list[bytes]`: 패킷 분할. |
 | **F-05** | **RFC 준수 MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리로 구현.<br/>- **현재 구현**: Username/Password 인증, Retained Messages<br/>- **현재 구현**: 예기치 못한 연결 실패 시 자동 재연결 (지수 백오프)<br/>- **현재 구현**: 재연결 시 구독 자동 복구 및 메시지 큐 처리<br/>- **현재 구현**: QoS (0, 1, 2) 레벨 완전 지원<br/>- **현재 구현**: 상세한 RFC 준수 에러 처리 |
-| **F-06** | **Thread-safe 보장** | - publish, subscribe, unsubscribe, 큐 처리 등 모든 API가 thread-safe해야 함 |
-| **F-07** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
-| **F-08** | **PacketStructureInterface 인터페이스** | - `abc.ABC` 기반의 `PacketStructureInterface` 추상 클래스 구현<br/>- `to_packet(data: bytes) -> bytes`: 데이터를 패킷으로 직렬화<br/>- `from_packet(packet: bytes) -> bytes`: 패킷을 데이터로 역직렬화<br/>- `is_valid(packet: bytes) -> bool`: 패킷 유효성 검사<br/>- `split_packet(packet: bytes) -> list[bytes]`: 패킷 분할 |
-| **F-09** | **SendData 클래스 구현** | - `abc.ABC` 기반의 `SendData` 추상 클래스 구현<br/>- `to_bytes() -> bytes`: 객체를 전송 가능한 바이트로 직렬화 |
-| **F-10** | **ReceivedData 클래스 구현** | - `abc.ABC` 기반의 `ReceivedData` 추상 클래스 구현<br/>- `from_bytes(data: bytes) -> Self`: 바이트 데이터를 객체로 역직렬화 |
-| **F-11** | **NetworkHandler 클래스 구현** | - `send`, `receive` 메서드가 포함된 클래스 구축<br/>- Listener, Requester 워커 모듈과 연동 |
-| **F-12** | **워커 모듈 구현** | - Listener: 수신 처리 스레드<br/>- Requester: 송신 처리 스레드<br/>- 이벤트 기반 콜백 처리 |
+| **F-06** | **TCP 프로토콜 구현** | - `ReqResProtocol` 인터페이스를 구현한 TCPClient/TCPServer 클래스<br/>- **현재 구현**: TCP 클라이언트/서버 통신 지원<br/>- **현재 구현**: 바이너리/텍스트 데이터 송수신<br/>- **현재 구현**: 타임아웃 설정 및 연결 관리<br/>- **현재 구현**: JSON 데이터 구조화 지원 |
+| **F-07** | **Serial 프로토콜 구현** | - `ReqResProtocol` 인터페이스를 구현한 SerialProtocol 클래스<br/>- **현재 구현**: 시리얼 포트 통신 지원<br/>- **현재 구현**: 다양한 보드레이트 설정<br/>- **현재 구현**: 바이너리/텍스트 데이터 송수신<br/>- **현재 구현**: AT 명령어 지원 |
+| **F-08** | **Thread-safe 보장** | - publish, subscribe, unsubscribe, 큐 처리 등 모든 API가 thread-safe해야 함 |
+| **F-09** | **테스트 코드 제공** | - `pytest`와 `unittest.mock`을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- `MQTTProtocol` 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함. |
+| **F-10** | **PacketStructureInterface 인터페이스** | - `abc.ABC` 기반의 `PacketStructureInterface` 추상 클래스 구현<br/>- `to_packet(data: bytes) -> bytes`: 데이터를 패킷으로 직렬화<br/>- `from_packet(packet: bytes) -> bytes`: 패킷을 데이터로 역직렬화<br/>- `is_valid(packet: bytes) -> bool`: 패킷 유효성 검사<br/>- `split_packet(packet: bytes) -> list[bytes]`: 패킷 분할 |
+| **F-11** | **SendData 클래스 구현** | - `abc.ABC` 기반의 `SendData` 추상 클래스 구현<br/>- `to_bytes() -> bytes`: 객체를 전송 가능한 바이트로 직렬화 |
+| **F-12** | **ReceivedData 클래스 구현** | - `abc.ABC` 기반의 `ReceivedData` 추상 클래스 구현<br/>- `from_bytes(data: bytes) -> Self`: 바이트 데이터를 객체로 역직렬화 |
+| **F-13** | **NetworkHandler 클래스 구현** | - `send`, `receive` 메서드가 포함된 클래스 구축<br/>- Listener, Requester 워커 모듈과 연동 |
+| **F-14** | **워커 모듈 구현** | - Listener: 수신 처리 스레드<br/>- Requester: 송신 처리 스레드<br/>- 이벤트 기반 콜백 처리 |
+| **F-15** | **매니저 시스템 구현** | - ReqResManager: ReqRes 프로토콜 통합 관리<br/>- PubSubManager: PubSub 프로토콜 통합 관리<br/>- 플러그인 등록/관리 기능 |
 
 ## 비기능 요구사항
 | ID | 요구사항 | 상세 |
@@ -106,7 +116,10 @@ flowchart TD
 app/
 ├── common/         # 예외, 로깅
 ├── interfaces/     # Protocol 인터페이스, PacketStructureInterface 인터페이스
-├── protocols/      # MQTTProtocol 등
+├── protocols/      # MQTTProtocol, TCPClient/TCPServer, SerialProtocol 등
+│   ├── mqtt/       # MQTT 프로토콜 구현
+│   ├── ethernet/   # TCP 프로토콜 구현
+│   └── serial/     # Serial 프로토콜 구현
 ├── manager/        # 프로토콜 로딩 및 관리
 ├── worker/         # Listener, Requester
 ├── data.py         # SendData, ReceivedData
@@ -122,15 +135,22 @@ app/
 - **데이터 클래스**
     - **`SendData`**: 전송 데이터 추상 클래스
     - **`ReceivedData`**: 수신 데이터 추상 클래스
-    - **`PacketStructure`**: 패킷 구조화 클래스
 - **네트워크 핸들러**
     - **`NetworkHandler`**: 네트워크 통신 핸들러
 - **워커 모듈**
     - **`Listener`**: 수신 처리 스레드
     - **`Requester`**: 송신 처리 스레드
+- **매니저 시스템**
+    - **`ReqResManager`**: ReqRes 프로토콜 통합 관리
+    - **`PubSubManager`**: PubSub 프로토콜 통합 관리
 - **RFC 준수 MQTT 구현**
     - `MQTTProtocol`: paho-mqtt 기반 RFC 준수 구현
     - `BrokerConfig`, `ClientConfig`: 설정 관리를 위한 데이터 클래스
+- **TCP 프로토콜 구현**
+    - `TCPClient`: TCP 클라이언트 구현
+    - `TCPServer`: TCP 서버 구현
+- **Serial 프로토콜 구현**
+    - `SerialProtocol`: 시리얼 통신 구현
 - **보안 및 신뢰성**
     - Username/Password 인증
     - **예기치 못한 연결 실패 시 자동 재연결** (지수 백오프)
@@ -168,6 +188,45 @@ mqtt.publish("topic/test", "hello", qos=1, retain=True)
 mqtt.disconnect()
 ```
 
+### 현재 구현된 TCP 예시
+```python
+from app import ReqResManager
+from app.protocols.ethernet.tcp_client import TCPClient
+from app.protocols.ethernet.tcp_server import TCPServer
+
+# TCP 클라이언트 설정
+tcp_client = TCPClient("localhost", 8080, timeout=1)
+ReqResManager.load("tcp_client", tcp_client)
+
+# TCP 서버 설정
+tcp_server = TCPServer("localhost", 8081, timeout=1)
+ReqResManager.load("tcp_server", tcp_server)
+
+# 연결 및 통신
+if ReqResManager.connect("tcp_client"):
+    ReqResManager.send("tcp_client", b"Hello Server!")
+    response = ReqResManager.receive("tcp_client")
+    print(f"Response: {response.decode()}")
+    ReqResManager.disconnect("tcp_client")
+```
+
+### 현재 구현된 Serial 예시
+```python
+from app import ReqResManager
+from app.protocols.serial.serial_protocol import SerialProtocol
+
+# 시리얼 프로토콜 설정
+serial_protocol = SerialProtocol("COM1", 9600, timeout=1)
+ReqResManager.load("serial", serial_protocol)
+
+# 연결 및 통신
+if ReqResManager.connect("serial"):
+    ReqResManager.send("serial", b"AT\r\n")
+    response = ReqResManager.receive("serial")
+    print(f"Response: {response.decode()}")
+    ReqResManager.disconnect("serial")
+```
+
 ### 미구현 기능 예시 (계획만)
 ```python
 # 다음 기능들은 아직 구현되지 않았습니다:
@@ -185,11 +244,11 @@ mqtt.set_will("device/status", "offline", qos=1, retain=True)  # 미구현
 
 ### 향후 Req/Res 예시 (계획)
 ```python
-# TCP 프로토콜 추가 예정
-tcp = TCPProtocol("192.168.0.10", 502)
-tcp.connect()
-tcp.send(b"PING")
-resp = tcp.read()
+# Modbus 프로토콜 추가 예정
+modbus = ModbusProtocol("192.168.0.10", 502)
+modbus.connect()
+modbus.send(b"PING")
+resp = modbus.read()
 ```
 
 ### PacketStructure 사용 예시
@@ -272,7 +331,8 @@ network_handler.send_data(send_data)  # PacketStructure 기반 전송
     - NetworkHandler 클래스 단위 테스트 추가
 - 통합 테스트 (Integration Test)
     - 실제 MQTT 브로커 환경에서 publish/subscribe 기능 검증
-    - 향후 Modbus, TCP/UDP 등 다른 프로토콜 추가 시 동일한 시나리오 확장
+    - TCP 클라이언트/서버 통신 테스트
+    - 시리얼 통신 테스트
     - SendData/ReceivedData 클래스 통합 테스트 추가
     - PacketStructure 기반 통신 통합 테스트 추가
 - 자동화
@@ -301,11 +361,11 @@ network_handler.send_data(send_data)  # PacketStructure 기반 전송
 
 ### 기술적 제약
 - **Python 버전**: 3.10.18 (권장)
-- **외부 의존성**: paho-mqtt 1.6.0+
+- **외부 의존성**: paho-mqtt 1.6.0+, pyserial 3.5+
 - **운영체제**: Windows, macOS, Linux
 
 ### 기능적 제약
-- **현재 지원**: MQTT v3.1.1 기본 기능만 지원
+- **현재 지원**: MQTT v3.1.1, TCP, Serial 기본 기능만 지원
 - **미구현**: TLS/SSL, Will Message, MQTT v5.0 기능들
 - **동시 연결**: 단일 브로커당 하나의 연결만 지원
 - **명시적 연결**: connect() 메서드 호출 필수 (자동 연결 없음)

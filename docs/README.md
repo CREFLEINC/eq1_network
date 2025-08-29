@@ -4,12 +4,15 @@ EQ-1 Network는 다양한 통신 프로토콜을 플러그인 기반으로 확�
 
 ## 개요
 
-현재 MQTT 프로토콜을 지원하며, 다음 기능을 제공합니다:
+현재 MQTT, TCP, Serial 프로토콜을 지원하며, 다음 기능을 제공합니다:
 
-- **Basic MQTT**: 기본 MQTT v3.1.1 기능 지원
-- **Authentication**: Username/Password 인증
-- **Reliability**: 재연결 시 구독 자동 복구
+- **MQTT**: MQTT v3.1.1 기본 기능 지원, 인증, 재연결, QoS
+- **TCP**: TCP 클라이언트/서버 통신, 바이너리/텍스트 데이터 지원
+- **Serial**: 시리얼 포트 통신, 다양한 보드레이트 지원
+- **Authentication**: Username/Password 인증 (MQTT)
+- **Reliability**: 재연결 시 구독 자동 복구 (MQTT)
 - **Thread Safety**: 스레드 안전한 API 설계
+- **Manager System**: ReqResManager, PubSubManager를 통한 통합 관리
 
 ## 시작하기 전에
 
@@ -17,6 +20,7 @@ EQ-1 Network는 다양한 통신 프로토콜을 플러그인 기반으로 확�
 
 - Python 3.10+
 - paho-mqtt 1.6.0+
+- pyserial 3.5+ (Serial 통신 사용 시)
 
 ## 설치
 
@@ -28,7 +32,7 @@ pip install -r requirements.txt
 
 ### 기본 MQTT 사용법
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 1. 설정 객체 생성
 broker_config = BrokerConfig(
@@ -58,9 +62,48 @@ mqtt.publish("test/topic", "Hello MQTT!", qos=1)
 mqtt.disconnect()
 ```
 
-### 인증 연결
+### 기본 TCP 사용법
 ```python
-from communicator.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from app import ReqResManager
+from app.protocols.ethernet.tcp_client import TCPClient
+from app.protocols.ethernet.tcp_server import TCPServer
+
+# TCP 클라이언트 설정
+tcp_client = TCPClient("localhost", 8080, timeout=1)
+ReqResManager.load("tcp_client", tcp_client)
+
+# TCP 서버 설정
+tcp_server = TCPServer("localhost", 8081, timeout=1)
+ReqResManager.load("tcp_server", tcp_server)
+
+# 연결 및 통신
+if ReqResManager.connect("tcp_client"):
+    ReqResManager.send("tcp_client", b"Hello Server!")
+    response = ReqResManager.receive("tcp_client")
+    print(f"Response: {response.decode()}")
+    ReqResManager.disconnect("tcp_client")
+```
+
+### 기본 Serial 사용법
+```python
+from app import ReqResManager
+from app.protocols.serial.serial_protocol import SerialProtocol
+
+# 시리얼 프로토콜 설정
+serial_protocol = SerialProtocol("COM1", 9600, timeout=1)
+ReqResManager.load("serial", serial_protocol)
+
+# 연결 및 통신
+if ReqResManager.connect("serial"):
+    ReqResManager.send("serial", b"AT\r\n")
+    response = ReqResManager.receive("serial")
+    print(f"Response: {response.decode()}")
+    ReqResManager.disconnect("serial")
+```
+
+### 인증 연결 (MQTT)
+```python
+from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 인증 설정
 broker_config = BrokerConfig(
@@ -88,8 +131,18 @@ mqtt.disconnect()
     - MQTT v3.1.1 기본 기능 지원
     - QoS 0, 1, 2 레벨 지원 (기본값: QoS 0)
     - Keep-alive 메커니즘
+- **TCP 프로토콜:**
+    - TCP 클라이언트/서버 통신 지원
+    - 바이너리/텍스트 데이터 송수신
+    - 타임아웃 설정 및 연결 관리
+    - JSON 데이터 구조화 지원
+- **Serial 프로토콜:**
+    - 시리얼 포트 통신 지원
+    - 다양한 보드레이트 설정
+    - 바이너리/텍스트 데이터 송수신
+    - AT 명령어 지원
 - **인증 기능:**
-    - Username/Password 인증
+    - Username/Password 인증 (MQTT)
 - **MQTT 고급 기능:**
     - Retained Messages
     - 재연결 시 구독 자동 복구
@@ -101,33 +154,44 @@ mqtt.disconnect()
     - **명시적 연결 필요**: connect() 메서드를 반드시 호출해야 함
 - **추상화된 인터페이스:**
     - `ReqRes(요청/응답), PubSub(발행/구독)` 인터페이스
+- **데이터 클래스:**
+    - `SendData`, `ReceivedData` 추상 클래스 구현
+    - `PacketStructure` 패킷 구조화 클래스
+    - `PacketStructureInterface` 패킷 인터페이스
+- **매니저 시스템:**
+    - `ReqResManager`: ReqRes 프로토콜 통합 관리
+    - `PubSubManager`: PubSub 프로토콜 통합 관리
 
 ### 🔄 미구현 기능
 - **플러그인 기반 확장:**
-    - TCP, Serial, Modbus 등 새로운 프로토콜 추가 예정
+    - Modbus 등 새로운 프로토콜 추가 예정
 - **보안 강화:**
     - TLS/SSL 지원, Will Message 등
 - **MQTT v5.0 기능들:**
     - Shared Subscriptions, Message Expiry 등
+- **PacketInterface 완전 구현:**
+    - SendData/ReceivedData 클래스의 PacketInterface 상속
+    - NetworkHandler 클래스의 PacketInterface 지원
 
 ## 프로젝트 구조
 ```
-communicator/
+app/
 ├── common/         # 공통 모듈 (예외, 로깅 등)
-├── interfaces/     # 추상 인터페이스 (Protocol 등)
+├── interfaces/     # 추상 인터페이스 (Protocol, Packet 등)
 ├── manager/        # 프로토콜 매니저
-├── protocols/      # 실제 프로토콜 구현체 (MQTT 등)
-│   └── mqtt/       # MQTT 프로토콜 구현
-├── docs/           # 문서
-└── tests/          # 테스트
-    ├── units/      # 단위 테스트 (Mock 기반)
-    ├── integrations/ # 통합 테스트 (실제 브로커)
-    └── e2e/        # E2E 테스트
+├── protocols/      # 실제 프로토콜 구현체
+│   ├── mqtt/       # MQTT 프로토콜 구현
+│   ├── ethernet/   # TCP 프로토콜 구현
+│   └── serial/     # Serial 프로토콜 구현
+├── worker/         # Listener, Requester 워커 모듈
+├── data.py         # SendData, ReceivedData, PacketStructure
+├── network.py      # NetworkHandler
+└── cli.py          # CLI 인터페이스
 ```
 
 ## 시스템 요구사항
-- Python 3.10.18 (권장)
-- OS: Windows
+- Python 3.10+ (권장)
+- OS: Windows, macOS, Linux
 - 설치 전 가상환경(venv) 사용을 권장합니다.
 
 ## 의존성
@@ -143,31 +207,59 @@ pip install -r requirements.txt
     - 추상 메소드: `connect()`, `disconnect()`
 - **ReqResProtocol (BaseProtocol 상속)**
     - 요청/응답 기반 통신 프로토콜 인터페이스
-    - 추상 메소드: `send()`, `receive()`
+    - 추상 메소드: `send()`, `read()`
 - **PubSubProtocol (BaseProtocol 상속)**
     - 발행/구독 기반 통신 프로토콜 인터페이스
-    - 추상 메소드: `publish()`, `subscribe()`
+    - 추상 메소드: `publish()`, `subscribe()`, `unsubscribe()`
 
 ### 현재 구현체
 - **MQTTProtocol**
     - `PubSubProtocol` 인터페이스 구현
     - paho-mqtt 라이브러리 기반
     - 기본 MQTT 기능 지원
+- **TCPClient/TCPServer**
+    - `ReqResProtocol` 인터페이스 구현
+    - TCP 클라이언트/서버 통신 지원
+- **SerialProtocol**
+    - `ReqResProtocol` 인터페이스 구현
+    - 시리얼 포트 통신 지원
 - **BrokerConfig & ClientConfig**
     - MQTT 연결 설정을 위한 데이터 클래스
     - 브로커 주소, 포트, 인증 정보 등
+
+### 데이터 클래스
+- **SendData (ABC)**
+    - 전송 데이터 추상 클래스
+    - `to_bytes()` 메서드 구현 필요
+- **ReceivedData (ABC)**
+    - 수신 데이터 추상 클래스
+    - `from_bytes()` 클래스 메서드 구현 필요
+- **PacketStructure**
+    - 패킷 구조화 및 직렬화/역직렬화
+    - HEAD_PACKET, TAIL_PACKET 기반 프레이밍
+
+### 매니저 시스템
+- **ReqResManager**
+    - ReqRes 프로토콜 통합 관리
+    - 플러그인 등록/관리 기능
+- **PubSubManager**
+    - PubSub 프로토콜 통합 관리
+    - 플러그인 등록/관리 기능
 
 ### 예외 처리
 - **ProtocolConnectionError**: 연결 실패, 타임아웃
 - **ProtocolValidationError**: 메시지 발행/구독 실패
 - **ProtocolError**: 일반적인 프로토콜 오류
+- **ProtocolAuthenticationError**: 인증 실패
+- **ProtocolTimeoutError**: 타임아웃 오류
+- **ProtocolDecodeError**: 디코딩 오류
 
 ## 프레임워크 확장
 새로운 통신 프로토콜을 추가하려면 적절한 인터페이스를 상속받아 구현합니다.
 
 ### Req/Res 프로토콜 추가
 ```python
-from communicator.interfaces.protocol import ReqResProtocol
+from app.interfaces.protocol import ReqResProtocol
 
 class TCPProtocol(ReqResProtocol):
     def __init__(self, host: str, port: int):
@@ -187,14 +279,14 @@ class TCPProtocol(ReqResProtocol):
         # 데이터 전송 구현
         pass
     
-    def receive(self, buffer_size: int = 1024) -> bytes:
+    def read(self) -> Tuple[bool, Optional[bytes]]:
         # 데이터 수신 구현
         pass
 ```
 
 ### Pub/Sub 프로토콜 추가
 ```python
-from communicator.interfaces.protocol import PubSubProtocol
+from app.interfaces.protocol import PubSubProtocol
 
 class RedisProtocol(PubSubProtocol):
     def publish(self, topic: str, message: str, qos: int = 0, retain: bool = False) -> bool:
@@ -206,9 +298,81 @@ class RedisProtocol(PubSubProtocol):
         pass
 ```
 
+## 예제 코드
+
+### 종합 예제
+프로젝트에는 각 프로토콜별 종합 예제가 포함되어 있습니다:
+
+- `examples/comprehensive_mqtt_example.py` - MQTT 종합 예제
+- `examples/comprehensive_tcp_example.py` - TCP 종합 예제
+- `examples/comprehensive_serial_example.py` - Serial 종합 예제
+
+### TCP 클라이언트-서버 예제
+```python
+import threading
+import time
+from app import ReqResManager
+from app.protocols.ethernet.tcp_client import TCPClient
+from app.protocols.ethernet.tcp_server import TCPServer
+
+# 서버 스레드
+def server_thread():
+    server = TCPServer("localhost", 8080, timeout=1)
+    ReqResManager.load("server", server)
+    
+    if ReqResManager.connect("server"):
+        print("Server started")
+        while True:
+            data = ReqResManager.receive("server")
+            if data:
+                print(f"Server received: {data.decode()}")
+                ReqResManager.send("server", b"Server response")
+            time.sleep(0.1)
+
+# 클라이언트
+def client_example():
+    client = TCPClient("localhost", 8080, timeout=1)
+    ReqResManager.load("client", client)
+    
+    if ReqResManager.connect("client"):
+        ReqResManager.send("client", b"Hello from client")
+        response = ReqResManager.receive("client")
+        print(f"Client received: {response.decode()}")
+        ReqResManager.disconnect("client")
+
+# 실행
+server = threading.Thread(target=server_thread, daemon=True)
+server.start()
+time.sleep(1)
+client_example()
+```
+
+### Serial 통신 예제
+```python
+from app import ReqResManager
+from app.protocols.serial.serial_protocol import SerialProtocol
+
+# 시리얼 프로토콜 설정
+serial = SerialProtocol("COM1", 9600, timeout=1)
+ReqResManager.load("serial", serial)
+
+if ReqResManager.connect("serial"):
+    # AT 명령어 전송
+    ReqResManager.send("serial", b"AT\r\n")
+    response = ReqResManager.receive("serial")
+    print(f"AT Response: {response.decode()}")
+    
+    # 데이터 전송
+    ReqResManager.send("serial", b"Hello Device\r\n")
+    response = ReqResManager.receive("serial")
+    print(f"Device Response: {response.decode()}")
+    
+    ReqResManager.disconnect("serial")
+```
+
 ## 테스트
 - **단위 테스트**: Mock 기반 개별 기능 테스트
-- **통합 테스트**: 실제 MQTT 브로커와의 연동 테스트
+- **통합 테스트**: 실제 MQTT 브로커, TCP, Serial과의 연동 테스트
 - **E2E 테스트**: 실제 사용 end-to-end 시나리오 테스트
 
 ### 테스트 실행
@@ -224,10 +388,13 @@ pytest tests/integrations/ -v
 
 # MQTT 프로토콜만 테스트
 pytest tests/units/test_mqtt_protocol.py -v
+
+# TCP 프로토콜만 테스트
+pytest tests/units/test_tcp_protocol.py -v
 ```
 
 ### 테스트 커버리지
-현재 테스트 커버리지: **92%+** 달성
+현재 테스트 커버리지: **90%+** 달성
 
 ## 다음 단계
 
@@ -237,7 +404,7 @@ pytest tests/units/test_mqtt_protocol.py -v
 - 자동 재연결 기능 추가 개선 (재시도 횟수 제한, 상태 콜백 등)
 
 ### 장기 로드맵
-- TCP, Serial, Modbus 프로토콜 추가
+- Modbus 프로토콜 추가
 - 플러그인 매니저 개발
 - 성능 최적화 및 비동기 처리 강화
 

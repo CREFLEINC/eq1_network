@@ -1,1 +1,1 @@
-from .mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from .mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol

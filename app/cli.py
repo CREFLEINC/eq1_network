@@ -8,7 +8,7 @@ import sys
 from typing import List, Optional
 
 from app import __version__
-from app.manager.protocol_manager import ReqResManager, PubSubManager
+from app.manager.protocol_manager import PubSubManager, ReqResManager
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -58,19 +58,19 @@ def list_protocols() -> None:
     try:
         reqres_protocols = list(ReqResManager._plugins.keys())
         pubsub_protocols = list(PubSubManager._plugins.keys())
-        
+
         print("사용 가능한 프로토콜:")
-        
+
         if reqres_protocols:
             print("  [Request-Response]:")
             for protocol_name in reqres_protocols:
                 print(f"    - {protocol_name}")
-        
+
         if pubsub_protocols:
             print("  [Publish-Subscribe]:")
             for protocol_name in pubsub_protocols:
                 print(f"    - {protocol_name}")
-        
+
         if not reqres_protocols and not pubsub_protocols:
             print("사용 가능한 프로토콜이 없습니다.")
 
@@ -82,12 +82,13 @@ def list_protocols() -> None:
 def test_mqtt(broker: str, port: int, topic: str) -> None:
     """MQTT 연결 테스트"""
     try:
+        import time
+
         from app.protocols.mqtt.mqtt_protocol import (
-            MQTTProtocol,
             BrokerConfig,
             ClientConfig,
+            MQTTProtocol,
         )
-        import time
 
         print(f"MQTT 브로커 연결 테스트: {broker}:{port}")
 

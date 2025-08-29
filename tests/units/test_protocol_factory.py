@@ -1,10 +1,12 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from app.common.params import Params
 from app.manager.protocol_factory import (
-    valid_params,
     create_mqtt_protocol,
     create_protocol,
+    valid_params,
 )
 
 
@@ -50,7 +52,9 @@ def test_valid_params_missing_key():
 @patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
 @patch("app.protocols.mqtt.mqtt_protocol.ClientConfig")
 @patch("app.protocols.mqtt.mqtt_protocol.BrokerConfig")
-def test_create_mqtt_protocol_success(mock_broker_cfg_cls, mock_client_cfg_cls, mock_mqtt_cls):
+def test_create_mqtt_protocol_success(
+    mock_broker_cfg_cls, mock_client_cfg_cls, mock_mqtt_cls
+):
     """
     create_mqtt_protocol()이 BrokerConfig/ClientConfig를 생성해
     MQTTProtocol(BrokerConfig(), ClientConfig())로 호출하는지 검증

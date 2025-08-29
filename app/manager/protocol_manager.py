@@ -1,5 +1,6 @@
 from typing import Dict, Type
-from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
+
+from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 
 class ReqResManager:

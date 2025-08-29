@@ -1535,6 +1535,5 @@ class TestNetworkHandler(unittest.TestCase):
         self.assertEqual(handler._protocol, mock_protocol2)
         self.assertTrue(mock_protocol2.connect_called)
 
-
 if __name__ == '__main__':
     unittest.main()

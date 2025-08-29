@@ -103,219 +103,52 @@ def assert_receiveddata_protocol(test_data, expected_cmd, expected_data):
 
 
 class TestDataPackage:
-    """DataPackage 클래스 테스트"""
+    """DataPackage 클래스 테스트 - 구성 객체"""
     
     def test_data_package_creation(self):
         """DataPackage 기본 생성 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        assert package.send_data is None
-        assert package.received_data is None
-        assert package.packet_structure is None
-        assert package.source is None
-        assert package.destination is None
-        assert isinstance(package.timestamp, float)
-    
-    def test_data_package_with_initial_data(self):
-        """초기 데이터로 DataPackage 생성 테스트"""
-        send_data = SendTestData("test_send")
-        received_data = ReceivedTestData("test_receive")
-        packet_structure = PacketStructureTestData
-        
         package = DataPackage[SendTestData, ReceivedTestData](
-            send_data=send_data,
-            received_data=received_data,
-            packet_structure=packet_structure,
-            source="client1",
-            destination="server1"
-        )
-        
-        assert package.send_data == send_data
-        assert package.received_data == received_data
-        assert package.packet_structure == packet_structure
-        assert package.source == "client1"
-        assert package.destination == "server1"
-    
-    def test_is_outgoing(self):
-        """is_outgoing 메서드 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        assert package.is_outgoing() is False
-        
-        package.set_send_data(SendTestData("test"))
-        assert package.is_outgoing() is True
-    
-    def test_is_incoming(self):
-        """is_incoming 메서드 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        assert package.is_incoming() is False
-        
-        package.set_received_data(ReceivedTestData("test"))
-        assert package.is_incoming() is True
-    
-    def test_set_send_data(self):
-        """set_send_data 메서드 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        send_data = SendTestData("test_data")
-        
-        result = package.set_send_data(send_data)
-        
-        assert result is package
-        assert package.send_data == send_data
-    
-    def test_set_received_data(self):
-        """set_received_data 메서드 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        received_data = ReceivedTestData("test_data")
-        
-        result = package.set_received_data(received_data)
-        
-        assert result is package
-        assert package.received_data == received_data
-    
-    def test_set_packet_structure(self):
-        """set_packet_structure 메서드 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        packet_structure = PacketStructureTestData
-        
-        result = package.set_packet_structure(packet_structure)
-        
-        assert result is package
-        assert package.packet_structure == packet_structure
-    
-    def test_build_packet_success(self):
-        """build_packet 성공 케이스 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        send_data = SendTestData("hello")
-        package.set_send_data(send_data).set_packet_structure(PacketStructureTestData)
-        
-        result = package.build_packet()
-        expected = b"$hello$"
-        assert result == expected
-    
-    def test_build_packet_no_send_data(self):
-        """build_packet - send_data가 없는 경우 예외 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        package.set_packet_structure(PacketStructureTestData)
-        
-        with pytest.raises(ValueError, match="send_data가 없습니다"):
-            package.build_packet()
-    
-    def test_build_packet_no_packet_structure(self):
-        """build_packet - packet_structure가 없는 경우 예외 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        package.set_send_data(SendTestData("test"))
-        
-        with pytest.raises(ValueError, match="packet_structure가 없습니다"):
-            package.build_packet()
-    
-    def test_parse_packet_success(self):
-        """parse_packet 성공 케이스 테스트"""
-        packet = b"$world$"
-        source = "client1"
-        destination = "server1"
-        
-        result = DataPackage.parse_packet(
-            packet,
-            receiver_type=ReceivedTestData,
             packet_structure=PacketStructureTestData,
-            source=source,
-            destination=destination
+            send_data=SendTestData,
+            received_data=ReceivedTestData
         )
         
-        assert isinstance(result, DataPackage)
-        assert result.received_data is not None
-        assert result.received_data.content == "world"
-        assert result.packet_structure == PacketStructureTestData
-        assert result.source == source
-        assert result.destination == destination
-        assert result.send_data is None
+        assert package.packet_structure == PacketStructureTestData
+        assert package.send_data == SendTestData
+        assert package.received_data == ReceivedTestData
     
-    def test_parse_packet_invalid_packet(self):
-        """parse_packet - 잘못된 패킷 형식 예외 테스트"""
-        invalid_packet = b"invalid_packet"
-        
-        with pytest.raises(ValueError, match="Packet Structure Error"):
-            DataPackage.parse_packet(
-                invalid_packet,
-                receiver_type=ReceivedTestData,
-                packet_structure=PacketStructureTestData
-            )
-    
-    def test_parse_packets_success(self):
-        """parse_packets 성공 케이스 테스트"""
-        stream = b"$hello$$world$$test$"
-        
-        results = DataPackage.parse_packets(
-            stream,
-            receiver_type=ReceivedTestData,
-            packet_structure=PacketStructureTestData
-        )
-        
-        assert len(results) == 3
-        assert results[0].received_data.content == "hello"
-        assert results[1].received_data.content == "world"
-        assert results[2].received_data.content == "test"
-    
-    def test_parse_packets_with_empty_packets(self):
-        """parse_packets - 빈 패킷 포함 테스트"""
-        stream = b"$hello$$$$world$"
-        results = DataPackage.parse_packets(
-            stream,
-            receiver_type=ReceivedTestData,
+    def test_data_package_type_safety(self):
+        """DataPackage 타입 안전성 테스트"""
+        package = DataPackage[SendTestData, ReceivedTestData](
             packet_structure=PacketStructureTestData,
-            drop_empty=True
+            send_data=SendTestData,
+            received_data=ReceivedTestData
         )
         
-        assert len(results) == 2
-        assert results[0].received_data.content == "hello"
-        assert results[1].received_data.content == "world"
+        # 타입이 올바르게 설정되었는지 확인
+        assert issubclass(package.packet_structure, PacketStructureInterface)
+        assert issubclass(package.send_data, SendData)
+        assert issubclass(package.received_data, ReceivedData)
     
-    def test_parse_packets_empty_stream(self):
-        """parse_packets - 빈 스트림 테스트"""
-        stream = b""
-        
-        results = DataPackage.parse_packets(
-            stream,
-            receiver_type=ReceivedTestData,
-            packet_structure=PacketStructureTestData
+    def test_data_package_with_cmd_data(self):
+        """CmdData 클래스로 DataPackage 생성 테스트"""
+        package = DataPackage[CmdDataSendTestData, CmdDataReceivedTestData](
+            packet_structure=PacketStructureTestData,
+            send_data=CmdDataSendTestData,
+            received_data=CmdDataReceivedTestData
         )
         
-        assert len(results) == 0
+        assert package.packet_structure == PacketStructureTestData
+        assert package.send_data == CmdDataSendTestData
+        assert package.received_data == CmdDataReceivedTestData
     
-    def test_timestamp_generation(self):
-        """타임스탬프 생성 테스트"""
-        before_time = time.time()
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        after_time = time.time()
-        
-        assert before_time <= package.timestamp <= after_time
-    
-    def test_custom_timestamp(self):
-        """사용자 정의 타임스탬프 테스트"""
-        custom_time = 1234567890.0
-        package = DataPackage[SendTestData, ReceivedTestData](timestamp=custom_time)
-        
-        assert package.timestamp == custom_time
-    
-    def test_method_chaining(self):
-        """메서드 체이닝 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
-        send_data = SendTestData("test")
-        received_data = ReceivedTestData("test")
-        packet_structure = PacketStructureTestData
-        
-        result = (package
-                .set_send_data(send_data)
-                .set_received_data(received_data)
-                .set_packet_structure(packet_structure))
-        
-        assert result is package
-        assert package.send_data == send_data
-        assert package.received_data == received_data
-        assert package.packet_structure == packet_structure
-    
-    def test_generic_type_safety(self):
+    def test_data_package_generic_type_safety(self):
         """제네릭 타입 안전성 테스트"""
-        package = DataPackage[SendTestData, ReceivedTestData]()
+        package = DataPackage[SendTestData, ReceivedTestData](
+            packet_structure=PacketStructureTestData,
+            send_data=SendTestData,
+            received_data=ReceivedTestData
+        )
         assert isinstance(package, DataPackage)
         
         class AnotherSendData(SendData):
@@ -327,8 +160,38 @@ class TestDataPackage:
             def from_bytes(cls, data: bytes) -> 'AnotherReceivedData':
                 return cls()
         
-        another_package = DataPackage[AnotherSendData, AnotherReceivedData]()
+        another_package = DataPackage[AnotherSendData, AnotherReceivedData](
+            packet_structure=PacketStructureTestData,
+            send_data=AnotherSendData,
+            received_data=AnotherReceivedData
+        )
         assert isinstance(another_package, DataPackage)
+    
+    def test_data_package_usage_example(self):
+        """DataPackage 사용 예시 테스트"""
+        package = DataPackage[CmdDataSendTestData, CmdDataReceivedTestData](
+            packet_structure=PacketStructureTestData,
+            send_data=CmdDataSendTestData,
+            received_data=CmdDataReceivedTestData
+        )
+        
+        # SendData 인스턴스 생성
+        send_data = package.send_data("PING", ["hello", "42"])
+        assert isinstance(send_data, CmdDataSendTestData)
+        assert send_data.cmd == "PING"
+        assert send_data.data == ["hello", "42"]
+        
+        # 패킷 변환
+        payload = send_data.to_bytes()
+        packet = package.packet_structure.to_packet(payload)
+        assert packet == b"$PING#hello#42$"
+        
+        # 패킷에서 데이터 추출
+        extracted_payload = package.packet_structure.from_packet(packet)
+        received_data = package.received_data.from_bytes(extracted_payload)
+        assert isinstance(received_data, CmdDataReceivedTestData)
+        assert received_data.cmd == "PING"
+        assert received_data.data == ["hello", "42"]
 
 
 class TestAbstractClasses:
@@ -468,3 +331,50 @@ class TestCmdDataProtocol:
         """공백 문자 보존 테스트"""
         test_data = CmdDataSendTestData("CMD", [" hello ", "world ", " "])
         assert_senddata_protocol(test_data, b"CMD# hello #world # ")
+
+
+class TestPacketStructureInterface:
+    """PacketStructureInterface 테스트"""
+    
+    def test_packet_structure_interface_methods(self):
+        """PacketStructureInterface 메서드 테스트"""
+        packet_structure = PacketStructureTestData
+        
+        # to_packet 테스트
+        data = b"hello"
+        packet = packet_structure.to_packet(data)
+        assert packet == b"$hello$"
+        
+        # from_packet 테스트
+        extracted_data = packet_structure.from_packet(packet)
+        assert extracted_data == data
+        
+        # is_valid 테스트
+        assert packet_structure.is_valid(packet) is True
+        assert packet_structure.is_valid(b"invalid") is False
+        
+        # split_packet 테스트
+        stream = b"$hello$$world$"
+        packets = packet_structure.split_packet(stream)
+        assert packets == [b"$hello$", b"$world$"]
+    
+    def test_packet_structure_invalid_packet(self):
+        """잘못된 패킷 처리 테스트"""
+        packet_structure = PacketStructureTestData
+        
+        with pytest.raises(ValueError, match="Packet Structure Error"):
+            packet_structure.from_packet(b"invalid_packet")
+    
+    def test_packet_structure_edge_cases(self):
+        """패킷 구조 엣지 케이스 테스트"""
+        packet_structure = PacketStructureTestData
+        
+        # 빈 데이터
+        empty_packet = packet_structure.to_packet(b"")
+        assert empty_packet == b"$$"
+        assert packet_structure.is_valid(empty_packet) is False
+        
+        # 빈 스트림 분할
+        empty_stream = b""
+        packets = packet_structure.split_packet(empty_stream)
+        assert packets == []

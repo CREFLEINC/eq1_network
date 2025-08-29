@@ -2,9 +2,9 @@ import queue
 import threading
 import time
 import logging
-from typing import Any, Dict, Union, Type
+from typing import Any, Dict
 
-from app.data import ReceivedData, SendData, DataPackage
+from app.data import DataPackage
 from app.manager.protocol_factory import create_protocol
 from app.manager.protocol_manager import ReqResManager, PubSubManager
 from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
@@ -42,27 +42,27 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
 
         self._event_callback = event_callback
 
-    def on_sent(self, data: SendData):
+    def on_sent(self, data):
         logger.debug(
             self, f"on_sent - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_failed_send(self, data: SendData):
+    def on_failed_send(self, data):
         logger.error(
             self, f"on_failed_send - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_received(self, data: ReceivedData):
+    def on_received(self, data):
         logger.debug(
             self, f"on_received - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_failed_recv(self, data: ReceivedData):
+    def on_failed_recv(self, data):
         logger.error(
             self, f"on_failed_recv - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_disconnected(self, data: Union[ReceivedData, SendData]):
+    def on_disconnected(self, data):
         logger.debug(
             self, f"on_disconnected - {self._net_id}", print_to_terminal=True
         )
@@ -124,9 +124,9 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
         self.stop_communications()
         self.start_communication()
 
-    def send_data(self, data: SendData) -> bool:
-        if not isinstance(data, SendData):
-            raise ValueError(f"Invalid data type. {data}")
+    def send_data(self, data) -> bool:
+        if self._data_package and not isinstance(data, self._data_package.send_data):
+            raise ValueError(f"Invalid data type. Expected {self._data_package.send_data}, got {type(data)}")
 
         if not self._request_queue:
             logger.debug(

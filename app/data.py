@@ -28,7 +28,7 @@ class SendData(abc.ABC):
 
 @dataclass(slots=True)
 class DataPackage(Generic[TSend, TRecv]):
-    """PacketStructureImpl, SendDataImpl, ReceivedDataImpl 클래스를 담는 구성 객체"""
+    """PacketStructure, SendData, ReceivedData 클래스를 담는 구성 객체"""
     packet_structure: type[PacketStructureInterface]
     send_data: type[TSend]
     received_data: type[TRecv]

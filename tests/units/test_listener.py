@@ -779,7 +779,7 @@ class TestListener(unittest.TestCase):
         )
         
         listener.start()
-        time.sleep(0.01)
+        time.sleep(0.05)  # 더 긴 대기 시간으로 모든 데이터가 처리되도록 함
         listener.stop()
         listener.join(timeout=0.1)
         

@@ -1,5 +1,6 @@
 import sys
 from unittest.mock import patch
+import pytest
 
 from app.common.exception import (
     ProtocolAuthenticationError,
@@ -17,6 +18,7 @@ from app.interfaces.protocol import (
 from app.manager.protocol_manager import PubSubManager, ReqResManager
 
 
+@pytest.mark.unit
 class TestAppInit:
     """app/__init__.py 모듈 테스트"""
 

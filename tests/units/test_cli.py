@@ -9,6 +9,7 @@ from app.cli import create_parser, list_protocols, main
 from app.cli import test_mqtt as cli_test_mqtt
 
 
+@pytest.mark.unit
 class TestCLI:
     """app/cli.py 모듈 테스트"""
 

@@ -4,6 +4,7 @@ import threading
 import time
 import queue
 import logging
+import pytest
 from typing import Type
 
 from app.worker.requester import Requester, RequesterEvent
@@ -149,6 +150,7 @@ class MockSendData(SendData):
         return f"MockSendData(message='{self.message}', topic='{self.topic}')"
 
 
+@pytest.mark.unit
 class TestRequester(unittest.TestCase):
     def setUp(self):
         """테스트 초기화"""
@@ -815,6 +817,84 @@ class TestRequester(unittest.TestCase):
         self.assertEqual(self.event_callback.sent_data[1], test_data2)
         self.assertEqual(self.event_callback.failed_send_data[0], test_data3)
         self.assertTrue(protocol.disconnect_called)
+
+    def test_logger_debug_calls(self):
+        """Logger debug 호출 테스트"""
+        protocol = MockReqResProtocol()
+        protocol.inject_send_result(True)
+        
+        with patch('app.worker.requester.logger') as mock_logger:
+            requester = Requester(
+                event_callback=self.event_callback,
+                protocol=protocol,
+                packet_structure_interface=self.packet_structure
+            )
+            
+            # stop 메서드에서 debug 호출 테스트
+            requester.stop()
+            mock_logger.debug.assert_called_with("Set Stop flag for Requester")
+            
+            # put 메서드에서 debug 호출 테스트
+            test_data = MockSendData("test message")
+            requester.put(test_data)
+            debug_calls = [call.args[0] for call in mock_logger.debug.call_args_list]
+            self.assertIn("Put data to Requester", debug_calls)
+            
+            # run 메서드에서 debug 호출 테스트
+            requester.start()
+            time.sleep(0.01)
+            requester.stop()
+            requester.join(timeout=0.5)
+            
+            # "Terminated Requester Thread" debug 호출 확인
+            debug_calls = [call.args[0] for call in mock_logger.debug.call_args_list]
+            self.assertIn("Set Stop flag for Requester", debug_calls)
+            self.assertIn("Terminated Requester Thread", debug_calls)
+
+    def test_logger_error_calls(self):
+        """Logger error 호출 테스트"""
+        protocol = MockReqResProtocol()
+        protocol.disconnect = Mock(side_effect=Exception("Disconnect error"))
+        
+        with patch('app.worker.requester.logger') as mock_logger:
+            requester = Requester(
+                event_callback=self.event_callback,
+                protocol=protocol,
+                packet_structure_interface=self.packet_structure
+            )
+            
+            requester.start()
+            time.sleep(0.01)
+            requester.stop()
+            requester.join(timeout=0.5)
+            
+            # disconnect 중 예외 발생 시 error 로그 확인
+            error_calls = [call.args[0] for call in mock_logger.error.call_args_list]
+            self.assertTrue(any("Error disconnecting protocol in Requester" in call for call in error_calls))
+
+    def test_logger_error_calls_for_general_exception(self):
+        """일반 예외 발생 시 Logger error 호출 테스트"""
+        protocol = MockReqResProtocol()
+        protocol.send = Mock(side_effect=Exception("General error"))
+        
+        with patch('app.worker.requester.logger') as mock_logger:
+            requester = Requester(
+                event_callback=self.event_callback,
+                protocol=protocol,
+                packet_structure_interface=self.packet_structure
+            )
+            
+            test_data = MockSendData("test message")
+            requester.put(test_data)
+            
+            requester.start()
+            time.sleep(0.01)
+            requester.stop()
+            requester.join(timeout=0.5)
+            
+            # 일반 예외 발생 시 error 로그 확인
+            error_calls = [call.args[0] for call in mock_logger.error.call_args_list]
+            self.assertTrue(any("Error in Requester" in call for call in error_calls))
 
 
 if __name__ == '__main__':

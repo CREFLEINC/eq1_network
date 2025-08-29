@@ -1,14 +1,20 @@
 import queue
 import threading
 import time
-from typing import Any, Dict, Union
+import logging
+from typing import Any, Dict
 
-from lib.communication.data import ReceivedData, SendData
-from lib.communication.protocol.factory import create_protocol
-from lib.communication.protocol.interface import Protocol
-from lib.communication.worker import Listener, ListenerEvent, Requester, RequesterEvent
-from src.configure import Params  # TODO : src 의존성 제거하기
-from src.logger import AppLogger
+from app.data import DataPackage
+from app.manager.protocol_factory import create_protocol
+from app.manager.protocol_manager import ReqResManager, PubSubManager
+from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
+from app.interfaces.packet import PacketStructureInterface
+from app.worker.listener import Listener, ListenerEvent
+from app.worker.requester import Requester, RequesterEvent
+from app.common.params import Params
+from app.common.exception import ProtocolError
+
+logger = logging.getLogger(__name__)
 
 
 class NetworkEvent:
@@ -17,7 +23,11 @@ class NetworkEvent:
 
 class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
     def __init__(
-        self, network_config: Dict, event_callback: NetworkEvent, net_id: Any = None
+        self, 
+        network_config: Dict, 
+        event_callback: NetworkEvent, 
+        net_id: Any = None,
+        data_package: DataPackage = None
     ):
         super().__init__()
         self._net_id = net_id
@@ -28,37 +38,38 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
         self._listener = None
         self._request_queue = None
         self._retry_flag = True
+        self._data_package = data_package
 
         self._event_callback = event_callback
 
-    def on_sent(self, data: SendData):
-        AppLogger.write_debug(
+    def on_sent(self, data):
+        logger.debug(
             self, f"on_sent - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_failed_send(self, data: SendData):
-        AppLogger.write_error(
+    def on_failed_send(self, data):
+        logger.error(
             self, f"on_failed_send - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_received(self, data: ReceivedData):
-        AppLogger.write_debug(
+    def on_received(self, data):
+        logger.debug(
             self, f"on_received - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_failed_recv(self, data: ReceivedData):
-        AppLogger.write_error(
+    def on_failed_recv(self, data):
+        logger.error(
             self, f"on_failed_recv - {self._net_id} - {data}", print_to_terminal=True
         )
 
-    def on_disconnected(self, data: Union[ReceivedData, SendData]):
-        AppLogger.write_debug(
+    def on_disconnected(self, data):
+        logger.debug(
             self, f"on_disconnected - {self._net_id}", print_to_terminal=True
         )
         self._retry_flag = True
 
     def start_communication(self):
-        AppLogger.write_debug(
+        logger.debug(
             self,
             f"start_communication - {self._net_id} - wait for connection...",
             print_to_terminal=True,
@@ -67,18 +78,28 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
         while not self._stop_flag.is_set():
             time.sleep(0.001)
             if self._protocol.connect():
-                AppLogger.write_debug(
+                logger.debug(
                     self, f"  {self._net_id} - connected !!", print_to_terminal=True
                 )
                 break
 
         self._request_queue = queue.Queue()
 
-        self._listener = Listener(event_callback=self, protocol=self._protocol)
+        # DataPackage를 사용하여 Listener와 Requester에 필요한 정보 전달
+        packet_structure_interface = self._data_package.packet_structure if self._data_package else None
+        received_data_class = self._data_package.received_data if self._data_package else None
+
+        self._listener = Listener(
+            event_callback=self, 
+            protocol=self._protocol,
+            packet_structure_interface=packet_structure_interface,
+            received_data_class=received_data_class
+        )
 
         self._requester = Requester(
             event_callback=self,
             protocol=self._protocol,
+            packet_structure_interface=packet_structure_interface,
             request_queue=self._request_queue,
         )
 
@@ -96,19 +117,19 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
             self._requester.stop()
             self._requester.join()
 
-        if isinstance(self._protocol, Protocol):
+        if isinstance(self._protocol, (ReqResProtocol, PubSubProtocol)):
             self._protocol.disconnect()
 
     def reconnect(self):
         self.stop_communications()
         self.start_communication()
 
-    def send_data(self, data: SendData) -> bool:
-        if not isinstance(data, SendData):
-            raise ValueError(f"Invalid data type. {data}")
+    def send_data(self, data) -> bool:
+        if self._data_package and not isinstance(data, self._data_package.send_data):
+            raise ValueError(f"Invalid data type. Expected {self._data_package.send_data}, got {type(data)}")
 
         if not self._request_queue:
-            AppLogger.write_debug(
+            logger.debug(
                 self,
                 f"Request Queue is not initialized. {self._net_id}, May be not connected yet",
                 print_to_terminal=True,

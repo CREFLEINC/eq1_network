@@ -65,9 +65,7 @@ class MockPubSubProtocol(PubSubProtocol):
         """연결 상태를 False로 설정"""
         self.connected = False
 
-    def publish(
-        self, topic: str, message: bytes, qos: int = 0, retain: bool = False
-    ) -> bool:
+    def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
         """토픽, 메시지, QoS를 튜플로 저장"""
         if not isinstance(topic, str) or not isinstance(message, bytes):
             raise TypeError("Invalid publish parameters")
@@ -223,9 +221,7 @@ class ConcretePubSubProtocol(PubSubProtocol):
     def disconnect(self):
         return super().disconnect()
 
-    def publish(
-        self, topic: str, message: bytes, qos: int = 0, retain: bool = False
-    ) -> bool:
+    def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
         return super().publish(topic, message, qos, retain)
 
     def subscribe(self, topic: str, callback):

@@ -5,6 +5,10 @@ import pytest
 from app.manager.protocol_manager import PubSubManager, ReqResManager
 
 
+def func(t, p):
+    return None
+
+
 @pytest.fixture
 def mock_reqres_plugin():
     """
@@ -148,7 +152,7 @@ def test_pubsub_subscribe(mock_pubsub_plugin):
     """
     PubSubManager._plugins.clear()
     PubSubManager.load("mqtt", mock_pubsub_plugin)
-    cb = lambda t, p: None
+    cb = func
     result = PubSubManager.subscribe("mqtt", "topic/b", cb, qos=2)
     assert result is True
     mock_pubsub_plugin.subscribe.assert_called_once_with("topic/b", cb, 2)

@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Dict
 
 from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
@@ -11,20 +11,24 @@ class ReqResManager:
     _plugins: Dict[str, ReqResProtocol] = {}
 
     @classmethod
-    def load(cls, name: str, plugin: ReqResProtocol) -> None:
-        """
-        프로토콜 인스턴스를 등록합니다.
-        """
-        cls._plugins[name.lower()] = plugin
+    def register(cls, name: str, plugin: ReqResProtocol) -> None:
+        cls._plugins[name] = plugin
+
+    @classmethod
+    def unregister(cls, name: str) -> None:
+        cls._plugins.pop(name, None)
+
+    @classmethod
+    def has(cls, name: str) -> bool:
+        return name in cls._plugins
 
     @classmethod
     def get(cls, name: str) -> ReqResProtocol:
-        """
-        등록된 프로토콜 인스턴스를 반환합니다.
-        """
-        if name.lower() not in cls._plugins:
-            raise ValueError(f"'{name}' 프로토콜이 등록되지 않았습니다.")
-        return cls._plugins[name.lower()]
+        try:
+            return cls._plugins[name]
+        except KeyError:
+            # 필요 시 커스텀 예외로 바꿔도 됨
+            raise LookupError(f"ReqRes plugin not found: {name}")
 
     @classmethod
     def connect(cls, name: str) -> bool:
@@ -41,11 +45,14 @@ class ReqResManager:
         return cls.get(name).send(data)
 
     @classmethod
-    def receive(cls, name: str, buffer_size: int = 1024) -> bytes:
+    def read(cls, name: str) -> bytes:
         """
-        등록된 플러그인 이름으로 receive() 호출 시 플러그인의 receive()가 호출되는지 테스트합니다.
+        등록된 플러그인 이름으로 read() 호출 시 플러그인의 read()가 호출되는지 테스트합니다.
         """
-        return cls.get(name).receive(buffer_size)
+        success, data = cls.get(name).read()
+        if success and data is not None:
+            return data
+        return b""
 
     @classmethod
     def disconnect(cls, name: str) -> None:
@@ -63,20 +70,24 @@ class PubSubManager:
     _plugins: Dict[str, PubSubProtocol] = {}
 
     @classmethod
-    def load(cls, name: str, plugin: PubSubProtocol) -> None:
-        """
-        프로토콜 인스턴스를 등록합니다.
-        """
-        cls._plugins[name.lower()] = plugin
+    def register(cls, name: str, plugin: PubSubProtocol) -> None:
+        cls._plugins[name] = plugin
+
+    @classmethod
+    def unregister(cls, name: str) -> None:
+        cls._plugins.pop(name, None)
+
+    @classmethod
+    def has(cls, name: str) -> bool:
+        return name in cls._plugins
 
     @classmethod
     def get(cls, name: str) -> PubSubProtocol:
-        """
-        등록된 프로토콜 인스턴스를 가져옵니다.
-        """
-        if name.lower() not in cls._plugins:
-            raise ValueError(f"'{name}' 프로토콜이 등록되지 않았습니다.")
-        return cls._plugins[name.lower()]
+        try:
+            return cls._plugins[name]
+        except KeyError:
+            # 필요 시 커스텀 예외로 바꿔도 됨
+            raise LookupError(f"PubSub plugin not found: {name}")
 
     @classmethod
     def connect(cls, name: str) -> bool:
@@ -86,25 +97,19 @@ class PubSubManager:
         return cls.get(name).connect()
 
     @classmethod
-    def publish(cls, name: str, topic: str, message: str, qos: int = 0) -> bool:
+    def publish(cls, name: str, topic: str, message: str, qos: int = 0, retain: bool = False) -> bool:
         """
         등록된 플러그인 이름으로 publish() 호출 시 플러그인의 publish()가 호출되는지 테스트합니다.
         """
-        return cls.get(name).publish(topic, message, qos)
+        return cls.get(name).publish(topic, message.encode(), qos, retain)
 
     @classmethod
-    def subscribe(cls, name: str, topic: str, callback, qos: int = 0) -> bool:
+    def subscribe(cls, name: str, topic: str, callback) -> bool:
         """
         등록된 플러그인 이름으로 subscribe() 호출 시 플러그인의 subscribe()가 호출되는지 테스트합니다.
         """
-        return cls.get(name).subscribe(topic, callback, qos)
-
-    @classmethod
-    def unsubscribe(cls, name: str, topic: str) -> bool:
-        """
-        등록된 플러그인 이름으로 unsubscribe() 호출 시 플러그인의 unsubscribe()가 호출되는지 테스트합니다.
-        """
-        return cls.get(name).unsubscribe(topic)
+        cls.get(name).subscribe(topic, callback)
+        return True
 
     @classmethod
     def disconnect(cls, name: str):

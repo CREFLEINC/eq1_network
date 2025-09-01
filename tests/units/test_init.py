@@ -1,21 +1,7 @@
 import sys
 from unittest.mock import patch
-import pytest
 
-from app.common.exception import (
-    ProtocolAuthenticationError,
-    ProtocolConnectionError,
-    ProtocolDecodeError,
-    ProtocolError,
-    ProtocolTimeoutError,
-    ProtocolValidationError,
-)
-from app.interfaces.protocol import (
-    BaseProtocol,
-    PubSubProtocol,
-    ReqResProtocol,
-)
-from app.manager.protocol_manager import PubSubManager, ReqResManager
+import pytest
 
 
 @pytest.mark.unit

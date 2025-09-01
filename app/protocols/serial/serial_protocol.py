@@ -1,6 +1,7 @@
-
+from typing import Any, Tuple
+import logging
 import serial
-from typing import Any, Tuple, Optional
+
 from app.interfaces.protocol import ReqResProtocol
 
 
@@ -20,6 +21,7 @@ class SerialProtocol(ReqResProtocol):
             self._socket.write(data)
             return True
         except Exception as e:
+            logging.error(f"failed to send data. {e}")
             return False
 
     def read(self) -> Tuple[bool, Any]:
@@ -28,6 +30,8 @@ class SerialProtocol(ReqResProtocol):
 
             return True, data
         except serial.SerialTimeoutException as te:
+            logging.error(f"failed to read data. {te}")
             return True, None
         except Exception as e:
+            logging.error(f"failed to read data. {e}")
             return False, None

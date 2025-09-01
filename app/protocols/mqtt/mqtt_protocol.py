@@ -60,7 +60,7 @@ class MQTTProtocol(PubSubProtocol):
         self.broker_config = broker_config
         self.client_config = client_config
         self.handler = self.MQTTHandler(
-            parent=self, name=self, client_id=self.client_config.client_id
+            parent=self, name="MQTTProtocol", client_id=self.client_config.client_id
         )
 
         try:
@@ -94,7 +94,7 @@ class MQTTProtocol(PubSubProtocol):
         # 연결 상태 플래그
         self._is_connected = False
 
-        self._publish_queue = Queue.Queue()
+        self._publish_queue: Queue.Queue = Queue.Queue()
         self._publish_lock = threading.Lock()
 
         # 자동 재연결 관련
@@ -113,9 +113,7 @@ class MQTTProtocol(PubSubProtocol):
         - 연결, 메시지 수신, 구독 관리 등을 담당
         """
 
-        def __init__(
-            self, client_id: str, parent: "MQTTProtocol", name: str = "Device-A"
-        ):
+        def __init__(self, client_id: str, parent: "MQTTProtocol", name: str = "Device-A"):
             self.parent = parent
             self.name = name
             self.client_id = client_id
@@ -146,9 +144,7 @@ class MQTTProtocol(PubSubProtocol):
                 None
             """
             self.parent._is_connected = False
-            logging.error(
-                f"[{self.name}] - [{self.client_id}] MQTT 연결 실패 (rc={rc})"
-            )
+            logging.error(f"[{self.name}] - [{self.client_id}] MQTT 연결 실패 (rc={rc})")
 
         def handle_disconnect(self, rc: int):
             """
@@ -206,18 +202,12 @@ class MQTTProtocol(PubSubProtocol):
             logging.info("큐에 남아 있는 메시지를 발행합니다.")
             while not self.parent._publish_queue.empty():
                 try:
-                    topic, message, qos, retain = (
-                        self.parent._publish_queue.get_nowait()
-                    )
+                    topic, message, qos, retain = self.parent._publish_queue.get_nowait()
                     result = publish_func(topic, message, qos, retain)
                     if result.rc != 0:
-                        logging.error(
-                            f"[{self.name}] - [{self.client_id}] 재발행 실패 - {topic}"
-                        )
+                        logging.error(f"[{self.name}] - [{self.client_id}] 재발행 실패 - {topic}")
                 except Exception as e:
-                    logging.error(
-                        f"[{self.name}] - [{self.client_id}] 큐 발행 중 예외 발생: {e}"
-                    )
+                    logging.error(f"[{self.name}] - [{self.client_id}] 큐 발행 중 예외 발생: {e}")
 
     def _on_connect(self, client, userdata, flags, rc):
         """
@@ -245,13 +235,9 @@ class MQTTProtocol(PubSubProtocol):
                 try:
                     result, _ = client.subscribe(topic=topic, qos=0)
                     if result != MQTT_ERR_SUCCESS:
-                        logging.error(
-                            f"[{client_id}] 구독 복구 실패 - {topic}: {result}"
-                        )
+                        logging.error(f"[{client_id}] 구독 복구 실패 - {topic}: {result}")
                 except Exception as e:
-                    logging.error(
-                        f"[{client_id}] 구독 복구 중 오류 발생 - {topic}: {e}"
-                    )
+                    logging.error(f"[{client_id}] 구독 복구 중 오류 발생 - {topic}: {e}")
             logging.info("구독 복구 완료")
 
             # 데이터 유실 방지 - 재연결 후 큐에 남아 있던 메시지를 다시 발행
@@ -360,9 +346,7 @@ class MQTTProtocol(PubSubProtocol):
                 break
             time.sleep(0.5)
 
-    def publish(
-        self, topic: str, message: str, qos: int = 0, retain: bool = False
-    ) -> bool:
+    def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
         """
         메시지 발행
 
@@ -382,15 +366,13 @@ class MQTTProtocol(PubSubProtocol):
                 self._publish_queue.put((topic, message, qos, retain))
                 return False
 
-            result = self.client.publish(topic, message, qos, retain)
+            result = self.client.publish(topic, message.decode() if isinstance(message, bytes) else message, qos, retain)
             return result.rc == MQTT_ERR_SUCCESS
         except Exception as e:
             logging.error(f"Publish error: {e}")
             return False
 
-    def subscribe(
-        self, topic: str, callback: Callable[[str, bytes], None], qos: int = 0
-    ) -> bool:
+    def subscribe(self, topic: str, callback: Optional[Callable[[str, bytes], None]] = None, qos: int = 0) -> bool:
         """토픽 구독"""
         try:
             # 토픽이 처음 구독되는 경우만 브로커에 구독 요청
@@ -419,13 +401,9 @@ class MQTTProtocol(PubSubProtocol):
                 self._subscriptions[topic].remove(callback)
                 if not self._subscriptions[topic]:
                     del self._subscriptions[topic]
-            raise ProtocolValidationError(
-                f"[{self.client_config.client_id}] 구독 오류: {e}"
-            )
+            raise ProtocolValidationError(f"[{self.client_config.client_id}] 구독 오류: {e}")
 
-    def unsubscribe(
-        self, topic: str, callback: Callable[[str, bytes], None] = None
-    ) -> bool:
+    def unsubscribe(self, topic: str, callback: Callable[[str, bytes], None] = None) -> bool:
         """
         구독 해제
 
@@ -464,9 +442,7 @@ class MQTTProtocol(PubSubProtocol):
             return True
         except Exception as e:
             logging.error(f"Unsubscribe error: {e}")
-            raise ProtocolValidationError(
-                f"[{self.client_config.client_id}] 구독 해제 오류: {e}"
-            )
+            raise ProtocolValidationError(f"[{self.client_config.client_id}] 구독 해제 오류: {e}")
 
     def _start_reconnect_thread(self):
         """재연결 스레드 시작"""
@@ -474,9 +450,7 @@ class MQTTProtocol(PubSubProtocol):
             return
 
         self._stop_reconnect.clear()
-        self._reconnect_thread = threading.Thread(
-            target=self._reconnect_loop, daemon=True
-        )
+        self._reconnect_thread = threading.Thread(target=self._reconnect_loop, daemon=True)
         self._reconnect_thread.start()
         logging.info(f"[{self.client_config.client_id}] 자동 재연결 스레드 시작")
 
@@ -517,8 +491,6 @@ class MQTTProtocol(PubSubProtocol):
 
 
 if __name__ == "__main__":
-    import logging
-
     logging.basicConfig(level=logging.DEBUG)
 
     broker_config = BrokerConfig(broker_address="localhost")

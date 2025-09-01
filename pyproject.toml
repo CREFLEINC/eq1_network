@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eq1-network"
-version = "1.0.1"
+version = "1.0.2"
 description = "Plugin-based Communication Framework"
-readme = "README.md"
+readme = "docs/README.md"
 license = {text = "MIT"}
 authors = [
     {name = "EQ-1 Team", email = "dev@eq1.com"}

@@ -52,9 +52,7 @@ def test_valid_params_missing_key():
 @patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
 @patch("app.protocols.mqtt.mqtt_protocol.ClientConfig")
 @patch("app.protocols.mqtt.mqtt_protocol.BrokerConfig")
-def test_create_mqtt_protocol_success(
-    mock_broker_cfg_cls, mock_client_cfg_cls, mock_mqtt_cls
-):
+def test_create_mqtt_protocol_success(mock_broker_cfg_cls, mock_client_cfg_cls, mock_mqtt_cls):
     """
     create_mqtt_protocol()이 BrokerConfig/ClientConfig를 생성해
     MQTTProtocol(BrokerConfig(), ClientConfig())로 호출하는지 검증
@@ -74,9 +72,7 @@ def test_create_mqtt_protocol_success(
     result = create_mqtt_protocol(broker, port)
 
     # BrokerConfig가 올바른 kwargs로 생성됐는지
-    mock_broker_cfg_cls.assert_called_once_with(
-        broker_address=broker, port=port, keepalive=60
-    )
+    mock_broker_cfg_cls.assert_called_once_with(broker_address=broker, port=port, keepalive=60)
     # ClientConfig 생성 호출(파라미터 없다면 빈 호출)
     mock_client_cfg_cls.assert_called_once_with()
 
@@ -117,9 +113,7 @@ def test_create_protocol_missing_method():
     method 키가 누락된 경우 create_protocol()이 ValueError를 발생시키는지 테스트합니다.
     """
     params = DummyParams({"broker_address": "broker.emqx.io", "port": 1883})
-    with pytest.raises(
-        ValueError, match="Not found \\[method\\] value in Network Params"
-    ):
+    with pytest.raises(ValueError, match="Not found \\[method\\] value in Network Params"):
         create_protocol(params)
 
 
@@ -128,9 +122,7 @@ def test_create_protocol_unsupported_method():
     """
     method가 지원되지 않는 프로토콜일 때 create_protocol()이 ValueError를 발생시키는지 테스트합니다.
     """
-    params = DummyParams(
-        {"method": "amqp", "broker_address": "broker.emqx.io", "port": 1883}
-    )
+    params = DummyParams({"method": "amqp", "broker_address": "broker.emqx.io", "port": 1883})
     with pytest.raises(ValueError, match="Unsupported protocol method: amqp"):
         create_protocol(params)
 
@@ -141,7 +133,5 @@ def test_create_protocol_missing_required_params():
     필수 파라미터(broker_address)가 누락된 경우 create_protocol()이 예외를 발생시키는지 테스트합니다.
     """
     params = DummyParams({"method": "mqtt", "port": 1883})
-    with pytest.raises(
-        ValueError, match="Not found \\[broker_address\\] in Network Params"
-    ):
+    with pytest.raises(ValueError, match="Not found \\[broker_address\\] in Network Params"):
         create_protocol(params)

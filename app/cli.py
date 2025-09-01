@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-EQ-1 Network CLI Interface
-"""
-
 import argparse
 import sys
 from typing import List, Optional
@@ -32,11 +27,6 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     subparsers = parser.add_subparsers(dest="command", help="사용 가능한 명령어")
-
-    # list-protocols 서브커맨드
-    list_parser = subparsers.add_parser(
-        "list-protocols", help="사용 가능한 프로토콜 목록 출력"
-    )
 
     # test-mqtt 서브커맨드
     mqtt_parser = subparsers.add_parser("test-mqtt", help="MQTT 연결 테스트")
@@ -82,8 +72,6 @@ def list_protocols() -> None:
 def test_mqtt(broker: str, port: int, topic: str) -> None:
     """MQTT 연결 테스트"""
     try:
-        import time
-
         from app.protocols.mqtt.mqtt_protocol import (
             BrokerConfig,
             ClientConfig,
@@ -93,9 +81,7 @@ def test_mqtt(broker: str, port: int, topic: str) -> None:
         print(f"MQTT 브로커 연결 테스트: {broker}:{port}")
 
         # 설정 생성
-        broker_config = BrokerConfig(
-            broker_address=broker, port=port, mode="non-blocking"
-        )
+        broker_config = BrokerConfig(broker_address=broker, port=port, mode="non-blocking")
         client_config = ClientConfig()
 
         # 프로토콜 인스턴스 생성

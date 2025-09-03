@@ -30,7 +30,7 @@ def create_ethernet_protocol(protocol: str, address: str, port: int, timeout: fl
     from app.protocols.ethernet.tcp_client import TCPClient
 
     if protocol.lower() == "tcp" and mode.lower() == "server":
-        return TCPServer(address, port, int(timeout))
+        return TCPServer(address, port, timeout)
     elif protocol.lower() == "tcp" and mode.lower() == "client":
         return TCPClient(address, port, timeout)
     elif protocol.lower() == "udp" and mode.lower() == "server":

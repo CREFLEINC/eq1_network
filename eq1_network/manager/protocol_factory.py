@@ -21,7 +21,7 @@ def valid_params(params: Union[Params, Dict], need_params: List[str]):
     # dict인 경우 Params 객체로 변환
     if isinstance(params, dict):
         params = Params(params)
-    
+
     for k in need_params:
         if not params.include(k):
             raise ValueError(f"Not found [{k}] in Network Params")
@@ -34,7 +34,7 @@ def create_ethernet_protocol(protocol: str, address: str, port: int, timeout: fl
     from eq1_network.protocols.ethernet.tcp_client import TCPClient
 
     if protocol.lower() == "tcp" and mode.lower() == "server":
-        return TCPServer(address, port, timeout)
+        return TCPServer(address, port, int(timeout))
     elif protocol.lower() == "tcp" and mode.lower() == "client":
         return TCPClient(address, port, timeout)
     elif protocol.lower() == "udp" and mode.lower() == "server":
@@ -93,7 +93,7 @@ def create_protocol(params: Union[Params, Dict]) -> Union[PubSubProtocol, ReqRes
     # dict인 경우 Params 객체로 변환
     if isinstance(params, dict):
         params = Params(params)
-    
+
     if not params.include("method"):
         raise ValueError("Not found [method] value in Network Params")
 
@@ -102,7 +102,7 @@ def create_protocol(params: Union[Params, Dict]) -> Union[PubSubProtocol, ReqRes
         need_params = ["protocol", "timeout", "address", "port"]
         valid_params(params, need_params)
         # mode는 선택적 파라미터로 처리 (기본값: "client")
-        mode = params.get("mode", "client")
+        mode = params.get_default("mode", "client")
         return create_ethernet_protocol(
             params['protocol'], params['address'], params['port'], params['timeout'], mode
         )
@@ -120,7 +120,7 @@ def create_protocol(params: Union[Params, Dict]) -> Union[PubSubProtocol, ReqRes
         return create_mqtt_protocol(
             broker_address=params["broker_address"],
             port=params["port"],
-            keepalive=params.get("keepalive", 60),
+            keepalive=params.get_default("keepalive", 60),
         )
 
     else:

@@ -1,8 +1,6 @@
-include README.md
 include LICENSE
 include requirements.txt
-include app/py.typed
-recursive-include app *.py
+include eq1_network/py.typed
 recursive-include docs *.md *.png
 recursive-include examples *.py
 recursive-exclude tests *

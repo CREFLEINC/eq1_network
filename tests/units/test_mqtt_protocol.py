@@ -422,10 +422,10 @@ def test_unsubscribe_specific_callback(protocol_factory, mode):
     특정 콜백 제거 테스트
     """
     protocol, client = protocol_factory(mode)
-    
+
     def callback1(t, m):
         return "callback1"
-    
+
     def callback2(t, m):
         return "callback2"
 
@@ -451,10 +451,10 @@ def test_unsubscribe_callback_not_in_list(protocol_factory, mode):
     콜백이 리스트에 없을 때 unsubscribe 테스트
     """
     protocol, client = protocol_factory(mode)
-    
+
     def callback1(t, m):
         return "callback1"
-    
+
     def callback2(t, m):
         return "callback2"
 

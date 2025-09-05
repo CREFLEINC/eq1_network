@@ -7,14 +7,13 @@ name = "eq1-network"
 version = "1.0.4"
 description = "Plugin-based Communication Framework"
 readme = "docs/README.md"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 authors = [
     {name = "EQ-1 Team", email = "dev@eq1.com"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -70,7 +69,7 @@ addopts = "--verbose --tb=short"
 
 [tool.coverage.run]
 source = ["eq1_network"]
-omit = ["tests/*", "examples/*"]
+omit = ["*/tests/*", "examples/*"]
 
 [tool.coverage.report]
 exclude_lines = [

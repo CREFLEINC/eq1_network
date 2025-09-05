@@ -20,13 +20,15 @@ class TCPClient(ReqResProtocol):
             return True
         except (ConnectionRefusedError, OSError) as e:
             logging.error(f"failed to connect {self._address}:{self._port}... {e}")
-            self._socket.close()
+            if self._socket is not None:
+                self._socket.close()
             self._socket = None
             return False
 
     def disconnect(self):
         try:
-            self._socket.close()
+            if self._socket is not None:
+                self._socket.close()
             print("client disconnected")
         except Exception as e:
             logging.error(f"failed to disconnect {self._address}:{self._port}... {e}")
@@ -34,6 +36,8 @@ class TCPClient(ReqResProtocol):
 
     def send(self, data: bytes) -> bool:
         try:
+            if self._socket is None:
+                return False
             self._socket.send(data)
             return True
         except BrokenPipeError as be:
@@ -45,6 +49,8 @@ class TCPClient(ReqResProtocol):
 
     def read(self) -> Tuple[bool, Optional[bytes]]:
         try:
+            if self._socket is None:
+                return False, None
             data = self._socket.recv(1024)
             if not data:
                 raise ConnectionResetError

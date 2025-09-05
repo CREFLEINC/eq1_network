@@ -381,13 +381,15 @@ class MQTTProtocol(PubSubProtocol):
             # 콜백 추가
             if topic not in self._subscriptions:
                 self._subscriptions[topic] = []
-            self._subscriptions[topic].append(callback)
+            if callback is not None:
+                self._subscriptions[topic].append(callback)
 
             if is_new_topic:
                 result, _ = self.client.subscribe(topic=topic, qos=qos)
                 if result != MQTT_ERR_SUCCESS:
                     # 실패 시 콜백 제거
-                    self._subscriptions[topic].remove(callback)
+                    if callback is not None and callback in self._subscriptions[topic]:
+                        self._subscriptions[topic].remove(callback)
                     if not self._subscriptions[topic]:
                         del self._subscriptions[topic]
                     raise ProtocolValidationError(
@@ -397,13 +399,13 @@ class MQTTProtocol(PubSubProtocol):
             return True
         except Exception as e:
             # 실패 시 콜백 제거
-            if topic in self._subscriptions and callback in self._subscriptions[topic]:
+            if topic in self._subscriptions and callback is not None and callback in self._subscriptions[topic]:
                 self._subscriptions[topic].remove(callback)
                 if not self._subscriptions[topic]:
                     del self._subscriptions[topic]
             raise ProtocolValidationError(f"[{self.client_config.client_id}] 구독 오류: {e}")
 
-    def unsubscribe(self, topic: str, callback: Callable[[str, bytes], None] = None) -> bool:
+    def unsubscribe(self, topic: str, callback: Optional[Callable[[str, bytes], None]] = None) -> bool:
         """
         구독 해제
 
@@ -500,6 +502,6 @@ if __name__ == "__main__":
     connected = client.connect()
     print(f"[DEBUG] Connected: {connected}")
     if connected:
-        client.publish("test/topic", "Hello from script")
+        client.publish("test/topic", b"Hello from script")
         time.sleep(1)
         client.disconnect()

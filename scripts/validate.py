@@ -43,8 +43,8 @@ def check_required_files() -> List[str]:
         "docs/README.md",
         "LICENSE",
         "MANIFEST.in",
-        "app/__init__.py",
-        "app/py.typed"
+        "eq1_network/__init__.py",
+        "eq1_network/py.typed"
     ]
     
     missing_files = []
@@ -68,14 +68,14 @@ def check_package_structure() -> List[str]:
     
     issues = []
     
-    # app 디렉토리 확인
-    app_dir = Path("app")
-    if not app_dir.exists():
-        issues.append("app 디렉토리가 존재하지 않습니다.")
+    # eq1_network 디렉토리 확인
+    eq1_network_dir = Path("eq1_network")
+    if not eq1_network_dir.exists():
+        issues.append("eq1_network 디렉토리가 존재하지 않습니다.")
         return issues
     
     # __init__.py 파일들 확인
-    for py_file in app_dir.rglob("*.py"):
+    for py_file in eq1_network_dir.rglob("*.py"):
         if py_file.name != "__init__.py":
             continue
         
@@ -160,7 +160,7 @@ def check_code_quality() -> List[str]:
     
     # flake8 실행
     try:
-        run_command([sys.executable, "-m", "flake8", "app/", "tests/", "--max-line-length=100"])
+        run_command([sys.executable, "-m", "flake8", "eq1_network/", "tests/", "--max-line-length=100"])
         print("✅ flake8 검사 통과")
     except subprocess.CalledProcessError:
         issues.append("flake8 검사 실패")
@@ -168,7 +168,7 @@ def check_code_quality() -> List[str]:
     
     # mypy 실행 (타입 힌트 검사)
     try:
-        run_command([sys.executable, "-m", "mypy", "app/", "--ignore-missing-imports"])
+        run_command([sys.executable, "-m", "mypy", "eq1_network/", "--ignore-missing-imports"])
         print("✅ mypy 검사 통과")
     except subprocess.CalledProcessError:
         issues.append("mypy 검사 실패")

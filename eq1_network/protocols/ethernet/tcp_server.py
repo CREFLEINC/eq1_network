@@ -67,6 +67,8 @@ class TCPServer(ReqResProtocol):
 
     def send(self, data: bytes) -> bool:
         try:
+            if self._conn is None:
+                return False
             self._conn.send(data)
             return True
         except socket.timeout as te:
@@ -81,6 +83,8 @@ class TCPServer(ReqResProtocol):
 
     def read(self) -> Tuple[bool, Optional[bytes]]:
         try:
+            if self._conn is None:
+                return False, None
             data = self._conn.recv(1024)
             if not data:
                 raise ConnectionResetError

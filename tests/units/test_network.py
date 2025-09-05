@@ -3,7 +3,7 @@ import queue
 import threading
 import time
 import unittest
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -131,7 +131,7 @@ class MockReqResProtocol(ReqResProtocol):
         self.send_called = True
         return self.send_result
 
-    def read(self) -> tuple[bool, Optional[bytes]]:
+    def read(self) -> tuple[bool, bytes | None]:
         self.read_called = True
         self._read_count += 1
         if self._read_count <= self.max_reads:
@@ -192,7 +192,7 @@ class TestNetworkHandler(unittest.TestCase):
 
         # 로깅 레벨 설정 (테스트에서 DEBUG 로그 출력 방지)
         logging.getLogger("eq1_network.network").setLevel(logging.WARNING)
-        
+
         # NetworkHandler 스레드 시작 방지를 위한 Mock 설정
         self.handler = None
 
@@ -215,11 +215,10 @@ class TestNetworkHandler(unittest.TestCase):
             self.handler.stop_communications()
             if hasattr(self.handler, 'is_alive') and self.handler.is_alive():
                 self.handler.join(timeout=1.0)
-        
+
         # 모든 활성 스레드 강제 종료
         import threading
-        import time
-        
+
         # 현재 활성 스레드 목록 가져오기
         active_threads = threading.enumerate()
         for thread in active_threads:
@@ -285,7 +284,7 @@ class TestNetworkHandler(unittest.TestCase):
         mock_protocol = MockReqResProtocol()
         mock_protocol.connect_result = True
         mock_create_protocol.return_value = mock_protocol
-        
+
         # Mock 스레드 인스턴스 생성
         mock_listener = Mock()
         mock_requester = Mock()
@@ -329,7 +328,7 @@ class TestNetworkHandler(unittest.TestCase):
         mock_protocol = MockReqResProtocol()
         mock_protocol.connect_result = True
         mock_create_protocol.return_value = mock_protocol
-        
+
         # Mock 스레드 인스턴스 생성
         mock_listener = Mock()
         mock_requester = Mock()
@@ -714,11 +713,6 @@ class TestNetworkHandler(unittest.TestCase):
         handler._protocol = mock_protocol
         handler._request_queue = queue.Queue()
 
-        packet_structure_interface = (
-            handler._data_package.packet_structure if handler._data_package else None
-        )
-        received_data_class = handler._data_package.received_data if handler._data_package else None
-
         # Mock 객체로 교체하여 실제 스레드 생성 방지
         handler._listener = Mock(spec=Listener)
         handler._listener.is_alive.return_value = False
@@ -798,11 +792,6 @@ class TestNetworkHandler(unittest.TestCase):
         handler._protocol = mock_protocol
         handler._request_queue = queue.Queue()
 
-        packet_structure_interface = (
-            handler._data_package.packet_structure if handler._data_package else None
-        )
-        received_data_class = handler._data_package.received_data if handler._data_package else None
-
         # Mock 객체로 교체하여 실제 스레드 생성 방지
         handler._listener = Mock(spec=Listener)
         handler._listener.is_alive.return_value = False
@@ -831,7 +820,7 @@ class TestNetworkHandler(unittest.TestCase):
         """에러 처리 테스트"""
         mock_protocol = MockReqResProtocol()
         mock_create_protocol.return_value = mock_protocol
-        
+
         handler = NetworkHandler(
             network_config=self.network_config,
             event_callback=self.event_callback,
@@ -844,7 +833,6 @@ class TestNetworkHandler(unittest.TestCase):
         handler._requester = None
 
         handler.stop_communications()
-        
         # stop_flag를 설정하여 무한루프 방지
         handler._stop_flag.set()
         handler.reconnect()
@@ -942,11 +930,6 @@ class TestNetworkHandler(unittest.TestCase):
         handler._protocol = mock_protocol
         handler._request_queue = queue.Queue()
 
-        packet_structure_interface = (
-            handler._data_package.packet_structure if handler._data_package else None
-        )
-        received_data_class = handler._data_package.received_data if handler._data_package else None
-
         # Mock 객체로 교체하여 실제 스레드 생성 방지
         handler._listener = Mock(spec=Listener)
         handler._listener.is_alive.return_value = False
@@ -1010,11 +993,6 @@ class TestNetworkHandler(unittest.TestCase):
         # start_communication() 대신 직접 설정
         handler._protocol = reqres_protocol
         handler._request_queue = queue.Queue()
-
-        packet_structure_interface = (
-            handler._data_package.packet_structure if handler._data_package else None
-        )
-        received_data_class = handler._data_package.received_data if handler._data_package else None
 
         # Mock 객체로 교체하여 실제 스레드 생성 방지
         handler._listener = Mock(spec=Listener)
@@ -1099,11 +1077,6 @@ class TestNetworkHandler(unittest.TestCase):
         # start_communication() 대신 직접 설정
         handler._protocol = mock_protocol
         handler._request_queue = queue.Queue()
-
-        packet_structure_interface = (
-            handler._data_package.packet_structure if handler._data_package else None
-        )
-        received_data_class = handler._data_package.received_data if handler._data_package else None
 
         # Mock 객체로 교체하여 실제 스레드 생성 방지
         handler._listener = Mock(spec=Listener)
@@ -1337,11 +1310,6 @@ class TestNetworkHandler(unittest.TestCase):
         # start_communication() 대신 직접 설정
         handler._protocol = mock_protocol
         handler._request_queue = queue.Queue()
-
-        packet_structure_interface = (
-            handler._data_package.packet_structure if handler._data_package else None
-        )
-        received_data_class = handler._data_package.received_data if handler._data_package else None
 
         # Mock 객체로 교체하여 실제 스레드 생성 방지
         handler._listener = Mock(spec=Listener)

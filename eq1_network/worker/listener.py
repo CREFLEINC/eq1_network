@@ -3,7 +3,7 @@ import logging
 import threading
 import time
 import traceback
-from typing import Generic, Type, TypeVar, Union, Optional
+from typing import Generic, Type, TypeVar, Union, Optional, cast
 
 from eq1_network.common.exception import (
     ProtocolDecodeError,
@@ -82,8 +82,8 @@ class Listener(Generic[TRecv], threading.Thread):
                     packets = []
 
                     if not is_ok:
-                        self._event_callback.on_failed_recv(bytes_data)
-                        self._event_callback.on_disconnected(bytes_data)
+                        self._event_callback.on_failed_recv(bytes_data or b"")
+                        self._event_callback.on_disconnected(bytes_data or b"")
                     elif bytes_data is None:
                         time.sleep(0.01)
                         continue
@@ -98,7 +98,7 @@ class Listener(Generic[TRecv], threading.Thread):
                             if self._received_data_class:
                                 received_data = self._received_data_class.from_bytes(raw_data)
                             else:
-                                received_data = raw_data
+                                received_data = cast(TRecv, raw_data)
                             self._event_callback.on_received(received_data)
                         except (ProtocolDecodeError, ProtocolValidationError) as e:
                             logger.warning(f"Packet decode/validation error: {e}")
@@ -134,7 +134,7 @@ class Listener(Generic[TRecv], threading.Thread):
                     if self._received_data_class:
                         received_data = self._received_data_class.from_bytes(raw_data)
                     else:
-                        received_data = raw_data
+                        received_data = cast(TRecv, raw_data)
                     self._event_callback.on_received(received_data)
                 except (ProtocolDecodeError, ProtocolValidationError) as e:
                     logger.warning(f"Packet decode/validation error: {e}")

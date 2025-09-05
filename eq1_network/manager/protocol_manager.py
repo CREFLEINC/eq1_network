@@ -104,11 +104,11 @@ class PubSubManager:
         return cls.get(name).publish(topic, message.encode(), qos)
 
     @classmethod
-    def subscribe(cls, name: str, topic: str, callback, qos: int = 0) -> bool:
+    def subscribe(cls, name: str, topic: str, callback) -> bool:
         """
         등록된 플러그인 이름으로 subscribe() 호출 시 플러그인의 subscribe()가 호출되는지 테스트합니다.
         """
-        cls.get(name).subscribe(topic, callback, qos)
+        cls.get(name).subscribe(topic, callback)
         return True
 
     @classmethod

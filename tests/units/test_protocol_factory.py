@@ -4,6 +4,7 @@ import pytest
 
 from eq1_network.common.params import Params
 from eq1_network.manager.protocol_factory import (
+    create_ethernet_protocol,
     create_mqtt_protocol,
     create_protocol,
     valid_params,
@@ -27,6 +28,9 @@ class DummyParams(Params):
 
     def get(self, key, default=None):
         return self._data.get(key, default)
+    
+    def get_default(self, key, default):
+        return self._data.get(key, default)
 
 
 @pytest.mark.unit
@@ -46,6 +50,25 @@ def test_valid_params_missing_key():
     params = DummyParams({"a": 1})
     with pytest.raises(ValueError, match=r"Not found \[b\] in Network Params"):
         valid_params(params, ["a", "b"])
+
+
+@pytest.mark.unit
+def test_valid_params_with_dict():
+    """
+    dict 타입 파라미터가 Params 객체로 변환되어 처리되는지 테스트합니다.
+    """
+    params_dict = {"a": 1, "b": 2}
+    assert valid_params(params_dict, ["a", "b"]) is True
+
+
+@pytest.mark.unit
+def test_valid_params_with_dict_missing_key():
+    """
+    dict 타입 파라미터에서 키가 누락된 경우 ValueError를 발생시키는지 테스트합니다.
+    """
+    params_dict = {"a": 1}
+    with pytest.raises(ValueError, match=r"Not found \[b\] in Network Params"):
+        valid_params(params_dict, ["a", "b"])
 
 
 @pytest.mark.unit
@@ -134,4 +157,154 @@ def test_create_protocol_missing_required_params():
     """
     params = DummyParams({"method": "mqtt", "port": 1883})
     with pytest.raises(ValueError, match="Not found \\[broker_address\\] in Network Params"):
+        create_protocol(params)
+
+
+@pytest.mark.unit
+@patch("eq1_network.protocols.ethernet.tcp_server.TCPServer")
+def test_create_ethernet_protocol_tcp_server(mock_tcp_server):
+    """
+    create_ethernet_protocol()이 TCP 서버 모드에서 TCPServer를 생성하는지 테스트합니다.
+    """
+    mock_instance = MagicMock()
+    mock_tcp_server.return_value = mock_instance
+
+    result = create_ethernet_protocol("tcp", "127.0.0.1", 8080, 0.01, "server")
+
+    mock_tcp_server.assert_called_once_with("127.0.0.1", 8080, 0)
+    assert result is mock_instance
+
+
+@pytest.mark.unit
+@patch("eq1_network.protocols.ethernet.tcp_client.TCPClient")
+def test_create_ethernet_protocol_tcp_client(mock_tcp_client):
+    """
+    create_ethernet_protocol()이 TCP 클라이언트 모드에서 TCPClient를 생성하는지 테스트합니다.
+    """
+    mock_instance = MagicMock()
+    mock_tcp_client.return_value = mock_instance
+
+    result = create_ethernet_protocol("tcp", "127.0.0.1", 8080, 0.01, "client")
+
+    mock_tcp_client.assert_called_once_with("127.0.0.1", 8080, 0.01)
+    assert result is mock_instance
+
+
+@pytest.mark.unit
+def test_create_ethernet_protocol_udp_server():
+    """
+    create_ethernet_protocol()이 UDP 서버 모드에서 NotImplementedError를 발생시키는지 테스트합니다.
+    """
+    with pytest.raises(NotImplementedError, match="UDP server protocol not implemented yet"):
+        create_ethernet_protocol("udp", "127.0.0.1", 8080, 0.01, "server")
+
+
+@pytest.mark.unit
+def test_create_ethernet_protocol_udp_client():
+    """
+    create_ethernet_protocol()이 UDP 클라이언트 모드에서 NotImplementedError를 발생시키는지 테스트합니다.
+    """
+    with pytest.raises(NotImplementedError, match="UDP client protocol not implemented yet"):
+        create_ethernet_protocol("udp", "127.0.0.1", 8080, 0.01, "client")
+
+
+@pytest.mark.unit
+def test_create_ethernet_protocol_unsupported_protocol():
+    """
+    create_ethernet_protocol()이 지원하지 않는 프로토콜에서 ValueError를 발생시키는지 테스트합니다.
+    """
+    with pytest.raises(ValueError, match="Unsupported protocol: http with mode: client"):
+        create_ethernet_protocol("http", "127.0.0.1", 8080, 0.01, "client")
+
+
+@pytest.mark.unit
+def test_create_ethernet_protocol_unsupported_mode():
+    """
+    create_ethernet_protocol()이 지원하지 않는 모드에서 ValueError를 발생시키는지 테스트합니다.
+    """
+    with pytest.raises(ValueError, match="Unsupported protocol: tcp with mode: proxy"):
+        create_ethernet_protocol("tcp", "127.0.0.1", 8080, 0.01, "proxy")
+
+
+@pytest.mark.unit
+@patch("eq1_network.manager.protocol_factory.create_mqtt_protocol")
+def test_create_protocol_with_dict_params(mock_create_mqtt):
+    """
+    create_protocol()이 dict 타입 파라미터를 Params 객체로 변환하여 처리하는지 테스트합니다.
+    """
+    mock_instance = MagicMock()
+    mock_create_mqtt.return_value = mock_instance
+
+    params_dict = {
+        "method": "mqtt",
+        "broker_address": "broker.emqx.io",
+        "port": 1883,
+    }
+
+    result = create_protocol(params_dict)
+
+    mock_create_mqtt.assert_called_once_with(
+        broker_address="broker.emqx.io", port=1883, keepalive=60
+    )
+    assert result is mock_instance
+
+
+@pytest.mark.unit
+@patch("eq1_network.manager.protocol_factory.create_ethernet_protocol")
+def test_create_protocol_with_ethernet(mock_create_ethernet):
+    """
+    method가 'ethernet'일 때 create_protocol()이 create_ethernet_protocol()을 호출하는지 테스트합니다.
+    """
+    mock_instance = MagicMock()
+    mock_create_ethernet.return_value = mock_instance
+
+    params = DummyParams(
+        {
+            "method": "ethernet",
+            "protocol": "tcp",
+            "address": "127.0.0.1",
+            "port": 8080,
+            "timeout": 0.01,
+            "mode": "client",
+        }
+    )
+
+    result = create_protocol(params)
+
+    mock_create_ethernet.assert_called_once_with("tcp", "127.0.0.1", 8080, 0.01, "client")
+    assert result is mock_instance
+
+
+@pytest.mark.unit
+@patch("eq1_network.manager.protocol_factory.create_ethernet_protocol")
+def test_create_protocol_with_ethernet_default_mode(mock_create_ethernet):
+    """
+    method가 'ethernet'이고 mode가 없을 때 기본값 'client'로 create_ethernet_protocol()을 호출하는지 테스트합니다.
+    """
+    mock_instance = MagicMock()
+    mock_create_ethernet.return_value = mock_instance
+
+    params = DummyParams(
+        {
+            "method": "ethernet",
+            "protocol": "tcp",
+            "address": "127.0.0.1",
+            "port": 8080,
+            "timeout": 0.01,
+        }
+    )
+
+    result = create_protocol(params)
+
+    mock_create_ethernet.assert_called_once_with("tcp", "127.0.0.1", 8080, 0.01, "client")
+    assert result is mock_instance
+
+
+@pytest.mark.unit
+def test_create_protocol_ethernet_missing_required_params():
+    """
+    ethernet 프로토콜에서 필수 파라미터가 누락된 경우 create_protocol()이 예외를 발생시키는지 테스트합니다.
+    """
+    params = DummyParams({"method": "ethernet", "protocol": "tcp", "address": "127.0.0.1"})
+    with pytest.raises(ValueError, match="Not found \\[timeout\\] in Network Params"):
         create_protocol(params)

@@ -2,7 +2,7 @@ import logging
 import queue
 import threading
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from eq1_network.data import DataPackage
 from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
@@ -23,7 +23,7 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
         network_config: Dict,
         event_callback: NetworkEvent,
         net_id: Any = None,
-        data_package: DataPackage = None,
+        data_package: Optional[DataPackage] = None,
     ):
         super().__init__()
         self._net_id = net_id
@@ -35,7 +35,6 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
         self._request_queue = None
         self._retry_flag = True
         self._data_package = data_package
-
         self._event_callback = event_callback
 
     def on_sent(self, data):

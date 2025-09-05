@@ -98,7 +98,7 @@ def test_mqtt(broker: str, port: int, topic: str) -> None:
             # 발행 테스트
             test_message = "Hello from EQ-1 Network CLI"
             print(f"메시지 발행 테스트: {topic}")
-            if mqtt.publish(topic, test_message):
+            if mqtt.publish(topic, test_message.encode()):
                 print("✓ 메시지 발행 성공")
             else:
                 print("✗ 메시지 발행 실패")

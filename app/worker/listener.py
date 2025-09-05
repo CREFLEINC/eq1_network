@@ -1,15 +1,17 @@
 import abc
-import queue
+import logging
 import threading
 import time
 import traceback
-import logging
-from typing import Callable, Generic, Optional, Type, TypeVar, Union, runtime_checkable
+from typing import Generic, Type, TypeVar, Union, Optional
 
-from app.data import SendData, ReceivedData
-from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
+from app.common.exception import (
+    ProtocolDecodeError,
+    ProtocolValidationError,
+)
+from app.data import ReceivedData, SendData
 from app.interfaces.packet import PacketStructureInterface
-from app.common.exception import ProtocolError, ProtocolConnectionError, ProtocolTimeoutError, ProtocolDecodeError, ProtocolValidationError, ProtocolAuthenticationError
+from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 ProtocolLike = Union[ReqResProtocol, PubSubProtocol]
 TSend = TypeVar("TSend", bound=SendData)
@@ -43,7 +45,7 @@ class Listener(Generic[TRecv], threading.Thread):
         event_callback: ListenerEvent[TRecv],
         protocol: ProtocolLike,
         packet_structure_interface: Type[PacketStructureInterface],
-        received_data_class: Type[TRecv] = None,
+        received_data_class: Optional[Type[TRecv]] = None,
     ):
         super().__init__()
         self._event_callback = event_callback
@@ -51,7 +53,7 @@ class Listener(Generic[TRecv], threading.Thread):
         self._packet_structure = packet_structure_interface
         self._stop_flag = threading.Event()
         self._received_data_class = received_data_class
-        
+
         # PubSub 프로토콜인 경우 초기화 시 콜백 등록
         if isinstance(self._protocol, PubSubProtocol):
             self._protocol.subscribe("#", self._handle_pubsub_message)
@@ -78,7 +80,7 @@ class Listener(Generic[TRecv], threading.Thread):
                 else:
                     is_ok, bytes_data = self._protocol.read()
                     packets = []
-                    
+
                     if not is_ok:
                         self._event_callback.on_failed_recv(bytes_data)
                         self._event_callback.on_disconnected(bytes_data)
@@ -102,9 +104,11 @@ class Listener(Generic[TRecv], threading.Thread):
                             logger.warning(f"Packet decode/validation error: {e}")
                             self._event_callback.on_failed_recv(packet)
                         except Exception as e:
-                            logger.error(f"Error processing packet in {self.__class__.__name__}: {e}")
+                            logger.error(
+                                f"Error processing packet in {self.__class__.__name__}: {e}"
+                            )
                             self._event_callback.on_failed_recv(packet)
-                        
+
             except Exception as e:
                 logger.error(f"Error in {self.__class__.__name__}: {e}")
                 traceback.print_exc()
@@ -115,7 +119,7 @@ class Listener(Generic[TRecv], threading.Thread):
         except Exception as e:
             logger.error(f"Error disconnecting protocol in {self.__class__.__name__}: {e}")
             traceback.print_exc()
-    
+
     def _handle_pubsub_message(self, topic: str, message: bytes) -> None:
         """PubSub 메시지 콜백 핸들러"""
         try:

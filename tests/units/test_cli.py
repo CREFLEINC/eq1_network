@@ -1,5 +1,3 @@
-import sys
-from io import StringIO
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
@@ -9,6 +7,7 @@ from app.cli import create_parser, list_protocols, main
 from app.cli import test_mqtt as cli_test_mqtt
 
 
+@pytest.mark.unit
 class TestCLI:
     """app/cli.py 모듈 테스트"""
 
@@ -66,9 +65,7 @@ class TestCLI:
     @patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
     @patch("app.protocols.mqtt.mqtt_protocol.BrokerConfig")
     @patch("app.protocols.mqtt.mqtt_protocol.ClientConfig")
-    def test_test_mqtt_success(
-        self, mock_client_config, mock_broker_config, mock_mqtt, capsys
-    ):
+    def test_test_mqtt_success(self, mock_client_config, mock_broker_config, mock_mqtt, capsys):
         """MQTT 테스트 성공"""
         mock_mqtt_instance = MagicMock()
         mock_mqtt_instance.connect.return_value = True
@@ -158,9 +155,7 @@ class TestCLI:
     @patch("app.cli.test_mqtt")
     def test_main_test_mqtt(self, mock_test):
         """test-mqtt 명령어 테스트"""
-        result = main(
-            ["test-mqtt", "--broker", "test.com", "--port", "8883", "--topic", "test"]
-        )
+        result = main(["test-mqtt", "--broker", "test.com", "--port", "8883", "--topic", "test"])
 
         assert result == 0
         mock_test.assert_called_once_with("test.com", 8883, "test")

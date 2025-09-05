@@ -1,4 +1,3 @@
-import threading
 import time
 
 import pytest
@@ -34,9 +33,7 @@ def test_real_mqtt_connection(protocol):
     time.sleep(2)
 
     if not protocol.is_connected:
-        pytest.skip(
-            "Cannot connect to MQTT broker - network issue or broker unavailable"
-        )
+        pytest.skip("Cannot connect to MQTT broker - network issue or broker unavailable")
 
     assert protocol.is_connected
 
@@ -91,9 +88,7 @@ def test_real_mqtt_publish_subscribe(protocol):
     if len(received_messages) == 0:
         pytest.fail("No messages received")
 
-    assert (
-        len(received_messages) == 1
-    ), f"Expected 1 message, got {len(received_messages)}"
+    assert len(received_messages) == 1, f"Expected 1 message, got {len(received_messages)}"
     assert (
         received_messages[0][0] == test_topic
     ), f"Topic mismatch: expected {test_topic}, got {received_messages[0][0]}"

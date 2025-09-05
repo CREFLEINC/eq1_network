@@ -1,22 +1,10 @@
 import sys
 from unittest.mock import patch
 
-from app.common.exception import (
-    ProtocolAuthenticationError,
-    ProtocolConnectionError,
-    ProtocolDecodeError,
-    ProtocolError,
-    ProtocolTimeoutError,
-    ProtocolValidationError,
-)
-from app.interfaces.protocol import (
-    BaseProtocol,
-    PubSubProtocol,
-    ReqResProtocol,
-)
-from app.manager.protocol_manager import PubSubManager, ReqResManager
+import pytest
 
 
+@pytest.mark.unit
 class TestAppInit:
     """app/__init__.py 모듈 테스트"""
 

@@ -11,15 +11,17 @@ from app.common.exception import (
 from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
+def func(t, m):
+    return None
+
+
 @pytest.fixture
 def mock_client(monkeypatch):
     """
     paho-mqtt.Client를 Mock으로 치환합니다.
     """
     mock_client = MagicMock()
-    monkeypatch.setattr(
-        "app.protocols.mqtt.mqtt_protocol.Client", lambda *a, **k: mock_client
-    )
+    monkeypatch.setattr("app.protocols.mqtt.mqtt_protocol.Client", lambda *a, **k: mock_client)
     return mock_client
 
 
@@ -28,9 +30,7 @@ def non_blocking_protocol(mock_client):
     """
     MQTTProtocol의 테스트용 non-blocking 모드 인스턴스를 생성합니다.
     """
-    config = BrokerConfig(
-        broker_address="broker.emqx.io", port=1883, mode="non-blocking"
-    )
+    config = BrokerConfig(broker_address="broker.emqx.io", port=1883, mode="non-blocking")
     client_config = ClientConfig()
     return MQTTProtocol(config, client_config)
 
@@ -97,9 +97,7 @@ def test_mqtt_auth_error(monkeypatch):
     mock_client.username_pw_set.side_effect = Exception("Auth failed")
     monkeypatch.setattr(mqtt_mod, "Client", lambda *a, **k: mock_client)
 
-    config = BrokerConfig(
-        broker_address="broker.emqx.io", username="user", password="pass"
-    )
+    config = BrokerConfig(broker_address="broker.emqx.io", username="user", password="pass")
     client_config = ClientConfig()
     with pytest.raises(ProtocolError):
         MQTTProtocol(config, client_config)
@@ -142,9 +140,7 @@ def test_connect_success(protocol_factory, mode):
             client, protocol.handler, {}, 0
         )
     else:
-        client.loop_forever.side_effect = lambda: setattr(
-            protocol, "_is_connected", True
-        )
+        client.loop_forever.side_effect = lambda: setattr(protocol, "_is_connected", True)
 
     assert protocol.connect() is True
     client.connect.assert_called_once()
@@ -307,7 +303,7 @@ def test_subscribe_unsubscribe_success(protocol_factory, mode):
     """
     protocol, client = protocol_factory(mode)
     client.subscribe.return_value = (0, 1)
-    callback = lambda t, m: None
+    callback = func
     assert protocol.subscribe("topic", callback)
     assert "topic" in protocol._subscriptions
     client.unsubscribe.return_value = (0, 1)
@@ -323,7 +319,7 @@ def test_subscribe_failure(protocol_factory, mode):
     protocol, client = protocol_factory(mode)
     client.subscribe.return_value = (1, None)
     with pytest.raises(ProtocolValidationError):
-        protocol.subscribe("bad", lambda t, m: None)
+        protocol.subscribe("bad", func)
 
 
 @pytest.mark.unit
@@ -334,7 +330,7 @@ def test_subscribe_duplicate_callbacks_allowed(protocol_factory, mode):
     """
     protocol, client = protocol_factory(mode)
     client.subscribe.return_value = (0, 1)
-    cb = lambda t, m: None
+    cb = func
     protocol.subscribe("topic", cb)
     protocol.subscribe("topic", cb)
     assert len(protocol._subscriptions["topic"]) == 2
@@ -347,7 +343,7 @@ def test_unsubscribe_success(protocol_factory, mode):
     구독 해제 성공 테스트
     """
     protocol, client = protocol_factory(mode)
-    protocol._subscriptions["topic"] = [lambda t, m: None]
+    protocol._subscriptions["topic"] = [func]
     client.unsubscribe.return_value = (0, 1)
     assert protocol.unsubscribe("topic")
 
@@ -359,7 +355,7 @@ def test_unsubscribe_failure(protocol_factory, mode):
     구독 해제 실패 테스트
     """
     protocol, client = protocol_factory(mode)
-    protocol._subscriptions["bad"] = [lambda t, m: None]
+    protocol._subscriptions["bad"] = [func]
     client.unsubscribe.return_value = (1, None)
     with pytest.raises(ProtocolValidationError):
         protocol.unsubscribe("bad")
@@ -372,7 +368,7 @@ def test_unsubscribe_exception_handling(protocol_factory, mode):
     구독 해제 예외 처리 테스트
     """
     protocol, client = protocol_factory(mode)
-    callback = lambda t, m: None
+    callback = func
     protocol._subscriptions["topic"] = [callback]
     client.unsubscribe.side_effect = Exception("Unsubscribe failed")
     with pytest.raises(ProtocolValidationError, match="구독 해제 오류"):
@@ -386,7 +382,7 @@ def test_unsubscribe_all_callbacks_failure_keeps_local_state(protocol_factory, m
     모든 콜백 해제 실패 시 로컬 상태 유지 테스트
     """
     protocol, client = protocol_factory(mode)
-    cb = lambda t, m: None
+    cb = func
     protocol._subscriptions["topic"] = [cb]
     client.unsubscribe.return_value = (1, None)
     with pytest.raises(ProtocolValidationError):
@@ -401,7 +397,7 @@ def test_unsubscribe_specific_callback_unsubscribe_failure(protocol_factory, mod
     특정 콜백 제거 후 unsubscribe 실패 테스트
     """
     protocol, client = protocol_factory(mode)
-    callback = lambda t, m: None
+    callback = func
     protocol._subscriptions["topic"] = [callback]
     client.unsubscribe.return_value = (1, None)
     with pytest.raises(ProtocolValidationError):
@@ -426,8 +422,12 @@ def test_unsubscribe_specific_callback(protocol_factory, mode):
     특정 콜백 제거 테스트
     """
     protocol, client = protocol_factory(mode)
-    callback1 = lambda t, m: None
-    callback2 = lambda t, m: None
+    
+    def callback1(t, m):
+        return "callback1"
+    
+    def callback2(t, m):
+        return "callback2"
 
     client.subscribe.return_value = (0, 1)
     protocol.subscribe("topic", callback1)
@@ -450,11 +450,16 @@ def test_unsubscribe_callback_not_in_list(protocol_factory, mode):
     """
     콜백이 리스트에 없을 때 unsubscribe 테스트
     """
-    protocol, _ = protocol_factory(mode)
-    callback1 = lambda t, m: None
-    callback2 = lambda t, m: None
+    protocol, client = protocol_factory(mode)
+    
+    def callback1(t, m):
+        return "callback1"
+    
+    def callback2(t, m):
+        return "callback2"
 
     protocol._subscriptions["topic"] = [callback1]
+    client.unsubscribe.return_value = (0, 1)  # Mock 반환값 설정
     assert protocol.unsubscribe("topic", callback2) is True
     assert "topic" in protocol._subscriptions
     assert callback1 in protocol._subscriptions["topic"]
@@ -478,7 +483,7 @@ def test_on_connect_callback(protocol_factory, mode):
     _on_connect 콜백 테스트
     """
     protocol, client = protocol_factory(mode)
-    callback = lambda t, m: None
+    callback = func
     protocol._subscriptions["topic"] = [callback]
     client.subscribe.return_value = (0, 1)
     protocol._on_connect(client, protocol.handler, {}, 0)
@@ -492,7 +497,7 @@ def test_on_connect_subscription_recovery_error(protocol_factory, mode):
     연결 시 구독 복구 오류 테스트
     """
     protocol, client = protocol_factory(mode)
-    protocol._subscriptions["topic1"] = [lambda t, m: None]
+    protocol._subscriptions["topic1"] = [func]
     client.subscribe.side_effect = Exception("구독 복구 실패")
     protocol._on_connect(client, protocol.handler, {}, 0)
     assert protocol._is_connected is True
@@ -505,7 +510,7 @@ def test_on_connect_subscription_recovery_failure(protocol_factory, mode):
     연결 시 구독 복구 실패 테스트
     """
     protocol, client = protocol_factory(mode)
-    protocol._subscriptions["topic1"] = [lambda t, m: None]
+    protocol._subscriptions["topic1"] = [func]
     client.subscribe.return_value = (1, None)
     protocol._on_connect(client, protocol.handler, {}, 0)
     assert protocol._is_connected is True
@@ -544,8 +549,8 @@ def test_on_connect_partial_subscription_recovery(protocol_factory, mode):
     """
     protocol, client = protocol_factory(mode)
     protocol._subscriptions = {
-        "ok": [lambda t, m: None],
-        "bad": [lambda t, m: None],
+        "ok": [func],
+        "bad": [func],
     }
 
     def sub_side_effect(*args, **kwargs):
@@ -583,7 +588,7 @@ def test_on_unsubscribe_error(protocol_factory, mode):
     _on_unsubscribe 오류 테스트
     """
     protocol, client = protocol_factory(mode)
-    protocol._subscriptions["topic"] = [lambda t, m: None]
+    protocol._subscriptions["topic"] = [func]
     client.unsubscribe.side_effect = Exception("구독 해제 실패")
     with pytest.raises(ProtocolValidationError):
         protocol.unsubscribe("topic")
@@ -597,7 +602,10 @@ def test_on_message_callback(protocol_factory, mode):
     """
     protocol, _ = protocol_factory(mode)
     called = []
-    callback = lambda t, m: called.append((t, m))
+
+    def callback(t, m):
+        called.append((t, m))
+
     protocol._subscriptions["topic"] = [callback]
     msg = type("msg", (), {"topic": "topic", "payload": b"data"})
     protocol._on_message(None, protocol.handler, msg)
@@ -611,7 +619,10 @@ def test_on_message_with_exception(protocol_factory, mode):
     _on_message 예외 발생 테스트
     """
     protocol, _ = protocol_factory(mode)
-    error_callback = lambda t, m: 1 / 0
+
+    def error_callback(t, m):
+        return 1 / 0
+
     protocol._subscriptions["topic"] = [error_callback]
     msg = type("msg", (), {"topic": "topic", "payload": b"data"})
     protocol._on_message(None, protocol.handler, msg)
@@ -661,7 +672,7 @@ def test_on_subscribe_error_cleanup(protocol_factory, mode):
     protocol, client = protocol_factory(mode)
     client.subscribe.side_effect = Exception("Subscribe error")
     with pytest.raises(ProtocolValidationError):
-        protocol.subscribe("topic", lambda t, m: None)
+        protocol.subscribe("topic", func)
     assert "topic" not in protocol._subscriptions
 
 
@@ -909,9 +920,7 @@ def test_start_reconnect_thread_creates_new_thread(protocol_factory, mode, monke
 
     protocol._start_reconnect_thread()
 
-    mock_thread_class.assert_called_once_with(
-        target=protocol._reconnect_loop, daemon=True
-    )
+    mock_thread_class.assert_called_once_with(target=protocol._reconnect_loop, daemon=True)
     mock_thread.start.assert_called_once()
     assert protocol._reconnect_thread is mock_thread
 
@@ -993,7 +1002,7 @@ def test_subscribe_with_different_qos_levels(protocol_factory, mode):
     """
     protocol, client = protocol_factory(mode)
     client.subscribe.return_value = (0, 1)
-    callback = lambda t, m: None
+    callback = func
 
     # QoS 0, 1, 2 테스트
     for qos in [0, 1, 2]:
@@ -1146,9 +1155,7 @@ def test_connect_with_custom_bind_address(protocol_factory, mode):
         with unittest.mock.patch(
             "app.protocols.mqtt.mqtt_protocol.Client", return_value=mock_client
         ):
-            config = BrokerConfig(
-                broker_address="test.broker.com", bind_address="192.168.1.100"
-            )
+            config = BrokerConfig(broker_address="test.broker.com", bind_address="192.168.1.100")
             protocol = MQTTProtocol(config, ClientConfig())
             return protocol, mock_client
 
@@ -1356,9 +1363,7 @@ def test_start_reconnect_thread_already_alive_thread(protocol_factory, mode):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_reconnect_loop_successful_reconnection_and_exit(
-    protocol_factory, mode, monkeypatch
-):
+def test_reconnect_loop_successful_reconnection_and_exit(protocol_factory, mode, monkeypatch):
     """
     재연결 성공 후 루프 종료 테스트 (라인 508-520 커버)
     """
@@ -1481,9 +1486,7 @@ def test_reconnect_loop_exponential_backoff_with_max_delay_reached(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_reconnect_loop_connection_check_with_partial_success(
-    protocol_factory, mode, monkeypatch
-):
+def test_reconnect_loop_connection_check_with_partial_success(protocol_factory, mode, monkeypatch):
     """
     재연결 후 연결 확인 중 일부 성공 테스트
     """
@@ -1521,9 +1524,7 @@ def test_reconnect_loop_connection_check_with_partial_success(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_start_reconnect_thread_with_dead_thread_replacement(
-    protocol_factory, mode, monkeypatch
-):
+def test_start_reconnect_thread_with_dead_thread_replacement(protocol_factory, mode, monkeypatch):
     """
     죽은 재연결 스레드를 새로운 스레드로 교체하는 테스트
     """
@@ -1543,18 +1544,14 @@ def test_start_reconnect_thread_with_dead_thread_replacement(
     protocol._start_reconnect_thread()
 
     # 새로운 스레드가 생성되고 시작되어야 함
-    mock_thread_class.assert_called_once_with(
-        target=protocol._reconnect_loop, daemon=True
-    )
+    mock_thread_class.assert_called_once_with(target=protocol._reconnect_loop, daemon=True)
     new_thread.start.assert_called_once()
     assert protocol._reconnect_thread is new_thread
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_reconnect_loop_with_multiple_failed_attempts(
-    protocol_factory, mode, monkeypatch
-):
+def test_reconnect_loop_with_multiple_failed_attempts(protocol_factory, mode, monkeypatch):
     """
     여러 번의 재연결 실패 후 성공하는 테스트
     """
@@ -1596,9 +1593,7 @@ def test_reconnect_loop_with_multiple_failed_attempts(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("mode", ["non-blocking", "blocking"])
-def test_handler_flush_queue_with_publish_failure_and_success_mix(
-    protocol_factory, mode
-):
+def test_handler_flush_queue_with_publish_failure_and_success_mix(protocol_factory, mode):
     """
     큐 플러시 시 발행 성공/실패 혼합 테스트
     """

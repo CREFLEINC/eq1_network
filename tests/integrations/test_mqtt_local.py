@@ -1,6 +1,4 @@
 import socket
-import subprocess
-import threading
 import time
 
 import pytest
@@ -33,9 +31,7 @@ def local_broker():
 @pytest.fixture
 def local_config():
     """로컬 MQTT 브로커 설정"""
-    return BrokerConfig(
-        broker_address="localhost", port=1883, mode="non-blocking", keepalive=10
-    )
+    return BrokerConfig(broker_address="localhost", port=1883, mode="non-blocking", keepalive=10)
 
 
 @pytest.mark.integration

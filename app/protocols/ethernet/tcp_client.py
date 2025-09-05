@@ -1,14 +1,16 @@
 import socket
+import logging
 from typing import Optional, Tuple
+
 from app.interfaces.protocol import ReqResProtocol
 
 
 class TCPClient(ReqResProtocol):
-    def __init__(self, address: str, port: int, timeout: int = 0.1):
+    def __init__(self, address: str, port: int, timeout: float = 0.01):
         self._address = address
         self._port = port
         self._timeout = timeout
-        self._socket = None
+        self._socket: Optional[socket.socket] = None
 
     def connect(self) -> bool:
         try:
@@ -17,6 +19,7 @@ class TCPClient(ReqResProtocol):
             self._socket.connect((self._address, self._port))
             return True
         except (ConnectionRefusedError, OSError) as e:
+            logging.error(f"failed to connect {self._address}:{self._port}... {e}")
             self._socket.close()
             self._socket = None
             return False
@@ -24,8 +27,9 @@ class TCPClient(ReqResProtocol):
     def disconnect(self):
         try:
             self._socket.close()
-            print('client disconnected')
+            print("client disconnected")
         except Exception as e:
+            logging.error(f"failed to disconnect {self._address}:{self._port}... {e}")
             pass
 
     def send(self, data: bytes) -> bool:
@@ -33,10 +37,10 @@ class TCPClient(ReqResProtocol):
             self._socket.send(data)
             return True
         except BrokenPipeError as be:
-            print(f'failed to send data. {be}')
+            print(f"failed to send data. {be}")
             return False
         except AttributeError as ae:
-            print(f'failed to send data. {ae}')
+            print(f"failed to send data. {ae}")
             return False
 
     def read(self) -> Tuple[bool, Optional[bytes]]:
@@ -47,10 +51,11 @@ class TCPClient(ReqResProtocol):
 
             return True, data
         except socket.timeout as te:
+            logging.error(f"failed to read data. {te}")
             return True, None
         except ConnectionResetError as ce:
-            # print(f'failed to read data. {ce}')
+            logging.error(f"failed to read data. {ce}")
             return False, None
         except AttributeError as ae:
-            # print(f'failed to read data. {ae}')
+            logging.error(f"failed to read data. {ae}")
             return False, None

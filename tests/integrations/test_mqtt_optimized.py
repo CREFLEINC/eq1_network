@@ -1,11 +1,9 @@
-import threading
 import time
 
 import pytest
 
 from app.common.exception import (
     ProtocolConnectionError,
-    ProtocolError,
     ProtocolValidationError,
 )
 from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
@@ -14,9 +12,7 @@ from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTPro
 @pytest.fixture
 def protocol():
     """MQTTProtocol EMQX 테스트 인스턴스"""
-    broker_config = BrokerConfig(
-        broker_address="broker.emqx.io", port=1883, mode="non-blocking"
-    )
+    broker_config = BrokerConfig(broker_address="broker.emqx.io", port=1883, mode="non-blocking")
     client_config = ClientConfig()
     protocol = MQTTProtocol(broker_config, client_config)
     yield protocol
@@ -414,13 +410,22 @@ class TestSequentialSubscriptionEdgeCases:
         assert result1 is True
         time.sleep(0.5)
 
-        # 잘못된 구독 시도 (빈 토픽)
-        try:
-            protocol.subscribe("", callback)
-        except:
-            pass  # 예외 발생 예상
-
-        time.sleep(0.5)
+        # 잘못된 구독 시도들 (다양한 실패 케이스)
+        invalid_topics = ["", None, "invalid/topic/with/#/wildcard", "invalid/topic/with/+/wildcard"]
+        for invalid_topic in invalid_topics:
+            try:
+                if invalid_topic is None:
+                    # None 토픽은 TypeError 발생 예상
+                    protocol.subscribe(None, callback)
+                else:
+                    protocol.subscribe(invalid_topic, callback)
+            except (ProtocolValidationError, TypeError, ValueError) as e:
+                # 예외 발생 예상 - 로그로 확인
+                print(f"Expected error for topic '{invalid_topic}': {e}")
+            except Exception as e:
+                # 기타 예외도 허용
+                print(f"Unexpected error for topic '{invalid_topic}': {e}")
+            time.sleep(0.1)
 
         # 다시 정상 구독
         valid_topic2 = f"{base_topic}/valid2"
@@ -437,6 +442,163 @@ class TestSequentialSubscriptionEdgeCases:
         assert len(received_messages) == 2
         assert "test1" in received_messages
         assert "test2" in received_messages
+
+        # 추가 검증: 구독 목록이 올바르게 유지되는지 확인
+        # (내부 구현에 따라 다를 수 있지만, 최소한 연결은 유지되어야 함)
+        assert protocol.is_connected
+
+    @pytest.mark.integration
+    def test_subscription_failure_edge_cases(self, protocol):
+        """구독 실패 엣지 케이스 테스트"""
+        protocol.connect()
+        time.sleep(2)
+        if not protocol.is_connected:
+            pytest.skip("Cannot connect to MQTT broker")
+
+        received_messages = []
+
+        def callback(topic, payload):
+            received_messages.append(payload.decode())
+
+        base_topic = f"test/edge/{int(time.time())}"
+        valid_topic = f"{base_topic}/valid"
+
+        # 정상 구독
+        result1 = protocol.subscribe(valid_topic, callback)
+        assert result1 is True
+        time.sleep(0.5)
+
+        # 다양한 엣지 케이스 테스트
+        edge_cases = [
+            ("", "빈 토픽"),
+            (None, "None 토픽"),
+            ("a" * 1000, "매우 긴 토픽"),  # MQTT 토픽 길이 제한
+            ("topic/with/../path", "상대 경로 포함"),
+            ("topic/with/./path", "현재 디렉토리 포함"),
+            ("topic/with/space ", "공백 포함"),
+            ("topic/with/tab\t", "탭 포함"),
+            ("topic/with/newline\n", "개행 포함"),
+            ("topic/with/carriage\r", "캐리지 리턴 포함"),
+        ]
+
+        for invalid_topic, description in edge_cases:
+            try:
+                protocol.subscribe(invalid_topic, callback)
+                print(f"Warning: {description} 구독이 성공했지만 예상과 다름")
+            except (ProtocolValidationError, TypeError, ValueError) as e:
+                print(f"Expected error for {description}: {e}")
+            except Exception as e:
+                print(f"Unexpected error for {description}: {e}")
+            time.sleep(0.1)
+
+        # 정상 구독이 여전히 작동하는지 확인
+        valid_topic2 = f"{base_topic}/valid2"
+        result2 = protocol.subscribe(valid_topic2, callback)
+        assert result2 is True
+
+        # 메시지 발행 및 수신 확인
+        protocol.publish(valid_topic, "test1")
+        protocol.publish(valid_topic2, "test2")
+        time.sleep(2)
+
+        assert len(received_messages) == 2
+        assert "test1" in received_messages
+        assert "test2" in received_messages
+
+    @pytest.mark.integration
+    def test_subscription_with_invalid_callback(self, protocol):
+        """잘못된 콜백으로 구독 시도 테스트"""
+        protocol.connect()
+        time.sleep(2)
+        if not protocol.is_connected:
+            pytest.skip("Cannot connect to MQTT broker")
+
+        base_topic = f"test/invalid_callback/{int(time.time())}"
+        valid_topic = f"{base_topic}/valid"
+
+        # 정상 구독
+        def valid_callback(topic, payload):
+            pass
+
+        result1 = protocol.subscribe(valid_topic, valid_callback)
+        assert result1 is True
+        time.sleep(0.5)
+
+        # 잘못된 콜백들
+        invalid_callbacks = [
+            None,  # None 콜백
+            "not_a_function",  # 문자열
+            123,  # 숫자
+            lambda: None,  # 잘못된 시그니처 (인자 없음)
+            lambda x: None,  # 잘못된 시그니처 (인자 1개)
+            lambda x, y, z: None,  # 잘못된 시그니처 (인자 3개)
+        ]
+
+        for invalid_callback in invalid_callbacks:
+            try:
+                protocol.subscribe(f"{base_topic}/invalid", invalid_callback)
+                print(f"Warning: 잘못된 콜백이 성공했지만 예상과 다름: {type(invalid_callback)}")
+            except (ProtocolValidationError, TypeError, ValueError) as e:
+                print(f"Expected error for invalid callback {type(invalid_callback)}: {e}")
+            except Exception as e:
+                print(f"Unexpected error for invalid callback {type(invalid_callback)}: {e}")
+            time.sleep(0.1)
+
+        # 정상 구독이 여전히 작동하는지 확인
+        valid_topic2 = f"{base_topic}/valid2"
+        result2 = protocol.subscribe(valid_topic2, valid_callback)
+        assert result2 is True
+
+        # 메시지 발행 및 수신 확인
+        protocol.publish(valid_topic, "test1")
+        protocol.publish(valid_topic2, "test2")
+        time.sleep(2)
+
+        # valid_callback이 호출되었는지 확인 (간접적으로)
+        assert protocol.is_connected
+
+    @pytest.mark.integration
+    def test_subscription_with_different_qos_levels(self, protocol):
+        """다양한 QoS 레벨로 구독 테스트"""
+        protocol.connect()
+        time.sleep(2)
+        if not protocol.is_connected:
+            pytest.skip("Cannot connect to MQTT broker")
+
+        received_messages = {}
+
+        def make_callback(topic_id):
+            def callback(topic, payload):
+                if topic_id not in received_messages:
+                    received_messages[topic_id] = []
+                received_messages[topic_id].append(payload.decode())
+            return callback
+
+        base_topic = f"test/qos/{int(time.time())}"
+        # 다양한 QoS 레벨로 구독
+        qos_levels = [0, 1, 2]
+        topics = [f"{base_topic}/qos{qos}" for qos in qos_levels]
+
+        for i, (topic, qos) in enumerate(zip(topics, qos_levels)):
+            result = protocol.subscribe(topic, make_callback(f"qos_{qos}"), qos=qos)
+            assert result is True
+            time.sleep(0.3)
+
+        time.sleep(1)
+
+        # 각 토픽에 메시지 발행 (동일한 QoS로)
+        for topic, qos in zip(topics, qos_levels):
+            result = protocol.publish(topic, f"qos{qos}_message", qos=qos)
+            assert result is True
+            time.sleep(0.2)
+
+        time.sleep(3)  # QoS 2는 더 오래 걸릴 수 있음
+
+        # 모든 메시지가 수신되었는지 확인
+        for qos in qos_levels:
+            topic_id = f"qos_{qos}"
+            assert topic_id in received_messages
+            assert f"qos{qos}_message" in received_messages[topic_id]
 
     @pytest.mark.integration
     def test_rapid_sequential_subscriptions(self, protocol):
@@ -715,10 +877,7 @@ class TestMultipleMessageStability:
         message_per_topic = 5  # 메시지 수 줄여서 안정성 확보
         for round_num in range(message_per_topic):
             for i, topic in enumerate(topics):
-                assert (
-                    protocol.publish(topic, f"concurrent_msg_{i}_{round_num}", qos=2)
-                    is True
-                )
+                assert protocol.publish(topic, f"concurrent_msg_{i}_{round_num}", qos=2) is True
                 time.sleep(0.1)  # 간격 더 늘림
 
         # 네트워크/브로커 지연 고려 여유 대기

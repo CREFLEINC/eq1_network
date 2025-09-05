@@ -70,9 +70,7 @@ class PubSubProtocol(BaseProtocol):
     """
 
     @abstractmethod
-    def publish(
-        self, topic: str, message: bytes, qos: int = 0, retain: bool = False
-    ) -> bool:
+    def publish(self, topic: str, message: bytes, qos: int = 0, retain: bool = False) -> bool:
         """특정 토픽에 메시지를 발행(Publish)합니다.
 
         Args:

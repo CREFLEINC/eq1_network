@@ -1,15 +1,21 @@
 import abc
+import logging
 import queue
 import threading
-import time
 import traceback
-import logging
-from typing import Callable, Generic, Optional, Type, TypeVar, Union, runtime_checkable
+from typing import Generic, Optional, Type, TypeVar, Union
 
+from app.common.exception import (
+    ProtocolAuthenticationError,
+    ProtocolConnectionError,
+    ProtocolDecodeError,
+    ProtocolError,
+    ProtocolTimeoutError,
+    ProtocolValidationError,
+)
 from app.data import SendData
-from app.interfaces.protocol import ReqResProtocol, PubSubProtocol
 from app.interfaces.packet import PacketStructureInterface
-from app.common.exception import ProtocolError, ProtocolConnectionError, ProtocolTimeoutError, ProtocolDecodeError, ProtocolValidationError, ProtocolAuthenticationError
+from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 ProtocolLike = Union[ReqResProtocol, PubSubProtocol]
 TSend = TypeVar("TSend", bound=SendData)
@@ -82,7 +88,7 @@ class Requester(Generic[TSend], threading.Thread):
             try:
                 payload = data.to_bytes()
                 packet = self._packet_structure.to_packet(payload)
-                
+
                 if isinstance(self._protocol, PubSubProtocol):
                     topic = getattr(data, "topic", None)
                     if not topic:
@@ -102,8 +108,13 @@ class Requester(Generic[TSend], threading.Thread):
             except ProtocolConnectionError:
                 self._event_callback.on_disconnected(data)
 
-            except (ProtocolTimeoutError, ProtocolDecodeError,
-                    ProtocolValidationError, ProtocolAuthenticationError, ProtocolError):
+            except (
+                ProtocolTimeoutError,
+                ProtocolDecodeError,
+                ProtocolValidationError,
+                ProtocolAuthenticationError,
+                ProtocolError,
+            ):
                 self._event_callback.on_failed_send(data)
 
             except Exception as e:

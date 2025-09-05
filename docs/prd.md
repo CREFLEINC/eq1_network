@@ -86,7 +86,7 @@ flowchart TD
 | ID   | 요구사항 | 상세 |
 | :--- | :--- | :--- |
 | **F-01** | **플러그인 기반 통신 모듈** | - `BaseProtocol` 인터페이스를 상속한 클래스를 `protocols` 디렉토리에 추가하는 것만으로 신규 프로토콜이 확장되어야 함.<br/>- `ProtocolManager`는 지정된 경로에서 사용 가능한 프로토콜을 동적으로 탐색하고 로드해야 함. |
-| **F-02** | **ReqRes 인터페이스** | - `ReqResProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 대상과의 연결 수립 및 종료<br/>  - `send(data: bytes)`: 데이터 동기 전송<br/>  - `read() -> Tuple[bool, Optional[bytes]]`: 응답 데이터 수신 (Non-blocking)<br/>  - `is_connected() -> bool`: 연결 상태 반환 |
+| **F-02** | **ReqRes 인터페이스** | - `ReqResProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 대상과의 연결 수립 및 종료<br/>  - `send(data: bytes) -> int`: 데이터 동기 전송 (전송된 바이트 수 반환)<br/>  - `read() -> Tuple[bool, Optional[bytes]]`: 응답 데이터 수신 (Non-blocking)<br/>  - `is_connected() -> bool`: 연결 상태 반환 |
 | **F-03** | **PubSub 인터페이스** | - `PubSubProtocol` 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - `connect()` / `disconnect()`: 브로커와의 연결 수립 및 종료<br/>  - `publish(topic: str, message: str, qos: int, retain: bool)`: 메시지 발행<br/>  - `subscribe(topic: str, callback: Callable)`: 토픽 구독 및 콜백 등록<br/>  - `unsubscribe(topic: str, callback: Callable)`: 토픽 구독 취소 |
 | **F-04** | **PacketStructure** | - 모든 통신 데이터는 `PacketStructure` 클래스를 통해 처리.<br/>- `to_packet(data: bytes) -> bytes`: 데이터를 패킷으로 직렬화.<br/>- `from_packet(packet: bytes) -> bytes`: 패킷을 데이터로 역직렬화.<br/>- `is_valid(packet: bytes) -> bool`: 패킷 유효성 검사.<br/>- `split_packet(packet: bytes) -> list[bytes]`: 패킷 분할. |
 | **F-05** | **RFC 준수 MQTTProtocol 구현** | - `PubSubProtocol` 인터페이스를 `paho-mqtt` 라이브러리로 구현.<br/>- **현재 구현**: Username/Password 인증, Retained Messages<br/>- **현재 구현**: 예기치 못한 연결 실패 시 자동 재연결 (지수 백오프)<br/>- **현재 구현**: 재연결 시 구독 자동 복구 및 메시지 큐 처리<br/>- **현재 구현**: QoS (0, 1, 2) 레벨 완전 지원<br/>- **현재 구현**: 상세한 RFC 준수 에러 처리 |
@@ -99,7 +99,7 @@ flowchart TD
 | **F-12** | **ReceivedData 클래스 구현** | - `abc.ABC` 기반의 `ReceivedData` 추상 클래스 구현<br/>- `from_bytes(data: bytes) -> Self`: 바이트 데이터를 객체로 역직렬화 |
 | **F-13** | **NetworkHandler 클래스 구현** | - `send`, `receive` 메서드가 포함된 클래스 구축<br/>- Listener, Requester 워커 모듈과 연동 |
 | **F-14** | **워커 모듈 구현** | - Listener: 수신 처리 스레드<br/>- Requester: 송신 처리 스레드<br/>- 이벤트 기반 콜백 처리 |
-| **F-15** | **매니저 시스템 구현** | - ReqResManager: ReqRes 프로토콜 통합 관리<br/>- PubSubManager: PubSub 프로토콜 통합 관리<br/>- 플러그인 등록/관리 기능 |
+| **F-15** | **매니저 시스템 구현** | - ReqResManager: ReqRes 프로토콜 통합 관리<br/>  - `register(name, protocol)`: 프로토콜 등록<br/>  - `send(name, data) -> int`: 데이터 전송 (전송된 바이트 수 반환)<br/>  - `read(name) -> bytes`: 데이터 수신 (bytes 반환)<br/>- PubSubManager: PubSub 프로토콜 통합 관리<br/>  - `register(name, protocol)`: 프로토콜 등록<br/>  - `publish(name, topic, message)`: 메시지 발행<br/>  - `subscribe(name, topic, callback)`: 토픽 구독<br/>- 플러그인 등록/관리 기능 |
 
 ## 비기능 요구사항
 | ID | 요구사항 | 상세 |
@@ -142,7 +142,17 @@ app/
     - **`Requester`**: 송신 처리 스레드
 - **매니저 시스템**
     - **`ReqResManager`**: ReqRes 프로토콜 통합 관리
+        - `register(name, protocol)`: 프로토콜 등록
+        - `connect(name)`: 연결
+        - `send(name, data)`: 데이터 전송 (int 반환)
+        - `read(name)`: 데이터 수신 (bytes 반환)
+        - `disconnect(name)`: 연결 해제
     - **`PubSubManager`**: PubSub 프로토콜 통합 관리
+        - `register(name, protocol)`: 프로토콜 등록
+        - `connect(name)`: 연결
+        - `publish(name, topic, message)`: 메시지 발행
+        - `subscribe(name, topic, callback)`: 토픽 구독
+        - `disconnect(name)`: 연결 해제
 - **RFC 준수 MQTT 구현**
     - `MQTTProtocol`: paho-mqtt 기반 RFC 준수 구현
     - `BrokerConfig`, `ClientConfig`: 설정 관리를 위한 데이터 클래스
@@ -196,17 +206,18 @@ from app.protocols.ethernet.tcp_server import TCPServer
 
 # TCP 클라이언트 설정
 tcp_client = TCPClient("localhost", 8080, timeout=1)
-ReqResManager.load("tcp_client", tcp_client)
+ReqResManager.register("tcp_client", tcp_client)
 
 # TCP 서버 설정
 tcp_server = TCPServer("localhost", 8081, timeout=1)
-ReqResManager.load("tcp_server", tcp_server)
+ReqResManager.register("tcp_server", tcp_server)
 
 # 연결 및 통신
 if ReqResManager.connect("tcp_client"):
-    ReqResManager.send("tcp_client", b"Hello Server!")
-    response = ReqResManager.receive("tcp_client")
-    print(f"Response: {response.decode()}")
+    result = ReqResManager.send("tcp_client", b"Hello Server!")
+    if result > 0:
+        response = ReqResManager.read("tcp_client")
+        print(f"Response: {response.decode()}")
     ReqResManager.disconnect("tcp_client")
 ```
 
@@ -217,13 +228,14 @@ from app.protocols.serial.serial_protocol import SerialProtocol
 
 # 시리얼 프로토콜 설정
 serial_protocol = SerialProtocol("COM1", 9600, timeout=1)
-ReqResManager.load("serial", serial_protocol)
+ReqResManager.register("serial", serial_protocol)
 
 # 연결 및 통신
 if ReqResManager.connect("serial"):
-    ReqResManager.send("serial", b"AT\r\n")
-    response = ReqResManager.receive("serial")
-    print(f"Response: {response.decode()}")
+    result = ReqResManager.send("serial", b"AT\r\n")
+    if result > 0:
+        response = ReqResManager.read("serial")
+        print(f"Response: {response.decode()}")
     ReqResManager.disconnect("serial")
 ```
 

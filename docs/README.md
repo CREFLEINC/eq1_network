@@ -70,17 +70,18 @@ from app.protocols.ethernet.tcp_server import TCPServer
 
 # TCP 클라이언트 설정
 tcp_client = TCPClient("localhost", 8080, timeout=1)
-ReqResManager.load("tcp_client", tcp_client)
+ReqResManager.register("tcp_client", tcp_client)
 
 # TCP 서버 설정
 tcp_server = TCPServer("localhost", 8081, timeout=1)
-ReqResManager.load("tcp_server", tcp_server)
+ReqResManager.register("tcp_server", tcp_server)
 
 # 연결 및 통신
 if ReqResManager.connect("tcp_client"):
-    ReqResManager.send("tcp_client", b"Hello Server!")
-    response = ReqResManager.receive("tcp_client")
-    print(f"Response: {response.decode()}")
+    result = ReqResManager.send("tcp_client", b"Hello Server!")
+    if result > 0:
+        response = ReqResManager.read("tcp_client")
+        print(f"Response: {response.decode()}")
     ReqResManager.disconnect("tcp_client")
 ```
 
@@ -91,13 +92,14 @@ from app.protocols.serial.serial_protocol import SerialProtocol
 
 # 시리얼 프로토콜 설정
 serial_protocol = SerialProtocol("COM1", 9600, timeout=1)
-ReqResManager.load("serial", serial_protocol)
+ReqResManager.register("serial", serial_protocol)
 
 # 연결 및 통신
 if ReqResManager.connect("serial"):
-    ReqResManager.send("serial", b"AT\r\n")
-    response = ReqResManager.receive("serial")
-    print(f"Response: {response.decode()}")
+    result = ReqResManager.send("serial", b"AT\r\n")
+    if result > 0:
+        response = ReqResManager.read("serial")
+        print(f"Response: {response.decode()}")
     ReqResManager.disconnect("serial")
 ```
 
@@ -241,10 +243,18 @@ pip install -r requirements.txt
 ### 매니저 시스템
 - **ReqResManager**
     - ReqRes 프로토콜 통합 관리
-    - 플러그인 등록/관리 기능
+    - `register(name, protocol)`: 프로토콜 등록
+    - `connect(name)`: 연결
+    - `send(name, data)`: 데이터 전송 (int 반환)
+    - `read(name)`: 데이터 수신 (bytes 반환)
+    - `disconnect(name)`: 연결 해제
 - **PubSubManager**
     - PubSub 프로토콜 통합 관리
-    - 플러그인 등록/관리 기능
+    - `register(name, protocol)`: 프로토콜 등록
+    - `connect(name)`: 연결
+    - `publish(name, topic, message)`: 메시지 발행
+    - `subscribe(name, topic, callback)`: 토픽 구독
+    - `disconnect(name)`: 연결 해제
 
 ### 예외 처리
 - **ProtocolConnectionError**: 연결 실패, 타임아웃
@@ -318,12 +328,12 @@ from app.protocols.ethernet.tcp_server import TCPServer
 # 서버 스레드
 def server_thread():
     server = TCPServer("localhost", 8080, timeout=1)
-    ReqResManager.load("server", server)
+    ReqResManager.register("server", server)
     
     if ReqResManager.connect("server"):
         print("Server started")
         while True:
-            data = ReqResManager.receive("server")
+            data = ReqResManager.read("server")
             if data:
                 print(f"Server received: {data.decode()}")
                 ReqResManager.send("server", b"Server response")
@@ -332,12 +342,13 @@ def server_thread():
 # 클라이언트
 def client_example():
     client = TCPClient("localhost", 8080, timeout=1)
-    ReqResManager.load("client", client)
+    ReqResManager.register("client", client)
     
     if ReqResManager.connect("client"):
-        ReqResManager.send("client", b"Hello from client")
-        response = ReqResManager.receive("client")
-        print(f"Client received: {response.decode()}")
+        result = ReqResManager.send("client", b"Hello from client")
+        if result > 0:
+            response = ReqResManager.read("client")
+            print(f"Client received: {response.decode()}")
         ReqResManager.disconnect("client")
 
 # 실행
@@ -354,18 +365,20 @@ from app.protocols.serial.serial_protocol import SerialProtocol
 
 # 시리얼 프로토콜 설정
 serial = SerialProtocol("COM1", 9600, timeout=1)
-ReqResManager.load("serial", serial)
+ReqResManager.register("serial", serial)
 
 if ReqResManager.connect("serial"):
     # AT 명령어 전송
-    ReqResManager.send("serial", b"AT\r\n")
-    response = ReqResManager.receive("serial")
-    print(f"AT Response: {response.decode()}")
+    result = ReqResManager.send("serial", b"AT\r\n")
+    if result > 0:
+        response = ReqResManager.read("serial")
+        print(f"AT Response: {response.decode()}")
     
     # 데이터 전송
-    ReqResManager.send("serial", b"Hello Device\r\n")
-    response = ReqResManager.receive("serial")
-    print(f"Device Response: {response.decode()}")
+    result = ReqResManager.send("serial", b"Hello Device\r\n")
+    if result > 0:
+        response = ReqResManager.read("serial")
+        print(f"Device Response: {response.decode()}")
     
     ReqResManager.disconnect("serial")
 ```

@@ -1,4 +1,4 @@
-name: Issue Labeler
+name: Labeler Drafter
 
 on:
   issues:
@@ -19,7 +19,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: dev
-
       - name: Run labeler
         id: labeler
         uses: jimschubert/labeler-action@v1

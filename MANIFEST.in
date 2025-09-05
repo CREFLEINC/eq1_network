@@ -3,7 +3,7 @@ include requirements.txt
 include eq1_network/py.typed
 recursive-include docs *.md *.png
 recursive-include examples *.py
-recursive-exclude tests *
+recursive-include tests *.py
 recursive-exclude .git *
 recursive-exclude __pycache__ *
 recursive-exclude *.egg-info *

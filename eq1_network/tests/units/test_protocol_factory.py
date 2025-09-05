@@ -28,7 +28,7 @@ class DummyParams(Params):
 
     def get(self, key, default=None):
         return self._data.get(key, default)
-    
+
     def get_default(self, key, default):
         return self._data.get(key, default)
 

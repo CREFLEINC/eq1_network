@@ -28,11 +28,36 @@ jobs:
                      id
                      fields(first: 50) {
                        nodes {
-                         id
-                         name
-                         dataType
                          ... on ProjectV2SingleSelectField {
+                           id
+                           name
+                           dataType
                            options { id name }
+                         }
+                         ... on ProjectV2TextField {
+                           id
+                           name
+                           dataType
+                         }
+                         ... on ProjectV2NumberField {
+                           id
+                           name
+                           dataType
+                         }
+                         ... on ProjectV2DateField {
+                           id
+                           name
+                           dataType
+                         }
+                         ... on ProjectV2IterationField {
+                           id
+                           name
+                           dataType
+                         }
+                         ... on ProjectV2MilestoneField {
+                           id
+                           name
+                           dataType
                          }
                        }
                      }

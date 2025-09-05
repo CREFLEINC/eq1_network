@@ -1,0 +1,1626 @@
+
+<!doctype html>
+<html lang="ko" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../mqtt_protocol/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
+    
+    
+      
+        <title>PRD - EQ1 Network Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="blue-grey">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#eq-1-network" class="md-skip">
+          콘텐츠로 이동
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="상단/헤더">
+    <a href=".." title="EQ1 Network Docs" class="md-header__button md-logo" aria-label="EQ1 Network Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EQ1 Network Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              PRD
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="blue-grey"  aria-label="Switch to dark"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="white" data-md-color-accent="blue-grey"  aria-label="Switch to light"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="검색" placeholder="검색" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="검색">
+        
+        <button type="reset" class="md-search__icon md-icon" title="지우기" aria-label="지우기" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            검색 초기화
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="네비게이션" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EQ1 Network Docs" class="md-nav__button md-logo" aria-label="EQ1 Network Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EQ1 Network Docs
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    PRD
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    PRD
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="목차">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      목차
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      문서 목적
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      개요
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="개요">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      아키텍처 다이아그램
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      목표
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      배경
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      성공 지표
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="성공 지표">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 상태
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      지속적 목표
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      범위
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="범위">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      포함 사항
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      제외 사항
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      기능 요구사항
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      비기능 요구사항
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      설계 개요
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="설계 개요">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      디렉토리 구조
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      주요 컴포넌트
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      사용자 시나리오
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="사용자 시나리오">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mqtt" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 구현된 MQTT 예시
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 구현된 TCP 예시
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serial" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 구현된 Serial 예시
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      미구현 기능 예시 (계획만)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reqres" class="md-nav__link">
+    <span class="md-ellipsis">
+      향후 Req/Res 예시 (계획)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packetstructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      PacketStructure 사용 예시
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      테스트 전략
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      위험 완화
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      배포 및 재사용
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      제약사항
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="제약사항">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      기술적 제약
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      기능적 제약
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_25" class="md-nav__link">
+    <span class="md-ellipsis">
+      성능 제약
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_26" class="md-nav__link">
+    <span class="md-ellipsis">
+      참고 자료
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mqtt_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    MQTT Protocol
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="목차">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      목차
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      문서 목적
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      개요
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="개요">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      아키텍처 다이아그램
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      목표
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      배경
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      성공 지표
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="성공 지표">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 상태
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      지속적 목표
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      범위
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="범위">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      포함 사항
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      제외 사항
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      기능 요구사항
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      비기능 요구사항
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      설계 개요
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="설계 개요">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      디렉토리 구조
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_16" class="md-nav__link">
+    <span class="md-ellipsis">
+      주요 컴포넌트
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_17" class="md-nav__link">
+    <span class="md-ellipsis">
+      사용자 시나리오
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="사용자 시나리오">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mqtt" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 구현된 MQTT 예시
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 구현된 TCP 예시
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serial" class="md-nav__link">
+    <span class="md-ellipsis">
+      현재 구현된 Serial 예시
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_18" class="md-nav__link">
+    <span class="md-ellipsis">
+      미구현 기능 예시 (계획만)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reqres" class="md-nav__link">
+    <span class="md-ellipsis">
+      향후 Req/Res 예시 (계획)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packetstructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      PacketStructure 사용 예시
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_19" class="md-nav__link">
+    <span class="md-ellipsis">
+      테스트 전략
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_20" class="md-nav__link">
+    <span class="md-ellipsis">
+      위험 완화
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_21" class="md-nav__link">
+    <span class="md-ellipsis">
+      배포 및 재사용
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_22" class="md-nav__link">
+    <span class="md-ellipsis">
+      제약사항
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="제약사항">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_23" class="md-nav__link">
+    <span class="md-ellipsis">
+      기술적 제약
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_24" class="md-nav__link">
+    <span class="md-ellipsis">
+      기능적 제약
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_25" class="md-nav__link">
+    <span class="md-ellipsis">
+      성능 제약
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_26" class="md-nav__link">
+    <span class="md-ellipsis">
+      참고 자료
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="eq-1-network">제품 요구사항 문서: EQ-1 Network</h1>
+<p>EQ-1 Network는 다양한 산업 및 IoT 환경에서 사용할 수 있는 플러그인 기반 통신 프레임워크입니다.</p>
+<h2 id="_1">문서 목적</h2>
+<p>이 문서는 EQ-1 Network의 목적, 요구사항, 설계 방향, 제약사항을 명확히 정의하여 팀 내 공통된 이해를 돕습니다.</p>
+<h2 id="_2">개요</h2>
+<ul>
+<li>MQTT, TCP, Serial을 시작으로 다양한 통신 프로토콜을 표준화된 인터페이스로 지원합니다.</li>
+<li>신규 프로토콜을 플러그인 방식으로 쉽게 확장할 수 있습니다.</li>
+<li>공통 ReqRes / PubSub 인터페이스와 일관된 직렬화 규칙을 제공합니다.</li>
+<li>Core-Network 연동: PacketStructureInterface 인터페이스를 통한 표준화된 패킷 처리 시스템을 제공합니다.</li>
+</ul>
+<h3 id="_3">아키텍처 다이아그램</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph Application[&quot;응용 시스템&quot;]
+        UI[&quot;UI / Vision System&quot;] --&gt; NET[&quot;EQ-1 Network 모듈&quot;]
+    end
+
+    NET --&gt; MANAGER[&quot;Protocol Manager&quot;]
+    MANAGER --&gt; INTERFACES[&quot;ReqRes / PubSub Interfaces&quot;]
+    INTERFACES --&gt; PACKET[&quot;PacketStructureInterface&quot;]
+    INTERFACES --&gt; PROTOCOLS[&quot;Protocol Plugins&quot;]
+
+    PROTOCOLS --&gt; MQTT[&quot;MQTTProtocol&quot;]
+    PROTOCOLS --&gt; TCP[&quot;TCPClient/TCPServer&quot;]
+    PROTOCOLS --&gt; SERIAL[&quot;SerialProtocol&quot;]
+    PROTOCOLS --&gt; MODBUS[(Future) ModbusProtocol]
+
+    PACKET --&gt; SENDDATA[&quot;SendData&quot;]
+    PACKET --&gt; RECEIVEDDATA[&quot;ReceivedData&quot;]
+    PACKET --&gt; NETWORKHANDLER[&quot;NetworkHandler&quot;]
+</code></pre>
+<h2 id="_4">목표</h2>
+<ul>
+<li>신규 프로토콜을 플러그인 형태로 쉽게 확장</li>
+<li>공통 인터페이스(ReqRes, PubSub) 제공</li>
+<li>일관된 패킷 직렬화/역직렬화 규칙 확립</li>
+<li>Core-Network 연동: 표준화된 패킷 인터페이스를 통한 데이터 처리 통합</li>
+</ul>
+<h2 id="_5">배경</h2>
+<ul>
+<li>기존 시스템별 통신 구현 중복</li>
+<li>MQTT, TCP/UDP, Serial, Modbus 등 여러 프로토콜을 하나의 코드베이스로 관리할 필요성 존재</li>
+<li>Core-Network 연동 필요성: 다양한 데이터 타입(List, Dict 등)을 일관된 방식으로 처리할 수 있는 표준 인터페이스 필요</li>
+</ul>
+<h2 id="_6">성공 지표</h2>
+<h3 id="_7">현재 상태</h3>
+<ul>
+<li><strong>개발 속도</strong>: ✅ 달성 - MQTT v3.1.1, TCP, Serial 기본 기능 구현 완료</li>
+<li><strong>품질 지표</strong>: ✅ 달성 - 테스트 커버리지 90%+ 달성</li>
+<li><strong>MQTT 기본 기능</strong>: ✅ 달성 - MQTT v3.1.1 기본 표준 준수</li>
+<li><strong>TCP 프로토콜</strong>: ✅ 구현됨 - TCPClient/TCPServer 클래스 구현 완료</li>
+<li><strong>Serial 프로토콜</strong>: ✅ 구현됨 - SerialProtocol 클래스 구현 완료</li>
+<li><strong>데이터 클래스</strong>: ✅ 구현됨 - SendData, ReceivedData, PacketStructure 클래스 구현 완료</li>
+<li><strong>인터페이스</strong>: ✅ 구현됨 - BaseProtocol, ReqResProtocol, PubSubProtocol 인터페이스 구현</li>
+<li><strong>예외 처리</strong>: ✅ 구현됨 - ProtocolError 계층 구조 구현</li>
+<li><strong>워커 모듈</strong>: ✅ 구현됨 - Listener, Requester 스레드 기반 워커 구현</li>
+<li><strong>매니저 시스템</strong>: ✅ 구현됨 - ReqResManager, PubSubManager 구현 완료</li>
+</ul>
+<h3 id="_8">지속적 목표</h3>
+<ul>
+<li><strong>안정성</strong>: 3개월간 치명적 통신 버그 0건 유지</li>
+<li><strong>성능</strong>: 초당 10,000 메시지 처리 성능 유지</li>
+<li><strong>확장성</strong>: 6개월 내 Modbus 프로토콜 추가</li>
+</ul>
+<h2 id="_9">범위</h2>
+<h3 id="_10">포함 사항</h3>
+<ul>
+<li>통신 프로토콜 공통 인터페이스</li>
+<li>패킷 구조화 및 직렬화</li>
+<li>MQTT 프로토콜 구현 (PubSub)</li>
+<li>TCP 프로토콜 구현 (ReqRes) - 클라이언트/서버</li>
+<li>Serial 프로토콜 구현 (ReqRes)</li>
+<li>단위 테스트 및 샘플 예제</li>
+<li>PacketStructureInterface 인터페이스 구현</li>
+<li>SendData/ReceivedData 클래스 구현</li>
+<li>NetworkHandler 클래스 구현</li>
+<li>Listener/Requester 워커 모듈 구현</li>
+<li>ReqResManager/PubSubManager 구현</li>
+<li>NetworkPacketStructure 및 다중 포맷 메시지 지원</li>
+<li>DataPackage 통합 관리 시스템</li>
+</ul>
+<h3 id="_11">제외 사항</h3>
+<ul>
+<li>UI (GUI, Web)</li>
+<li>데이터 저장소, 서비스 로직</li>
+<li>배포/운영 자동화</li>
+</ul>
+<h2 id="_12">기능 요구사항</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">요구사항</th>
+<th style="text-align: left;">상세</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>F-01</strong></td>
+<td style="text-align: left;"><strong>플러그인 기반 통신 모듈</strong></td>
+<td style="text-align: left;">- <code>BaseProtocol</code> 인터페이스를 상속한 클래스를 <code>protocols</code> 디렉토리에 추가하는 것만으로 신규 프로토콜이 확장되어야 함.<br/>- <code>ProtocolManager</code>는 지정된 경로에서 사용 가능한 프로토콜을 동적으로 탐색하고 로드해야 함.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-02</strong></td>
+<td style="text-align: left;"><strong>ReqRes 인터페이스</strong></td>
+<td style="text-align: left;">- <code>ReqResProtocol</code> 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - <code>connect()</code> / <code>disconnect()</code>: 대상과의 연결 수립 및 종료<br/>  - <code>send(data: bytes) -&gt; int</code>: 데이터 동기 전송 (전송된 바이트 수 반환)<br/>  - <code>read() -&gt; Tuple[bool, Optional[bytes]]</code>: 응답 데이터 수신 (Non-blocking)<br/>  - <code>is_connected() -&gt; bool</code>: 연결 상태 반환</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-03</strong></td>
+<td style="text-align: left;"><strong>PubSub 인터페이스</strong></td>
+<td style="text-align: left;">- <code>PubSubProtocol</code> 추상 클래스는 다음 메서드를 반드시 포함해야 함:<br/>  - <code>connect()</code> / <code>disconnect()</code>: 브로커와의 연결 수립 및 종료<br/>  - <code>publish(topic: str, message: str, qos: int, retain: bool)</code>: 메시지 발행<br/>  - <code>subscribe(topic: str, callback: Callable)</code>: 토픽 구독 및 콜백 등록<br/>  - <code>unsubscribe(topic: str, callback: Callable)</code>: 토픽 구독 취소</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-04</strong></td>
+<td style="text-align: left;"><strong>PacketStructure</strong></td>
+<td style="text-align: left;">- 모든 통신 데이터는 <code>PacketStructure</code> 클래스를 통해 처리.<br/>- <code>to_packet(data: bytes) -&gt; bytes</code>: 데이터를 패킷으로 직렬화.<br/>- <code>from_packet(packet: bytes) -&gt; bytes</code>: 패킷을 데이터로 역직렬화.<br/>- <code>is_valid(packet: bytes) -&gt; bool</code>: 패킷 유효성 검사.<br/>- <code>split_packet(packet: bytes) -&gt; list[bytes]</code>: 패킷 분할.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-05</strong></td>
+<td style="text-align: left;"><strong>RFC 준수 MQTTProtocol 구현</strong></td>
+<td style="text-align: left;">- <code>PubSubProtocol</code> 인터페이스를 <code>paho-mqtt</code> 라이브러리로 구현.<br/>- <strong>현재 구현</strong>: Username/Password 인증, Retained Messages<br/>- <strong>현재 구현</strong>: 예기치 못한 연결 실패 시 자동 재연결 (지수 백오프)<br/>- <strong>현재 구현</strong>: 재연결 시 구독 자동 복구 및 메시지 큐 처리<br/>- <strong>현재 구현</strong>: QoS (0, 1, 2) 레벨 완전 지원<br/>- <strong>현재 구현</strong>: 상세한 RFC 준수 에러 처리</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-06</strong></td>
+<td style="text-align: left;"><strong>TCP 프로토콜 구현</strong></td>
+<td style="text-align: left;">- <code>ReqResProtocol</code> 인터페이스를 구현한 TCPClient/TCPServer 클래스<br/>- <strong>현재 구현</strong>: TCP 클라이언트/서버 통신 지원<br/>- <strong>현재 구현</strong>: 바이너리/텍스트 데이터 송수신<br/>- <strong>현재 구현</strong>: 타임아웃 설정 및 연결 관리<br/>- <strong>현재 구현</strong>: JSON 데이터 구조화 지원</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-07</strong></td>
+<td style="text-align: left;"><strong>Serial 프로토콜 구현</strong></td>
+<td style="text-align: left;">- <code>ReqResProtocol</code> 인터페이스를 구현한 SerialProtocol 클래스<br/>- <strong>현재 구현</strong>: 시리얼 포트 통신 지원<br/>- <strong>현재 구현</strong>: 다양한 보드레이트 설정<br/>- <strong>현재 구현</strong>: 바이너리/텍스트 데이터 송수신<br/>- <strong>현재 구현</strong>: AT 명령어 지원</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-08</strong></td>
+<td style="text-align: left;"><strong>Thread-safe 보장</strong></td>
+<td style="text-align: left;">- publish, subscribe, unsubscribe, 큐 처리 등 모든 API가 thread-safe해야 함</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-09</strong></td>
+<td style="text-align: left;"><strong>테스트 코드 제공</strong></td>
+<td style="text-align: left;">- <code>pytest</code>와 <code>unittest.mock</code>을 사용하여 각 컴포넌트의 독립적인 동작을 검증.<br/>- <code>MQTTProtocol</code> 테스트를 위해 Mock MQTT 브로커를 사용.<br/>- CI 환경에서 실행 가능해야 하며, 코드 커버리지 90% 이상을 목표로 함.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-10</strong></td>
+<td style="text-align: left;"><strong>PacketStructureInterface 인터페이스</strong></td>
+<td style="text-align: left;">- <code>abc.ABC</code> 기반의 <code>PacketStructureInterface</code> 추상 클래스 구현<br/>- <code>to_packet(data: bytes) -&gt; bytes</code>: 데이터를 패킷으로 직렬화<br/>- <code>from_packet(packet: bytes) -&gt; bytes</code>: 패킷을 데이터로 역직렬화<br/>- <code>is_valid(packet: bytes) -&gt; bool</code>: 패킷 유효성 검사<br/>- <code>split_packet(packet: bytes) -&gt; list[bytes]</code>: 패킷 분할</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-11</strong></td>
+<td style="text-align: left;"><strong>SendData 클래스 구현</strong></td>
+<td style="text-align: left;">- <code>abc.ABC</code> 기반의 <code>SendData</code> 추상 클래스 구현<br/>- <code>to_bytes() -&gt; bytes</code>: 객체를 전송 가능한 바이트로 직렬화</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-12</strong></td>
+<td style="text-align: left;"><strong>ReceivedData 클래스 구현</strong></td>
+<td style="text-align: left;">- <code>abc.ABC</code> 기반의 <code>ReceivedData</code> 추상 클래스 구현<br/>- <code>from_bytes(data: bytes) -&gt; Self</code>: 바이트 데이터를 객체로 역직렬화</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-13</strong></td>
+<td style="text-align: left;"><strong>NetworkHandler 클래스 구현</strong></td>
+<td style="text-align: left;">- <code>send</code>, <code>receive</code> 메서드가 포함된 클래스 구축<br/>- Listener, Requester 워커 모듈과 연동</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-14</strong></td>
+<td style="text-align: left;"><strong>워커 모듈 구현</strong></td>
+<td style="text-align: left;">- Listener: 수신 처리 스레드<br/>- Requester: 송신 처리 스레드<br/>- 이벤트 기반 콜백 처리</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-15</strong></td>
+<td style="text-align: left;"><strong>매니저 시스템 구현</strong></td>
+<td style="text-align: left;">- ReqResManager: ReqRes 프로토콜 통합 관리<br/>  - <code>register(name, protocol)</code>: 프로토콜 등록<br/>  - <code>send(name, data) -&gt; int</code>: 데이터 전송 (전송된 바이트 수 반환)<br/>  - <code>read(name) -&gt; bytes</code>: 데이터 수신 (bytes 반환)<br/>- PubSubManager: PubSub 프로토콜 통합 관리<br/>  - <code>register(name, protocol)</code>: 프로토콜 등록<br/>  - <code>publish(name, topic, message)</code>: 메시지 발행<br/>  - <code>subscribe(name, topic, callback)</code>: 토픽 구독<br/>- 플러그인 등록/관리 기능</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-16</strong></td>
+<td style="text-align: left;"><strong>NetworkPacketStructure 구현</strong></td>
+<td style="text-align: left;">- <code>PacketStructureInterface</code>를 구현한 <code>NetworkPacketStructure</code> 클래스<br/>- 4바이트 헤더 기반 패킷 구조 (빅엔디안)<br/>- 최대 1MB 페이로드 크기 제한<br/>- 패킷 분할 및 병합 기능<br/>- 메시지 타입별 직렬화/역직렬화 지원</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-17</strong></td>
+<td style="text-align: left;"><strong>다중 포맷 메시지 지원</strong></td>
+<td style="text-align: left;">- TEXT, BINARY, INT 포맷 지원<br/>- 각 포맷별 SendData/ReceivedData 클래스 구현<br/>- 메시지 타입 정의 (COMMAND, DATA, RESPONSE, STATUS, ERROR, HEARTBEAT, FILE_TRANSFER, BULK_DATA)<br/>- 타임스탬프, 소스/목적지 정보 포함</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>F-18</strong></td>
+<td style="text-align: left;"><strong>DataPackage 통합 관리</strong></td>
+<td style="text-align: left;">- 패킷 구조와 데이터 클래스를 묶은 <code>DataPackage</code> 클래스<br/>- 포맷별 사전 정의된 패키지 (TEXT_PACKAGE, BINARY_PACKAGE, INT_PACKAGE)<br/>- 일관된 데이터 처리 인터페이스 제공</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_13">비기능 요구사항</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">요구사항</th>
+<th style="text-align: left;">상세</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>NF-01</strong></td>
+<td style="text-align: left;"><strong>확장성</strong></td>
+<td style="text-align: left;">- <strong>OCP (개방-폐쇄 원칙):</strong> 새로운 프로토콜 추가 시, 기존 핵심 코드(<code>manager</code>, <code>interfaces</code> 등)의 수정 없이 확장 가능해야 함.<br/>- 개발자는 정의된 프로토콜 인터페이스를 구현하는 것만으로 모듈을 추가할 수 있어야 함.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>NF-02</strong></td>
+<td style="text-align: left;"><strong>가독성</strong></td>
+<td style="text-align: left;">- 모든 코드는 <code>black</code>, <code>isort</code> 포매터를 사용하여 일관된 스타일을 유지.<br/>- 모든 공개(public) 클래스 및 함수에는 <strong>Google Style Docstring</strong>을 작성하여 파라미터, 반환값, 예외 등을 명확히 설명.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>NF-03</strong></td>
+<td style="text-align: left;"><strong>표준화</strong></td>
+<td style="text-align: left;">- 모든 프로토콜은 <code>ProtocolManager</code>를 통해 <code>get_protocol("이름")</code> 형식의 단일 API로 접근.<br/>- 예외 처리는 <code>common.exceptions</code>에 정의된 커스텀 예외 클래스를 사용하여 일관되게 처리.<br/>- 로깅은 Python 표준 <code>logging</code> 모듈을 사용하며, 설정이 통일되어야 함.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>NF-04</strong></td>
+<td style="text-align: left;"><strong>유지보수성</strong></td>
+<td style="text-align: left;">- 프로토콜 구현(<code>protocols</code>), 인터페이스(<code>interfaces</code>), 공통 기능(<code>common</code>) 등 역할에 따라 코드를 명확히 분리 (낮은 결합도).<br/>- 각 모듈은 하나의 핵심 책임만 가지도록 설계 (높은 응집도).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_14">설계 개요</h2>
+<h3 id="_15">디렉토리 구조</h3>
+<pre><code>app/
+├── common/         # 예외, 로깅
+├── interfaces/     # Protocol 인터페이스, PacketStructureInterface 인터페이스
+├── protocols/      # MQTTProtocol, TCPClient/TCPServer, SerialProtocol 등
+│   ├── mqtt/       # MQTT 프로토콜 구현
+│   ├── ethernet/   # TCP 프로토콜 구현
+│   └── serial/     # Serial 프로토콜 구현
+├── manager/        # 프로토콜 로딩 및 관리
+├── worker/         # Listener, Requester
+├── data.py         # SendData, ReceivedData
+├── network.py      # NetworkHandler
+└── cli.py          # CLI 인터페이스
+</code></pre>
+<h3 id="_16">주요 컴포넌트</h3>
+<ul>
+<li><strong>인터페이스 레이어</strong><ul>
+<li><code>ReqResProtocol</code> / <code>PubSubProtocol</code>: 통신 유형별 표준 인터페이스</li>
+<li><code>BaseProtocol</code>: 모든 프로토콜의 공통 기반 인터페이스</li>
+<li><strong><code>PacketStructureInterface</code></strong>: 패킷 직렬화/역직렬화 표준 인터페이스</li>
+</ul>
+</li>
+<li><strong>데이터 클래스</strong><ul>
+<li><strong><code>SendData</code></strong>: 전송 데이터 추상 클래스</li>
+<li><strong><code>ReceivedData</code></strong>: 수신 데이터 추상 클래스</li>
+</ul>
+</li>
+<li><strong>네트워크 핸들러</strong><ul>
+<li><strong><code>NetworkHandler</code></strong>: 네트워크 통신 핸들러</li>
+</ul>
+</li>
+<li><strong>워커 모듈</strong><ul>
+<li><strong><code>Listener</code></strong>: 수신 처리 스레드</li>
+<li><strong><code>Requester</code></strong>: 송신 처리 스레드</li>
+</ul>
+</li>
+<li><strong>매니저 시스템</strong><ul>
+<li><strong><code>ReqResManager</code></strong>: ReqRes 프로토콜 통합 관리<ul>
+<li><code>register(name, protocol)</code>: 프로토콜 등록</li>
+<li><code>connect(name)</code>: 연결</li>
+<li><code>send(name, data)</code>: 데이터 전송 (int 반환)</li>
+<li><code>read(name)</code>: 데이터 수신 (bytes 반환)</li>
+<li><code>disconnect(name)</code>: 연결 해제</li>
+</ul>
+</li>
+<li><strong><code>PubSubManager</code></strong>: PubSub 프로토콜 통합 관리<ul>
+<li><code>register(name, protocol)</code>: 프로토콜 등록</li>
+<li><code>connect(name)</code>: 연결</li>
+<li><code>publish(name, topic, message)</code>: 메시지 발행</li>
+<li><code>subscribe(name, topic, callback)</code>: 토픽 구독</li>
+<li><code>disconnect(name)</code>: 연결 해제</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>RFC 준수 MQTT 구현</strong><ul>
+<li><code>MQTTProtocol</code>: paho-mqtt 기반 RFC 준수 구현</li>
+<li><code>BrokerConfig</code>, <code>ClientConfig</code>: 설정 관리를 위한 데이터 클래스</li>
+</ul>
+</li>
+<li><strong>TCP 프로토콜 구현</strong><ul>
+<li><code>TCPClient</code>: TCP 클라이언트 구현</li>
+<li><code>TCPServer</code>: TCP 서버 구현</li>
+</ul>
+</li>
+<li><strong>Serial 프로토콜 구현</strong><ul>
+<li><code>SerialProtocol</code>: 시리얼 통신 구현</li>
+</ul>
+</li>
+<li><strong>보안 및 신뢰성</strong><ul>
+<li>Username/Password 인증</li>
+<li><strong>예기치 못한 연결 실패 시 자동 재연결</strong> (지수 백오프)</li>
+<li>재연결 시 구독 복구 및 메시지 큐 처리</li>
+<li>Thread-safe 설계</li>
+</ul>
+</li>
+<li><strong>에러 처리</strong><ul>
+<li>RFC 준수 상세 연결 실패 코드 처리</li>
+<li>예외 클래스 계층 구조</li>
+</ul>
+</li>
+</ul>
+<h2 id="_17">사용자 시나리오</h2>
+<h3 id="mqtt">현재 구현된 MQTT 예시</h3>
+<pre><code class="language-python">from eq1_network.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+
+# 기본 인증 설정
+broker_config = BrokerConfig(
+    broker_address=&quot;broker.example.com&quot;,
+    port=1883,
+    username=&quot;mqtt_username&quot;,
+    password=&quot;mqtt_password&quot;
+)
+client_config = ClientConfig()
+
+mqtt = MQTTProtocol(broker_config, client_config)
+
+# 명시적 연결 필요
+mqtt.connect()
+
+def message_callback(topic: str, payload: bytes):
+    print(f&quot;Received: [{topic}] {payload.decode()}&quot;)
+
+mqtt.subscribe(&quot;topic/test&quot;, message_callback)
+mqtt.publish(&quot;topic/test&quot;, &quot;hello&quot;, qos=1, retain=True)
+mqtt.disconnect()
+</code></pre>
+<h3 id="tcp">현재 구현된 TCP 예시</h3>
+<pre><code class="language-python">from app import ReqResManager
+from eq1_network.protocols.ethernet.tcp_client import TCPClient
+from eq1_network.protocols.ethernet.tcp_server import TCPServer
+
+# TCP 클라이언트 설정
+tcp_client = TCPClient(&quot;localhost&quot;, 8080, timeout=1)
+ReqResManager.register(&quot;tcp_client&quot;, tcp_client)
+
+# TCP 서버 설정
+tcp_server = TCPServer(&quot;localhost&quot;, 8081, timeout=1)
+ReqResManager.register(&quot;tcp_server&quot;, tcp_server)
+
+# 연결 및 통신
+if ReqResManager.connect(&quot;tcp_client&quot;):
+    result = ReqResManager.send(&quot;tcp_client&quot;, b&quot;Hello Server!&quot;)
+    if result &gt; 0:
+        response = ReqResManager.read(&quot;tcp_client&quot;)
+        print(f&quot;Response: {response.decode()}&quot;)
+    ReqResManager.disconnect(&quot;tcp_client&quot;)
+</code></pre>
+<h3 id="serial">현재 구현된 Serial 예시</h3>
+<pre><code class="language-python">from app import ReqResManager
+from eq1_network.protocols.serial.serial_protocol import SerialProtocol
+
+# 시리얼 프로토콜 설정
+serial_protocol = SerialProtocol(&quot;COM1&quot;, 9600, timeout=1)
+ReqResManager.register(&quot;serial&quot;, serial_protocol)
+
+# 연결 및 통신
+if ReqResManager.connect(&quot;serial&quot;):
+    result = ReqResManager.send(&quot;serial&quot;, b&quot;AT\r\n&quot;)
+    if result &gt; 0:
+        response = ReqResManager.read(&quot;serial&quot;)
+        print(f&quot;Response: {response.decode()}&quot;)
+    ReqResManager.disconnect(&quot;serial&quot;)
+</code></pre>
+<h3 id="_18">미구현 기능 예시 (계획만)</h3>
+<pre><code class="language-python"># 다음 기능들은 아직 구현되지 않았습니다:
+
+# TLS/SSL 보안 연결 (미구현)
+broker_config = BrokerConfig(
+    broker_address=&quot;secure-broker.example.com&quot;,
+    port=8883,
+    ca_certs=&quot;/path/to/ca.crt&quot;  # 미구현
+)
+
+# Will Message 설정 (미구현)
+mqtt.set_will(&quot;device/status&quot;, &quot;offline&quot;, qos=1, retain=True)  # 미구현
+</code></pre>
+<h3 id="reqres">향후 Req/Res 예시 (계획)</h3>
+<pre><code class="language-python"># Modbus 프로토콜 추가 예정
+modbus = ModbusProtocol(&quot;192.168.0.10&quot;, 502)
+modbus.connect()
+modbus.send(b&quot;PING&quot;)
+resp = modbus.read()
+</code></pre>
+<h3 id="packetstructure">PacketStructure 사용 예시</h3>
+<pre><code class="language-python"># PacketInterface를 통한 표준화된 데이터 처리
+from eq1_network.interfaces.packet import PacketStructureInterface
+
+class PacketStructure(PacketStructureInterface):
+    HEAD_PACKET = b'$'
+    TAIL_PACKET = b'$'
+
+    @classmethod
+    def to_packet(cls, data: bytes) -&gt; bytes:
+        return cls.HEAD_PACKET + data + cls.TAIL_PACKET
+
+    @classmethod
+    def from_packet(cls, packet: bytes) -&gt; bytes:
+        if not cls.is_valid(packet):
+            raise ValueError(f&quot;Packet Structure Error : {packet}&quot;)
+
+        return packet[1:-1]
+
+    @classmethod
+    def is_valid(cls, packet: bytes) -&gt; bool:
+        if (cls.TAIL_PACKET + cls.HEAD_PACKET) in packet:
+            return False
+
+        if packet[:1] != cls.HEAD_PACKET:
+            return False
+
+        if packet[-1:] != cls.TAIL_PACKET:
+            return False
+
+        return True
+
+    @classmethod
+    def split_packet(cls, packet: bytes) -&gt; list[bytes]:
+        results = []
+        for _d in packet.split(cls.HEAD_PACKET):
+            if len(_d) == 0:
+                continue
+            results.append(cls.HEAD_PACKET+_d+cls.TAIL_PACKET)
+        return results
+
+# SendData 클래스 사용
+class TestSendData(SendData):
+    def __init__(self, cmd: str, data: list):
+        self.cmd = cmd
+        self.data = data
+
+    def to_bytes(self) -&gt; bytes:
+        result = self.cmd
+        for datum in self.data:
+            result += f&quot;#{datum}&quot;
+        return result.encode('utf-8')
+
+# ReceivedData 클래스 사용
+class TestReceivedData(ReceivedData):
+    @classmethod
+    def from_bytes(cls, data: bytes):
+        data_str = data.decode('utf-8')
+        split_data = data_str.split('#')
+        if len(split_data) == 1:
+            return cls(cmd=split_data[0], data=[])
+        return cls(cmd=split_data[0], data=split_data[1:])
+
+send_data = TestSendData(&quot;TEST&quot;, [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;, &quot;5&quot;])
+packet_bytes = PacketStructure.to_packet(send_data.to_bytes())  # List를 바이트로 직렬화
+
+# NetworkHandler 사용
+network_handler = NetworkHandler(network_config, event_callback)
+network_handler.send_data(send_data)  # PacketStructure 기반 전송
+</code></pre>
+<h2 id="_19">테스트 전략</h2>
+<ul>
+<li>단위 테스트 (Unit Test)<ul>
+<li>pytest 기반으로 각 프로토콜과 PacketStructure 단위 테스트 진행</li>
+<li>Mock 객체를 이용한 독립적인 동작 검증</li>
+<li>PacketStructureInterface 인터페이스 단위 테스트 추가</li>
+<li>NetworkHandler 클래스 단위 테스트 추가</li>
+</ul>
+</li>
+<li>통합 테스트 (Integration Test)<ul>
+<li>실제 MQTT 브로커 환경에서 publish/subscribe 기능 검증</li>
+<li>TCP 클라이언트/서버 통신 테스트</li>
+<li>시리얼 통신 테스트</li>
+<li>SendData/ReceivedData 클래스 통합 테스트 추가</li>
+<li>PacketStructure 기반 통신 통합 테스트 추가</li>
+</ul>
+</li>
+<li>자동화<ul>
+<li>CI 파이프라인에서 자동 실행되도록 설정</li>
+<li>코드 커버리지 측정을 통해 목표 커버리지 90% 이상 유지</li>
+</ul>
+</li>
+</ul>
+<h2 id="_20">위험 완화</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">위험 (Risk)</th>
+<th style="text-align: center;">발생 가능성</th>
+<th style="text-align: center;">영향도</th>
+<th style="text-align: left;">대응</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>외부 라이브러리 의존성</strong></td>
+<td style="text-align: center;">중간</td>
+<td style="text-align: center;">높음</td>
+<td style="text-align: left;">- 라이브러리 핵심 기능을 직접 호출하지 않고, 어댑터(Adapter) 클래스로 한 번 더 감싸서 구현합니다.<br/>- 이를 통해 문제 발생 시 다른 라이브러리(예: gmqtt)로 최소한의 코드 수정으로 교체할 수 있습니다.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>플러그인 아키텍처의 한계</strong></td>
+<td style="text-align: center;">중간</td>
+<td style="text-align: center;">높음</td>
+<td style="text-align: left;">- 초기 인터페이스 설계 시 TCP/IP 기반의 요청/응답 시나리오를 미리 고려하여 <code>ReqResProtocol</code> 인터페이스를 정의합니다.<br/>- Modbus 프로토콜 추가 단계에서 PoC(Proof of Concept)를 먼저 진행하여 아키텍처의 확장성을 검증합니다.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>낮은 내부 채택률</strong></td>
+<td style="text-align: center;">높음</td>
+<td style="text-align: center;">중간</td>
+<td style="text-align: left;">- 상세한 <code>README.md</code>와 예제 코드를 제공하여 사용 장벽을 낮춥니다.<br/>- 주요 사용 예상 팀을 대상으로 초기 버전 데모 및 피드백 세션을 진행하여 요구사항을 반영하고 참여를 유도합니다.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PacketStructure 설계 복잡성</strong></td>
+<td style="text-align: center;">중간</td>
+<td style="text-align: center;">중간</td>
+<td style="text-align: left;">- 간단하고 직관적인 인터페이스 설계로 복잡성 최소화<br/>- 기존 SendData/ReceivedData 클래스와의 호환성 보장<br/>- 충분한 테스트 케이스 작성으로 안정성 확보</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>기존 코드 호환성</strong></td>
+<td style="text-align: center;">높음</td>
+<td style="text-align: center;">높음</td>
+<td style="text-align: left;">- 단계적 마이그레이션으로 기존 코드와의 호환성 보장<br/>- PacketStructure와 PacketStructureInterface 병행 지원 기간 설정<br/>- 충분한 테스트를 통한 안정성 검증</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_21">배포 및 재사용</h2>
+<ul>
+<li>패키지화<ul>
+<li>내부 PyPI 서버에 업로드하거나, git submodule 형태로 관리</li>
+</ul>
+</li>
+<li>재사용 방법<ul>
+<li>동일한 구조를 유지하여 다른 비전 시스템, 공장 자동화 시스템에서 그대로 임포트 가능</li>
+</ul>
+</li>
+<li>버전 관리<ul>
+<li>SemVer(유의적 버전) 정책 적용</li>
+<li>주요 변경사항 발생 시 CHANGELOG에 기록</li>
+</ul>
+</li>
+</ul>
+<h2 id="_22">제약사항</h2>
+<h3 id="_23">기술적 제약</h3>
+<ul>
+<li><strong>Python 버전</strong>: 3.10.18 (권장)</li>
+<li><strong>외부 의존성</strong>: paho-mqtt 1.6.0+, pyserial 3.5+</li>
+<li><strong>운영체제</strong>: Windows, macOS, Linux</li>
+</ul>
+<h3 id="_24">기능적 제약</h3>
+<ul>
+<li><strong>현재 지원</strong>: MQTT v3.1.1, TCP, Serial 기본 기능만 지원</li>
+<li><strong>미구현</strong>: TLS/SSL, Will Message, MQTT v5.0 기능들</li>
+<li><strong>동시 연결</strong>: 단일 브로커당 하나의 연결만 지원</li>
+<li><strong>명시적 연결</strong>: connect() 메서드 호출 필수 (자동 연결 없음)</li>
+</ul>
+<h3 id="_25">성능 제약</h3>
+<ul>
+<li><strong>처리량</strong>: 초당 10,000 메시지 처리 가능</li>
+<li><strong>동시 연결</strong>: 100개 이하 권장</li>
+<li><strong>메모리</strong>: 연결당 약 10MB 사용</li>
+</ul>
+<h2 id="_26">참고 자료</h2>
+<ul>
+<li><a href="../mqtt_protocol/">MQTT Protocol</a></li>
+<li><a href="../">README.md</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.expand", "navigation.sections"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "\ud074\ub9bd\ubcf4\ub4dc\uc5d0 \ubcf5\uc0ac\ub428", "clipboard.copy": "\ud074\ub9bd\ubcf4\ub4dc\ub85c \ubcf5\uc0ac", "search.result.more.one": "\uc774 \ubb38\uc11c\uc5d0\uc11c 1\uac1c\uc758 \uac80\uc0c9 \uacb0\uacfc \ub354 \ubcf4\uae30", "search.result.more.other": "\uc774 \ubb38\uc11c\uc5d0\uc11c #\uac1c\uc758 \uac80\uc0c9 \uacb0\uacfc \ub354 \ubcf4\uae30", "search.result.none": "\uac80\uc0c9\uc5b4\uc640 \uc77c\uce58\ud558\ub294 \ubb38\uc11c\uac00 \uc5c6\uc2b5\ub2c8\ub2e4", "search.result.one": "1\uac1c\uc758 \uc77c\uce58\ud558\ub294 \ubb38\uc11c", "search.result.other": "#\uac1c\uc758 \uc77c\uce58\ud558\ub294 \ubb38\uc11c", "search.result.placeholder": "\uac80\uc0c9\uc5b4\ub97c \uc785\ub825\ud558\uc138\uc694", "search.result.term.missing": "\ud3ec\ud568\ub418\uc9c0 \uc54a\uc740 \uac80\uc0c9\uc5b4", "select.version": "\ubc84\uc804 \uc120\ud0dd"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+    
+  </body>
+</html>

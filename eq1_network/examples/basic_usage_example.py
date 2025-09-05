@@ -8,6 +8,7 @@ from eq1_network import PubSubManager, ReqResManager
 from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 from eq1_network.protocols.ethernet.tcp_client import TCPClient
 from eq1_network.protocols.ethernet.tcp_server import TCPServer
+from eq1_network.examples.data.dataset import MessageType   # TODO: uitls 파일 추가 시, 사용할 것
 
 
 def basic_mqtt_example():

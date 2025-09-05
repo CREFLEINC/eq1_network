@@ -9,6 +9,7 @@ import threading
 import uuid
 from datetime import datetime
 from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
+from eq1_network.examples.data.dataset import MessageType   # TODO: uitls 파일 추가 시, 사용할 것
 
 
 class ComprehensiveMQTTExample:

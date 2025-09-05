@@ -4,10 +4,10 @@ EQ-1 Network 기본 사용법 예제
 """
 
 import time
-from app import PubSubManager, ReqResManager
-from app.protocols.mqtt.mqtt_protocol import BrokerConfig, MQTTProtocol
-from app.protocols.ethernet.tcp_client import TCPClient
-from app.protocols.ethernet.tcp_server import TCPServer
+from eq1_network import PubSubManager, ReqResManager
+from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
+from eq1_network.protocols.ethernet.tcp_client import TCPClient
+from eq1_network.protocols.ethernet.tcp_server import TCPServer
 
 
 def basic_mqtt_example():
@@ -15,12 +15,13 @@ def basic_mqtt_example():
     print("=== MQTT 기본 사용법 ===")
     
     # 1. MQTT 프로토콜 생성
-    config = BrokerConfig(
+    broker_config = BrokerConfig(
         broker_address="localhost",
         port=1883,
         mode="non-blocking"
     )
-    mqtt = MQTTProtocol(config)
+    client_config = ClientConfig()
+    mqtt = MQTTProtocol(broker_config, client_config)
     
     # 2. 매니저에 등록
     PubSubManager.register("mqtt", mqtt)
@@ -85,8 +86,8 @@ def protocol_management_example():
     print("\n=== 프로토콜 관리 예제 ===")
     
     # 여러 프로토콜 등록
-    mqtt1 = MQTTProtocol(BrokerConfig("localhost", 1883))
-    mqtt2 = MQTTProtocol(BrokerConfig("localhost", 1884))
+    mqtt1 = MQTTProtocol(BrokerConfig("localhost", 1883), ClientConfig())
+    mqtt2 = MQTTProtocol(BrokerConfig("localhost", 1884), ClientConfig())
     tcp_client = TCPClient("localhost", 8080)
     
     # 매니저에 등록

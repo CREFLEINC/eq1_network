@@ -8,9 +8,9 @@ import threading
 import socket
 import json
 from datetime import datetime
-from app import ReqResManager
-from app.protocols.ethernet.tcp_client import TCPClient
-from app.protocols.ethernet.tcp_server import TCPServer
+from eq1_network import ReqResManager
+from eq1_network.protocols.ethernet.tcp_client import TCPClient
+from eq1_network.protocols.ethernet.tcp_server import TCPServer
 
 
 class ComprehensiveTCPExample:

@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 ### 기본 MQTT 사용법
 ```python
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from eq1_network.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 1. 설정 객체 생성
 broker_config = BrokerConfig(
@@ -65,8 +65,8 @@ mqtt.disconnect()
 ### 기본 TCP 사용법
 ```python
 from app import ReqResManager
-from app.protocols.ethernet.tcp_client import TCPClient
-from app.protocols.ethernet.tcp_server import TCPServer
+from eq1_network.protocols.ethernet.tcp_client import TCPClient
+from eq1_network.protocols.ethernet.tcp_server import TCPServer
 
 # TCP 클라이언트 설정
 tcp_client = TCPClient("localhost", 8080, timeout=1)
@@ -88,7 +88,7 @@ if ReqResManager.connect("tcp_client"):
 ### 기본 Serial 사용법
 ```python
 from app import ReqResManager
-from app.protocols.serial.serial_protocol import SerialProtocol
+from eq1_network.protocols.serial.serial_protocol import SerialProtocol
 
 # 시리얼 프로토콜 설정
 serial_protocol = SerialProtocol("COM1", 9600, timeout=1)
@@ -105,7 +105,7 @@ if ReqResManager.connect("serial"):
 
 ### 인증 연결 (MQTT)
 ```python
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from eq1_network.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 인증 설정
 broker_config = BrokerConfig(
@@ -269,7 +269,7 @@ pip install -r requirements.txt
 
 ### Req/Res 프로토콜 추가
 ```python
-from app.interfaces.protocol import ReqResProtocol
+from eq1_network.interfaces.protocol import ReqResProtocol
 
 class TCPProtocol(ReqResProtocol):
     def __init__(self, host: str, port: int):
@@ -296,7 +296,7 @@ class TCPProtocol(ReqResProtocol):
 
 ### Pub/Sub 프로토콜 추가
 ```python
-from app.interfaces.protocol import PubSubProtocol
+from eq1_network.interfaces.protocol import PubSubProtocol
 
 class RedisProtocol(PubSubProtocol):
     def publish(self, topic: str, message: str, qos: int = 0, retain: bool = False) -> bool:
@@ -322,8 +322,8 @@ class RedisProtocol(PubSubProtocol):
 import threading
 import time
 from app import ReqResManager
-from app.protocols.ethernet.tcp_client import TCPClient
-from app.protocols.ethernet.tcp_server import TCPServer
+from eq1_network.protocols.ethernet.tcp_client import TCPClient
+from eq1_network.protocols.ethernet.tcp_server import TCPServer
 
 # 서버 스레드
 def server_thread():
@@ -361,7 +361,7 @@ client_example()
 ### Serial 통신 예제
 ```python
 from app import ReqResManager
-from app.protocols.serial.serial_protocol import SerialProtocol
+from eq1_network.protocols.serial.serial_protocol import SerialProtocol
 
 # 시리얼 프로토콜 설정
 serial = SerialProtocol("COM1", 9600, timeout=1)

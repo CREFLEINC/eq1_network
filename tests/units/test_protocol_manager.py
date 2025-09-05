@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.manager.protocol_manager import PubSubManager, ReqResManager
+from eq1_network.manager.protocol_manager import PubSubManager, ReqResManager
 
 
 def func(t, p):

@@ -5,14 +5,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolDecodeError,
     ProtocolValidationError,
 )
-from app.data import ReceivedData
-from app.interfaces.packet import PacketStructureInterface
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
-from app.worker.listener import Listener, ListenerEvent
+from eq1_network.data import ReceivedData
+from eq1_network.interfaces.packet import PacketStructureInterface
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.worker.listener import Listener, ListenerEvent
 
 
 class MockListenerEvent(ListenerEvent[ReceivedData]):
@@ -985,7 +985,7 @@ class TestListener(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.inject_read_result(True, b"$test$")
 
-        with patch("app.worker.listener.logger") as mock_logger:
+        with patch("eq1_network.worker.listener.logger") as mock_logger:
             listener = Listener(
                 event_callback=self.event_callback,
                 protocol=protocol,
@@ -1013,7 +1013,7 @@ class TestListener(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.disconnect = Mock(side_effect=Exception("Disconnect error"))
 
-        with patch("app.worker.listener.logger") as mock_logger:
+        with patch("eq1_network.worker.listener.logger") as mock_logger:
             listener = Listener(
                 event_callback=self.event_callback,
                 protocol=protocol,

@@ -8,8 +8,8 @@ import threading
 import struct
 import serial
 from datetime import datetime
-from app import ReqResManager
-from app.protocols.serial.serial_protocol import SerialProtocol
+from eq1_network import ReqResManager
+from eq1_network.protocols.serial.serial_protocol import SerialProtocol
 
 
 class ComprehensiveSerialExample:

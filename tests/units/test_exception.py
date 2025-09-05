@@ -1,6 +1,6 @@
 import pytest
 
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolAuthenticationError,
     ProtocolConnectionError,
     ProtocolDecodeError,

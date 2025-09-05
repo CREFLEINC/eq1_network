@@ -5,22 +5,22 @@ import pytest
 
 
 @pytest.mark.unit
-class TestAppInit:
-    """app/__init__.py 모듈 테스트"""
+class TestEq1NetworkInit:
+    """eq1_network/__init__.py 모듈 테스트"""
 
     def test_version_info(self):
         """버전 정보 테스트"""
-        import app
+        import eq1_network
 
-        assert app.__version__ == "1.0.0"
-        assert app.__author__ == "EQ-1 Team"
-        assert app.__email__ == "dev@eq1.com"
-        assert app.__license__ == "MIT"
-        assert app.__description__ == "플러그인 기반 통신 프레임워크"
+        assert eq1_network.__version__ == "1.0.0"
+        assert eq1_network.__author__ == "EQ-1 Team"
+        assert eq1_network.__email__ == "dev@eq1.com"
+        assert eq1_network.__license__ == "MIT"
+        assert eq1_network.__description__ == "플러그인 기반 통신 프레임워크"
 
     def test_successful_imports(self):
         """성공적인 임포트 테스트"""
-        import app
+        import eq1_network
 
         # 성공적인 임포트 시 __all__에 포함되는 항목들 확인
         expected_items = [
@@ -38,20 +38,20 @@ class TestAppInit:
         ]
 
         for item in expected_items:
-            in_all = hasattr(app, "__all__") and (item in app.__all__)
-            available = hasattr(app, item)
+            in_all = hasattr(eq1_network, "__all__") and (item in eq1_network.__all__)
+            available = hasattr(eq1_network, item)
             assert (
                 in_all or available
-            ), f"{item} should be exported via __all__ or available as attribute on app"
+            ), f"{item} should be exported via __all__ or available as attribute on eq1_network"
 
     def test_import_error_handling(self):
         """임포트 에러 처리 테스트"""
         # 모듈을 다시 로드하기 위해 sys.modules에서 제거
         modules_to_remove = [
-            "app",
-            "app.manager.protocol_manager",
-            "app.interfaces.protocol",
-            "app.common.exception",
+            "eq1_network",
+            "eq1_network.manager.protocol_manager",
+            "eq1_network.interfaces.protocol",
+            "eq1_network.common.exception",
         ]
 
         for module in modules_to_remove:
@@ -62,16 +62,16 @@ class TestAppInit:
         with patch.dict(
             "sys.modules",
             {
-                "app.manager.protocol_manager": None,
-                "app.interfaces.protocol": None,
-                "app.common.exception": None,
+                "eq1_network.manager.protocol_manager": None,
+                "eq1_network.interfaces.protocol": None,
+                "eq1_network.common.exception": None,
             },
         ):
             import importlib
 
-            import app
+            import eq1_network
 
-            importlib.reload(app)
+            importlib.reload(eq1_network)
 
             # Fallback: 메타데이터만 __all__에 포함
             expected_fallback = [
@@ -81,7 +81,7 @@ class TestAppInit:
                 "__license__",
                 "__description__",
             ]
-            assert app.__all__ == expected_fallback
+            assert eq1_network.__all__ == expected_fallback
 
             # API 심볼들이 노출되지 않아야 함(선택적 검증)
             for sym in [
@@ -97,4 +97,4 @@ class TestAppInit:
                 "ProtocolDecodeError",
                 "ProtocolAuthenticationError",
             ]:
-                assert not hasattr(app, sym)
+                assert not hasattr(eq1_network, sym)

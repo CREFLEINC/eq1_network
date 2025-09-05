@@ -2,13 +2,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import app.protocols.mqtt.mqtt_protocol as mqtt_mod
-from app.common.exception import (
+import eq1_network.protocols.mqtt.mqtt_protocol as mqtt_mod
+from eq1_network.common.exception import (
     ProtocolConnectionError,
     ProtocolError,
     ProtocolValidationError,
 )
-from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
+from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 def func(t, m):
@@ -21,7 +21,7 @@ def mock_client(monkeypatch):
     paho-mqtt.Client를 Mock으로 치환합니다.
     """
     mock_client = MagicMock()
-    monkeypatch.setattr("app.protocols.mqtt.mqtt_protocol.Client", lambda *a, **k: mock_client)
+    monkeypatch.setattr("eq1_network.protocols.mqtt.mqtt_protocol.Client", lambda *a, **k: mock_client)
     return mock_client
 
 
@@ -1146,14 +1146,14 @@ def test_connect_with_custom_bind_address(protocol_factory, mode):
 
         import unittest.mock
 
-        from app.protocols.mqtt.mqtt_protocol import (
+        from eq1_network.protocols.mqtt.mqtt_protocol import (
             BrokerConfig,
             ClientConfig,
             MQTTProtocol,
         )
 
         with unittest.mock.patch(
-            "app.protocols.mqtt.mqtt_protocol.Client", return_value=mock_client
+            "eq1_network.protocols.mqtt.mqtt_protocol.Client", return_value=mock_client
         ):
             config = BrokerConfig(broker_address="test.broker.com", bind_address="192.168.1.100")
             protocol = MQTTProtocol(config, ClientConfig())

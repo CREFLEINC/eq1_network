@@ -8,7 +8,7 @@ import time
 import threading
 import uuid
 from datetime import datetime
-from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
+from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 class ComprehensiveMQTTExample:

@@ -1,7 +1,7 @@
 import pytest
 from pytest import approx
 
-from app.common.params import Params
+from eq1_network.common.params import Params
 
 
 @pytest.fixture

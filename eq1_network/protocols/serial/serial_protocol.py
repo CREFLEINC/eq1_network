@@ -2,7 +2,7 @@ from typing import Any, Tuple
 import logging
 import serial
 
-from app.interfaces.protocol import ReqResProtocol
+from eq1_network.interfaces.protocol import ReqResProtocol
 
 
 class SerialProtocol(ReqResProtocol):

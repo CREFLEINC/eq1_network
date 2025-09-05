@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 from enum import Enum
 
-from app.data import SendData, ReceivedData
+from eq1_network.data import SendData, ReceivedData
 
 
 class MessageType(Enum):

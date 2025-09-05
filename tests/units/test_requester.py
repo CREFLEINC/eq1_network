@@ -6,14 +6,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolConnectionError,
     ProtocolTimeoutError,
 )
-from app.data import SendData
-from app.interfaces.packet import PacketStructureInterface
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
-from app.worker.requester import Requester, RequesterEvent
+from eq1_network.data import SendData
+from eq1_network.interfaces.packet import PacketStructureInterface
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.worker.requester import Requester, RequesterEvent
 
 
 class MockRequesterEvent(RequesterEvent[SendData]):
@@ -832,7 +832,7 @@ class TestRequester(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.inject_send_result(True)
 
-        with patch("app.worker.requester.logger") as mock_logger:
+        with patch("eq1_network.worker.requester.logger") as mock_logger:
             requester = Requester(
                 event_callback=self.event_callback,
                 protocol=protocol,
@@ -865,7 +865,7 @@ class TestRequester(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.disconnect = Mock(side_effect=Exception("Disconnect error"))
 
-        with patch("app.worker.requester.logger") as mock_logger:
+        with patch("eq1_network.worker.requester.logger") as mock_logger:
             requester = Requester(
                 event_callback=self.event_callback,
                 protocol=protocol,
@@ -888,7 +888,7 @@ class TestRequester(unittest.TestCase):
         protocol = MockReqResProtocol()
         protocol.send = Mock(side_effect=Exception("General error"))
 
-        with patch("app.worker.requester.logger") as mock_logger:
+        with patch("eq1_network.worker.requester.logger") as mock_logger:
             requester = Requester(
                 event_callback=self.event_callback,
                 protocol=protocol,

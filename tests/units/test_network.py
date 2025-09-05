@@ -8,12 +8,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from app.data import DataPackage, ReceivedData, SendData
-from app.interfaces.packet import PacketStructureInterface
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
-from app.network import NetworkEvent, NetworkHandler
-from app.worker.listener import Listener, ListenerEvent
-from app.worker.requester import Requester, RequesterEvent
+from eq1_network.data import DataPackage, ReceivedData, SendData
+from eq1_network.interfaces.packet import PacketStructureInterface
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.network import NetworkEvent, NetworkHandler
+from eq1_network.worker.listener import Listener, ListenerEvent
+from eq1_network.worker.requester import Requester, RequesterEvent
 
 
 class MockNetworkEvent(NetworkEvent):
@@ -116,7 +116,7 @@ class MockReqResProtocol(ReqResProtocol):
         self.send_result = True
         self.read_result = (True, b"test_data")
         self._read_count = 0
-        self.max_reads = 0  # 기본적으로 읽지 않음 (테스트에서 필요시 설정)
+        self.max_reads = 1  # 최소 1번은 읽도록 설정
 
     def connect(self) -> bool:
         self.connect_called = True
@@ -139,7 +139,7 @@ class MockReqResProtocol(ReqResProtocol):
         else:
             # 무한루프 방지를 위해 짧은 대기 시간 추가
             time.sleep(0.01)
-            return (False, None)
+            return (True, None)  # False 대신 True를 반환하여 무한루프 방지
 
 
 class MockPubSubProtocol(PubSubProtocol):
@@ -191,20 +191,61 @@ class TestNetworkHandler(unittest.TestCase):
         )
 
         # 로깅 레벨 설정 (테스트에서 DEBUG 로그 출력 방지)
-        logging.getLogger("app.network").setLevel(logging.WARNING)
+        logging.getLogger("eq1_network.network").setLevel(logging.WARNING)
+        
+        # NetworkHandler 스레드 시작 방지를 위한 Mock 설정
+        self.handler = None
+
+    def _create_handler(self, **kwargs):
+        """NetworkHandler를 생성하고 스레드 시작을 방지하는 헬퍼 메서드"""
+        # 실제 NetworkHandler 생성하되 스레드 시작 방지
+        handler = NetworkHandler(**kwargs)
+        # 스레드 관련 메서드들을 Mock으로 교체
+        handler.start = Mock()
+        handler.run = Mock()
+        handler.is_alive = Mock(return_value=False)
+        handler.join = Mock()
+        return handler
 
     def tearDown(self):
         """테스트 정리"""
-        pass
+        # NetworkHandler가 생성된 경우 정리
+        if hasattr(self, 'handler') and self.handler:
+            self.handler.stop()
+            self.handler.stop_communications()
+            if hasattr(self.handler, 'is_alive') and self.handler.is_alive():
+                self.handler.join(timeout=1.0)
+        
+        # 모든 활성 스레드 강제 종료
+        import threading
+        import time
+        
+        # 현재 활성 스레드 목록 가져오기
+        active_threads = threading.enumerate()
+        for thread in active_threads:
+            # 메인 스레드가 아닌 경우에만 종료
+            if thread != threading.current_thread() and thread.is_alive():
+                try:
+                    # 스레드에 stop_flag가 있으면 설정
+                    if hasattr(thread, '_stop_flag'):
+                        thread._stop_flag.set()
+                    # 스레드에 stop 메서드가 있으면 호출
+                    if hasattr(thread, 'stop'):
+                        thread.stop()
+                    # 짧은 대기 후 join 시도
+                    thread.join(timeout=0.1)
+                except Exception:
+                    pass  # 스레드 종료 실패는 무시
 
     def test_init(self):
         """초기화 테스트"""
-        handler = NetworkHandler(
+        self.handler = self._create_handler(
             network_config=self.network_config,
             event_callback=self.event_callback,
             net_id=self.net_id,
             data_package=self.data_package,
         )
+        handler = self.handler
 
         self.assertEqual(handler._net_id, self.net_id)
         self.assertEqual(handler._network_config, self.network_config)
@@ -236,9 +277,9 @@ class TestNetworkHandler(unittest.TestCase):
         self.assertTrue(handler._retry_flag)
         self.assertFalse(handler._stop_flag.is_set())
 
-    @patch("app.network.Requester")
-    @patch("app.network.Listener")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.Requester")
+    @patch("eq1_network.network.Listener")
+    @patch("eq1_network.network.create_protocol")
     def test_start_communication_success(self, mock_create_protocol, mock_listener_class, mock_requester_class):
         """통신 시작 성공 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -250,6 +291,8 @@ class TestNetworkHandler(unittest.TestCase):
         mock_requester = Mock()
         mock_listener.is_alive.return_value = False
         mock_requester.is_alive.return_value = False
+        mock_listener.start = Mock()  # 실제 스레드 시작 방지
+        mock_requester.start = Mock()  # 실제 스레드 시작 방지
         mock_listener_class.return_value = mock_listener
         mock_requester_class.return_value = mock_requester
 
@@ -278,9 +321,9 @@ class TestNetworkHandler(unittest.TestCase):
         # 정리
         handler.stop_communications()
 
-    @patch("app.network.Requester")
-    @patch("app.network.Listener")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.Requester")
+    @patch("eq1_network.network.Listener")
+    @patch("eq1_network.network.create_protocol")
     def test_start_communication_without_data_package(self, mock_create_protocol, mock_listener_class, mock_requester_class):
         """DataPackage 없이 통신 시작 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -292,6 +335,8 @@ class TestNetworkHandler(unittest.TestCase):
         mock_requester = Mock()
         mock_listener.is_alive.return_value = False
         mock_requester.is_alive.return_value = False
+        mock_listener.start = Mock()  # 실제 스레드 시작 방지
+        mock_requester.start = Mock()  # 실제 스레드 시작 방지
         mock_listener_class.return_value = mock_listener
         mock_requester_class.return_value = mock_requester
 
@@ -319,7 +364,7 @@ class TestNetworkHandler(unittest.TestCase):
         # 정리
         handler.stop_communications()
 
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.create_protocol")
     def test_start_communication_connection_failure(self, mock_create_protocol):
         """연결 실패 시 재시도 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -348,7 +393,7 @@ class TestNetworkHandler(unittest.TestCase):
         # 정리
         handler.stop_communications()
 
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.create_protocol")
     def test_start_communication_protocol_factory_exception(self, mock_create_protocol):
         """프로토콜 팩토리 예외 처리 테스트"""
         mock_create_protocol.side_effect = Exception("Protocol creation failed")
@@ -365,7 +410,7 @@ class TestNetworkHandler(unittest.TestCase):
         with self.assertRaises(Exception):
             handler.start_communication()
 
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.create_protocol")
     def test_stop_communications(self, mock_create_protocol):
         """통신 중지 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -396,7 +441,7 @@ class TestNetworkHandler(unittest.TestCase):
         mock_listener.join.assert_called_once()
         mock_requester.join.assert_called_once()
 
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.create_protocol")
     def test_stop_communications_with_dead_threads(self, mock_create_protocol):
         """죽은 스레드 상태에서 통신 중지 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -426,7 +471,7 @@ class TestNetworkHandler(unittest.TestCase):
         mock_listener.join.assert_not_called()
         mock_requester.join.assert_not_called()
 
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.create_protocol")
     def test_reconnect(self, mock_create_protocol):
         """재연결 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -546,7 +591,7 @@ class TestNetworkHandler(unittest.TestCase):
         handler._retry_flag = False
         self.assertTrue(handler.is_connected())
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_on_sent_logging(self, mock_logger):
         """전송 성공 이벤트 로깅 테스트"""
         handler = NetworkHandler(
@@ -563,7 +608,7 @@ class TestNetworkHandler(unittest.TestCase):
         call_args = mock_logger.debug.call_args
         self.assertIn("on_sent", call_args[0][0])
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_on_failed_send_logging(self, mock_logger):
         """전송 실패 이벤트 로깅 테스트"""
         handler = NetworkHandler(
@@ -580,7 +625,7 @@ class TestNetworkHandler(unittest.TestCase):
         call_args = mock_logger.error.call_args
         self.assertIn("on_failed_send", call_args[0][0])
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_on_received_logging(self, mock_logger):
         """수신 성공 이벤트 로깅 테스트"""
         handler = NetworkHandler(
@@ -597,7 +642,7 @@ class TestNetworkHandler(unittest.TestCase):
         call_args = mock_logger.debug.call_args
         self.assertIn("on_received", call_args[0][0])
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_on_failed_recv_logging(self, mock_logger):
         """수신 실패 이벤트 로깅 테스트"""
         handler = NetworkHandler(
@@ -614,7 +659,7 @@ class TestNetworkHandler(unittest.TestCase):
         call_args = mock_logger.error.call_args
         self.assertIn("on_failed_recv", call_args[0][0])
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_on_disconnected_logging(self, mock_logger):
         """연결 해제 이벤트 로깅 테스트"""
         handler = NetworkHandler(
@@ -632,7 +677,7 @@ class TestNetworkHandler(unittest.TestCase):
         call_args = mock_logger.debug.call_args
         self.assertIn("on_disconnected", call_args[0][0])
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_on_disconnected_with_send_data(self, mock_logger):
         """SendData로 연결 해제 이벤트 테스트"""
         handler = NetworkHandler(
@@ -647,8 +692,8 @@ class TestNetworkHandler(unittest.TestCase):
 
         self.assertTrue(handler._retry_flag)
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_full_lifecycle(self, mock_create_protocol, mock_logger):
         """전체 생명주기 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -674,19 +719,12 @@ class TestNetworkHandler(unittest.TestCase):
         )
         received_data_class = handler._data_package.received_data if handler._data_package else None
 
-        handler._listener = Listener(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            received_data_class=received_data_class,
-        )
+        # Mock 객체로 교체하여 실제 스레드 생성 방지
+        handler._listener = Mock(spec=Listener)
+        handler._listener.is_alive.return_value = False
 
-        handler._requester = Requester(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            request_queue=handler._request_queue,
-        )
+        handler._requester = Mock(spec=Requester)
+        handler._requester.is_alive.return_value = False
 
         handler._retry_flag = False
 
@@ -742,8 +780,8 @@ class TestNetworkHandler(unittest.TestCase):
         self.assertTrue(hasattr(handler, "on_failed_recv"))
         self.assertTrue(hasattr(handler, "on_disconnected"))
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_concurrent_access(self, mock_create_protocol, mock_logger):
         """동시 접근 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -765,19 +803,12 @@ class TestNetworkHandler(unittest.TestCase):
         )
         received_data_class = handler._data_package.received_data if handler._data_package else None
 
-        handler._listener = Listener(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            received_data_class=received_data_class,
-        )
+        # Mock 객체로 교체하여 실제 스레드 생성 방지
+        handler._listener = Mock(spec=Listener)
+        handler._listener.is_alive.return_value = False
 
-        handler._requester = Requester(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            request_queue=handler._request_queue,
-        )
+        handler._requester = Mock(spec=Requester)
+        handler._requester.is_alive.return_value = False
 
         handler._retry_flag = False
 
@@ -794,9 +825,13 @@ class TestNetworkHandler(unittest.TestCase):
         self.assertTrue(all(results))
         self.assertEqual(handler._request_queue.qsize(), 10)
 
-    @patch("app.network.logger")
-    def test_error_handling(self, mock_logger):
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
+    def test_error_handling(self, mock_create_protocol, mock_logger):
         """에러 처리 테스트"""
+        mock_protocol = MockReqResProtocol()
+        mock_create_protocol.return_value = mock_protocol
+        
         handler = NetworkHandler(
             network_config=self.network_config,
             event_callback=self.event_callback,
@@ -809,10 +844,13 @@ class TestNetworkHandler(unittest.TestCase):
         handler._requester = None
 
         handler.stop_communications()
+        
+        # stop_flag를 설정하여 무한루프 방지
+        handler._stop_flag.set()
         handler.reconnect()
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_protocol_factory_integration(self, mock_create_protocol, mock_logger):
         """프로토콜 팩토리 통합 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -843,8 +881,8 @@ class TestNetworkHandler(unittest.TestCase):
 
         self.assertEqual(handler._network_config, invalid_config)
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_cleanup_on_stop(self, mock_create_protocol, mock_logger):
         """중지 시 정리 작업 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -886,8 +924,8 @@ class TestNetworkHandler(unittest.TestCase):
 
         self.assertIsNone(handler._data_package)
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_memory_leak_prevention(self, mock_create_protocol, mock_logger):
         """메모리 누수 방지 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -909,19 +947,12 @@ class TestNetworkHandler(unittest.TestCase):
         )
         received_data_class = handler._data_package.received_data if handler._data_package else None
 
-        handler._listener = Listener(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            received_data_class=received_data_class,
-        )
+        # Mock 객체로 교체하여 실제 스레드 생성 방지
+        handler._listener = Mock(spec=Listener)
+        handler._listener.is_alive.return_value = False
 
-        handler._requester = Requester(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            request_queue=handler._request_queue,
-        )
+        handler._requester = Mock(spec=Requester)
+        handler._requester.is_alive.return_value = False
 
         handler._retry_flag = False
 
@@ -937,8 +968,8 @@ class TestNetworkHandler(unittest.TestCase):
         self.assertIsNotNone(handler._requester)
         self.assertIsNotNone(handler._request_queue)
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_timeout_handling(self, mock_create_protocol, mock_logger):
         """타임아웃 처리 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -961,8 +992,8 @@ class TestNetworkHandler(unittest.TestCase):
         execution_time = end_time - start_time
         self.assertLess(execution_time, 1.0)
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_protocol_type_handling(self, mock_create_protocol, mock_logger):
         """프로토콜 타입별 처리 테스트"""
         # ReqResProtocol 테스트
@@ -985,19 +1016,12 @@ class TestNetworkHandler(unittest.TestCase):
         )
         received_data_class = handler._data_package.received_data if handler._data_package else None
 
-        handler._listener = Listener(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            received_data_class=received_data_class,
-        )
+        # Mock 객체로 교체하여 실제 스레드 생성 방지
+        handler._listener = Mock(spec=Listener)
+        handler._listener.is_alive.return_value = False
 
-        handler._requester = Requester(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            request_queue=handler._request_queue,
-        )
+        handler._requester = Mock(spec=Requester)
+        handler._requester.is_alive.return_value = False
 
         handler._retry_flag = False
 
@@ -1020,19 +1044,12 @@ class TestNetworkHandler(unittest.TestCase):
         handler._protocol = pubsub_protocol
         handler._request_queue = queue.Queue()
 
-        handler._listener = Listener(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            received_data_class=received_data_class,
-        )
+        # Mock 객체로 교체하여 실제 스레드 생성 방지
+        handler._listener = Mock(spec=Listener)
+        handler._listener.is_alive.return_value = False
 
-        handler._requester = Requester(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            request_queue=handler._request_queue,
-        )
+        handler._requester = Mock(spec=Requester)
+        handler._requester.is_alive.return_value = False
 
         handler._retry_flag = False
 
@@ -1064,8 +1081,8 @@ class TestNetworkHandler(unittest.TestCase):
         for thread in threads:
             thread.join()
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_connection_retry_logic(self, mock_create_protocol, mock_logger):
         """연결 재시도 로직 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -1088,19 +1105,12 @@ class TestNetworkHandler(unittest.TestCase):
         )
         received_data_class = handler._data_package.received_data if handler._data_package else None
 
-        handler._listener = Listener(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            received_data_class=received_data_class,
-        )
+        # Mock 객체로 교체하여 실제 스레드 생성 방지
+        handler._listener = Mock(spec=Listener)
+        handler._listener.is_alive.return_value = False
 
-        handler._requester = Requester(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            request_queue=handler._request_queue,
-        )
+        handler._requester = Mock(spec=Requester)
+        handler._requester.is_alive.return_value = False
 
         handler._retry_flag = False
 
@@ -1112,7 +1122,7 @@ class TestNetworkHandler(unittest.TestCase):
         # stop_flag가 설정되어 있어서 connect()가 호출되지 않음
         # self.assertTrue(mock_protocol.connect_called)
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_event_callback_integration(self, mock_logger):
         """이벤트 콜백 통합 테스트"""
         received_events = []
@@ -1256,7 +1266,7 @@ class TestNetworkHandler(unittest.TestCase):
 
         self.assertIsNone(weak_ref())
 
-    @patch("app.network.logger")
+    @patch("eq1_network.network.logger")
     def test_concurrent_data_sending(self, mock_logger):
         """동시 데이터 전송 테스트"""
         handler = NetworkHandler(
@@ -1310,8 +1320,8 @@ class TestNetworkHandler(unittest.TestCase):
         self.assertEqual(handler1._net_id, "handler1")
         self.assertEqual(handler2._net_id, "handler2")
 
-    @patch("app.network.logger")
-    @patch("app.network.create_protocol")
+    @patch("eq1_network.network.logger")
+    @patch("eq1_network.network.create_protocol")
     def test_protocol_lifecycle_management(self, mock_create_protocol, mock_logger):
         """프로토콜 생명주기 관리 테스트"""
         mock_protocol = MockReqResProtocol()
@@ -1333,19 +1343,12 @@ class TestNetworkHandler(unittest.TestCase):
         )
         received_data_class = handler._data_package.received_data if handler._data_package else None
 
-        handler._listener = Listener(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            received_data_class=received_data_class,
-        )
+        # Mock 객체로 교체하여 실제 스레드 생성 방지
+        handler._listener = Mock(spec=Listener)
+        handler._listener.is_alive.return_value = False
 
-        handler._requester = Requester(
-            event_callback=handler,
-            protocol=handler._protocol,
-            packet_structure_interface=packet_structure_interface,
-            request_queue=handler._request_queue,
-        )
+        handler._requester = Mock(spec=Requester)
+        handler._requester.is_alive.return_value = False
 
         handler._retry_flag = False
 

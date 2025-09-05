@@ -1,9 +1,14 @@
 import abc
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Self, TypeVar
+from typing import Generic, TypeVar, TYPE_CHECKING
 
-from app.interfaces.packet import PacketStructureInterface
+if TYPE_CHECKING:
+    from typing import Self
+else:
+    Self = "Self"
+
+from eq1_network.interfaces.packet import PacketStructureInterface
 
 TRecv = TypeVar("TRecv", bound="ReceivedData")
 TSend = TypeVar("TSend", bound="SendData")
@@ -24,7 +29,7 @@ class SendData(abc.ABC):
         ...
 
 
-@dataclass(slots=True)
+@dataclass
 class DataPackage(Generic[TSend, TRecv]):
     """PacketStructure, SendData, ReceivedData 클래스를 담는 구성 객체"""
 

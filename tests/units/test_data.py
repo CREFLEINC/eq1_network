@@ -3,8 +3,8 @@ from typing import List
 
 import pytest
 
-from app.data import DataPackage, ReceivedData, SendData
-from app.interfaces.packet import PacketStructureInterface
+from eq1_network.data import DataPackage, ReceivedData, SendData
+from eq1_network.interfaces.packet import PacketStructureInterface
 
 
 class SendTestData(SendData):

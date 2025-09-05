@@ -8,12 +8,12 @@ from uuid import uuid4
 
 from paho.mqtt.client import MQTT_ERR_SUCCESS, Client
 
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolConnectionError,
     ProtocolError,
     ProtocolValidationError,
 )
-from app.interfaces.protocol import PubSubProtocol
+from eq1_network.interfaces.protocol import PubSubProtocol
 
 
 @dataclass

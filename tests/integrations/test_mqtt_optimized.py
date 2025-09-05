@@ -2,11 +2,11 @@ import time
 
 import pytest
 
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolConnectionError,
     ProtocolValidationError,
 )
-from app.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
+from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 
 
 @pytest.fixture

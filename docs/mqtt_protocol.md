@@ -5,7 +5,7 @@ MQTT 브로커와 연결하여 메시지 발행(publish), 토픽 구독(subscrib
 ## 1. 빠른 시작
 ### 기본 사용법
 ```python
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from eq1_network.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 1. 설정 객체 생성
 broker_config = BrokerConfig(
@@ -37,7 +37,7 @@ mqtt.disconnect()
 
 ### 인증 기능 사용법
 ```python
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from eq1_network.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 인증 설정
 broker_config = BrokerConfig(
@@ -60,7 +60,7 @@ mqtt.disconnect()
 
 ### ClientConfig 커스터마이징
 ```python
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from eq1_network.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 기본 설정
 broker_config = BrokerConfig(broker_address="localhost")
@@ -251,7 +251,7 @@ mqtt.disconnect()
 
 #### 예외 처리 예시:
 ```python
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolConnectionError,
     ProtocolValidationError,
     ProtocolError

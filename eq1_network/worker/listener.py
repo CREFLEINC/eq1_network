@@ -5,13 +5,13 @@ import time
 import traceback
 from typing import Generic, Type, TypeVar, Union, Optional
 
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolDecodeError,
     ProtocolValidationError,
 )
-from app.data import ReceivedData, SendData
-from app.interfaces.packet import PacketStructureInterface
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.data import ReceivedData, SendData
+from eq1_network.interfaces.packet import PacketStructureInterface
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 ProtocolLike = Union[ReqResProtocol, PubSubProtocol]
 TSend = TypeVar("TSend", bound=SendData)

@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-import app.cli
-from app.cli import create_parser, list_protocols, main
-from app.cli import test_mqtt as cli_test_mqtt
+import eq1_network.cli
+from eq1_network.cli import create_parser, list_protocols, main
+from eq1_network.cli import test_mqtt as cli_test_mqtt
 
 
 @pytest.mark.unit
@@ -28,8 +28,8 @@ class TestCLI:
         assert "list-protocols" in subparsers_actions[0].choices
         assert "test-mqtt" in subparsers_actions[0].choices
 
-    @patch("app.cli.ReqResManager._plugins", {"tcp": MagicMock()})
-    @patch("app.cli.PubSubManager._plugins", {"mqtt": MagicMock()})
+    @patch("eq1_network.cli.ReqResManager._plugins", {"tcp": MagicMock()})
+    @patch("eq1_network.cli.PubSubManager._plugins", {"mqtt": MagicMock()})
     def test_list_protocols_success(self, capsys):
         """프로토콜 목록 출력 성공 테스트"""
         list_protocols()
@@ -41,8 +41,8 @@ class TestCLI:
         assert "[Publish-Subscribe]:" in captured.out
         assert "- mqtt" in captured.out
 
-    @patch("app.cli.ReqResManager._plugins", {})
-    @patch("app.cli.PubSubManager._plugins", {})
+    @patch("eq1_network.cli.ReqResManager._plugins", {})
+    @patch("eq1_network.cli.PubSubManager._plugins", {})
     def test_list_protocols_empty(self, capsys):
         """빈 프로토콜 목록 테스트"""
         list_protocols()
@@ -50,7 +50,7 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "사용 가능한 프로토콜이 없습니다." in captured.out
 
-    @patch("app.cli.ReqResManager._plugins", new_callable=PropertyMock)
+    @patch("eq1_network.cli.ReqResManager._plugins", new_callable=PropertyMock)
     def test_list_protocols_error(self, mock_plugins, capsys):
         """프로토콜 목록 오류 테스트"""
         mock_plugins.side_effect = Exception("테스트 오류")
@@ -62,9 +62,9 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "오류: 프로토콜 목록을 가져올 수 없습니다" in captured.err
 
-    @patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
-    @patch("app.protocols.mqtt.mqtt_protocol.BrokerConfig")
-    @patch("app.protocols.mqtt.mqtt_protocol.ClientConfig")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.MQTTProtocol")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.BrokerConfig")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.ClientConfig")
     def test_test_mqtt_success(self, mock_client_config, mock_broker_config, mock_mqtt, capsys):
         """MQTT 테스트 성공"""
         mock_mqtt_instance = MagicMock()
@@ -79,9 +79,9 @@ class TestCLI:
         assert "✓ 메시지 발행 성공" in captured.out
         assert "✓ 연결 해제 완료" in captured.out
 
-    @patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
-    @patch("app.protocols.mqtt.mqtt_protocol.BrokerConfig")
-    @patch("app.protocols.mqtt.mqtt_protocol.ClientConfig")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.MQTTProtocol")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.BrokerConfig")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.ClientConfig")
     def test_test_mqtt_connection_fail(
         self, mock_client_config, mock_broker_config, mock_mqtt, capsys
     ):
@@ -99,7 +99,7 @@ class TestCLI:
 
     def test_test_mqtt_import_error(self, capsys):
         """MQTT ImportError 테스트"""
-        with patch.dict("sys.modules", {"app.protocols.mqtt.mqtt_protocol": None}):
+        with patch.dict("sys.modules", {"eq1_network.protocols.mqtt.mqtt_protocol": None}):
             with pytest.raises(SystemExit) as exc_info:
                 cli_test_mqtt("localhost", 1883, "test/topic")
 
@@ -107,7 +107,7 @@ class TestCLI:
             captured = capsys.readouterr()
             assert "MQTT 프로토콜을 사용할 수 없습니다" in captured.err
 
-    @patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.MQTTProtocol")
     def test_test_mqtt_exception(self, mock_mqtt, capsys):
         """MQTT 예외 처리 테스트"""
         mock_mqtt.side_effect = Exception("테스트 오류")
@@ -119,9 +119,9 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "MQTT 테스트 실패" in captured.err
 
-    @patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
-    @patch("app.protocols.mqtt.mqtt_protocol.BrokerConfig")
-    @patch("app.protocols.mqtt.mqtt_protocol.ClientConfig")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.MQTTProtocol")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.BrokerConfig")
+    @patch("eq1_network.protocols.mqtt.mqtt_protocol.ClientConfig")
     def test_test_mqtt_publish_fail(
         self, mock_client_config, mock_broker_config, mock_mqtt, capsys
     ):
@@ -144,7 +144,7 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "usage:" in captured.out
 
-    @patch("app.cli.list_protocols")
+    @patch("eq1_network.cli.list_protocols")
     def test_main_list_protocols(self, mock_list):
         """list-protocols 명령어 테스트"""
         result = main(["list-protocols"])
@@ -152,7 +152,7 @@ class TestCLI:
         assert result == 0
         mock_list.assert_called_once()
 
-    @patch("app.cli.test_mqtt")
+    @patch("eq1_network.cli.test_mqtt")
     def test_main_test_mqtt(self, mock_test):
         """test-mqtt 명령어 테스트"""
         result = main(["test-mqtt", "--broker", "test.com", "--port", "8883", "--topic", "test"])
@@ -162,7 +162,7 @@ class TestCLI:
 
     def test_main_unknown_command_direct(self, capsys):
         """알 수 없는 명령어 직접 처리 테스트"""
-        with patch("app.cli.create_parser") as mock_parser:
+        with patch("eq1_network.cli.create_parser") as mock_parser:
             mock_parser_instance = MagicMock()
             mock_parser_instance.parse_args.return_value = MagicMock(command="unknown")
             mock_parser.return_value = mock_parser_instance
@@ -182,7 +182,7 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "invalid choice: 'unknown'" in captured.err
 
-    @patch("app.cli.list_protocols")
+    @patch("eq1_network.cli.list_protocols")
     def test_main_keyboard_interrupt(self, mock_list, capsys):
         """KeyboardInterrupt 처리 테스트"""
         mock_list.side_effect = KeyboardInterrupt()
@@ -193,7 +193,7 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "중단되었습니다." in captured.err
 
-    @patch("app.cli.list_protocols")
+    @patch("eq1_network.cli.list_protocols")
     def test_main_unexpected_error(self, mock_list, capsys):
         """예상치 못한 오류 처리 테스트"""
         mock_list.side_effect = Exception("예상치 못한 오류")
@@ -205,16 +205,16 @@ class TestCLI:
         assert "예상치 못한 오류" in captured.err
 
     @patch("sys.exit")
-    @patch("app.cli.__name__", "__main__")
+    @patch("eq1_network.cli.__name__", "__main__")
     def test_main_module_execution(self, mock_exit):
         """모듈 직접 실행 테스트"""
-        with patch("app.cli.main") as mock_main:
+        with patch("eq1_network.cli.main") as mock_main:
             mock_main.return_value = 0
 
             # __name__ == "__main__" 블록 시뮬레이션
-            if app.cli.__name__ == "__main__":
+            if eq1_network.cli.__name__ == "__main__":
                 import sys
 
-                sys.exit(app.cli.main())
+                sys.exit(eq1_network.cli.main())
 
             mock_exit.assert_called_once_with(0)

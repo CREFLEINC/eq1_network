@@ -55,7 +55,7 @@ class ComprehensiveSerialExample:
         
         try:
             self.serial_protocol = SerialProtocol(port_name, baud_rate, timeout=1)
-            ReqResManager.load("serial", self.serial_protocol)
+            ReqResManager.register("serial", self.serial_protocol)
             print(f"✓ 기본 시리얼 프로토콜 설정 완료: {port_name} @ {baud_rate} bps")
             return True
         except Exception as e:
@@ -68,7 +68,7 @@ class ComprehensiveSerialExample:
         
         try:
             self.serial_protocol = SerialProtocol(port_name, baud_rate, timeout=0.5)
-            ReqResManager.load("advanced_serial", self.serial_protocol)
+            ReqResManager.register("advanced_serial", self.serial_protocol)
             print(f"✓ 고급 시리얼 프로토콜 설정 완료: {port_name} @ {baud_rate} bps")
             print(f"  - 타임아웃: 0.5초")
             return True
@@ -99,7 +99,8 @@ class ComprehensiveSerialExample:
                 print(f"\n--- 메시지 {i} 전송 ---")
                 print(f"전송: {message.decode().strip()}")
                 
-                if ReqResManager.send("serial", message):
+                result = ReqResManager.send("serial", message)
+                if result > 0:
                     print("✓ 전송 성공")
                     
                     # 응답 대기
@@ -107,7 +108,7 @@ class ComprehensiveSerialExample:
                     time.sleep(0.5)
                     
                     # 응답 수신
-                    response = ReqResManager.receive("serial")
+                    response = ReqResManager.read("serial")
                     if response:
                         print(f"📨 응답: {response.decode().strip()}")
                         self.message_count += 1
@@ -162,12 +163,13 @@ class ComprehensiveSerialExample:
             test_data = struct.pack('<Iff', 12345, 3.14159, 2.71828)  # uint32, float, float
             print(f"📤 바이너리 데이터 전송: {test_data.hex()}")
             
-            if ReqResManager.send("advanced_serial", test_data):
+            result = ReqResManager.send("advanced_serial", test_data)
+            if result > 0:
                 print("✓ 바이너리 데이터 전송 성공")
                 
                 # 응답 대기
                 time.sleep(0.5)
-                response = ReqResManager.receive("advanced_serial")
+                response = ReqResManager.read("advanced_serial")
                 if response:
                     print(f"📨 바이너리 응답: {response.hex()}")
                     self.received_data.append(("binary", response, datetime.now()))
@@ -200,11 +202,12 @@ class ComprehensiveSerialExample:
                 print(f"\n--- HEX 명령어 {i} ---")
                 print(f"전송: {command.hex().upper()}")
                 
-                if ReqResManager.send("advanced_serial", command):
+                result = ReqResManager.send("advanced_serial", command)
+                if result > 0:
                     print("✓ HEX 명령어 전송 성공")
                     
                     time.sleep(0.5)
-                    response = ReqResManager.receive("advanced_serial")
+                    response = ReqResManager.read("advanced_serial")
                     if response:
                         print(f"📨 HEX 응답: {response.hex().upper()}")
                         self.received_data.append(("hex", response, datetime.now()))
@@ -228,7 +231,7 @@ class ComprehensiveSerialExample:
             count = 0
             while self.running and count < 10:
                 try:
-                    response = ReqResManager.receive("advanced_serial")
+                    response = ReqResManager.read("advanced_serial")
                     if response:
                         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                         print(f"[{timestamp}] 📨 수신: {response.hex().upper()}")
@@ -258,7 +261,8 @@ class ComprehensiveSerialExample:
                 test_data = f"MONITOR_{i:02d}\r\n".encode()
                 print(f"📤 모니터링 데이터 전송: {test_data.decode().strip()}")
                 
-                if ReqResManager.send("advanced_serial", test_data):
+                result = ReqResManager.send("advanced_serial", test_data)
+                if result > 0:
                     print("✓ 전송 성공")
                 else:
                     print("❌ 전송 실패")
@@ -304,18 +308,19 @@ class ComprehensiveSerialExample:
                     config['timeout']
                 )
                 
-                ReqResManager.load("config_test", serial_protocol)
+                ReqResManager.register("config_test", serial_protocol)
                 
                 if ReqResManager.connect("config_test"):
                     print("✓ 연결 성공")
                     
                     # 테스트 데이터 전송
                     test_message = f"CONFIG_{config['baud_rate']}\r\n".encode()
-                    if ReqResManager.send("config_test", test_message):
+                    result = ReqResManager.send("config_test", test_message)
+                    if result > 0:
                         print("✓ 전송 성공")
                         
                         time.sleep(0.5)
-                        response = ReqResManager.receive("config_test")
+                        response = ReqResManager.read("config_test")
                         if response:
                             print(f"📨 응답: {response.decode().strip()}")
                             self.message_count += 1
@@ -339,7 +344,7 @@ class ComprehensiveSerialExample:
         print("1. 존재하지 않는 포트 연결 테스트")
         try:
             bad_protocol = SerialProtocol("/dev/nonexistent", 9600, timeout=1)
-            ReqResManager.load("bad_serial", bad_protocol)
+            ReqResManager.register("bad_serial", bad_protocol)
             
             if not ReqResManager.connect("bad_serial"):
                 print("❌ 예상된 연결 실패")
@@ -356,7 +361,7 @@ class ComprehensiveSerialExample:
             try:
                 port_name = available_ports[0]
                 serial_protocol = SerialProtocol(port_name, 9600, timeout=1)
-                ReqResManager.load("error_test", serial_protocol)
+                ReqResManager.register("error_test", serial_protocol)
                 
                 if ReqResManager.connect("error_test"):
                     # None 데이터 전송 시도
@@ -470,7 +475,7 @@ def quick_serial_test():
         
         # 간단한 시리얼 테스트
         serial_protocol = SerialProtocol(port_name, 9600, timeout=1)
-        ReqResManager.load("quick_serial", serial_protocol)
+        ReqResManager.register("quick_serial", serial_protocol)
         
         if ReqResManager.connect("quick_serial"):
             test_message = b"Quick Test\r\n"
@@ -478,7 +483,7 @@ def quick_serial_test():
                 print("✓ 전송 성공")
                 
                 time.sleep(0.5)
-                response = ReqResManager.receive("quick_serial")
+                response = ReqResManager.read("quick_serial")
                 if response:
                     print(f"📨 응답: {response.decode().strip()}")
                 else:

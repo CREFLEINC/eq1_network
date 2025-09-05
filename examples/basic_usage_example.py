@@ -23,7 +23,7 @@ def basic_mqtt_example():
     mqtt = MQTTProtocol(config)
     
     # 2. 매니저에 등록
-    PubSubManager.load("mqtt", mqtt)
+    PubSubManager.register("mqtt", mqtt)
     
     # 3. 연결
     if PubSubManager.connect("mqtt"):
@@ -56,7 +56,7 @@ def basic_tcp_example():
     tcp_client = TCPClient("localhost", 8080)
     
     # 2. 매니저에 등록
-    ReqResManager.load("tcp_client", tcp_client)
+    ReqResManager.register("tcp_client", tcp_client)
     
     # 3. 연결
     if ReqResManager.connect("tcp_client"):
@@ -64,11 +64,12 @@ def basic_tcp_example():
         
         # 4. 데이터 전송
         message = "Hello TCP Server!"
-        if ReqResManager.send("tcp_client", message.encode()):
+        result = ReqResManager.send("tcp_client", message.encode())
+        if result > 0:
             print(f"✓ 메시지 전송: {message}")
         
         # 5. 응답 수신
-        response = ReqResManager.receive("tcp_client")
+        response = ReqResManager.read("tcp_client")
         if response:
             print(f"📨 응답 수신: {response.decode()}")
         
@@ -89,9 +90,9 @@ def protocol_management_example():
     tcp_client = TCPClient("localhost", 8080)
     
     # 매니저에 등록
-    PubSubManager.load("mqtt_primary", mqtt1)
-    PubSubManager.load("mqtt_backup", mqtt2)
-    ReqResManager.load("tcp_client", tcp_client)
+    PubSubManager.register("mqtt_primary", mqtt1)
+    PubSubManager.register("mqtt_backup", mqtt2)
+    ReqResManager.register("tcp_client", tcp_client)
     
     # 등록된 프로토콜 확인
     print("등록된 Pub/Sub 프로토콜:")

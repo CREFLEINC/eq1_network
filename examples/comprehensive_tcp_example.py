@@ -30,12 +30,12 @@ class ComprehensiveTCPExample:
         try:
             # TCP 클라이언트 생성
             self.tcp_client = TCPClient("localhost", 8080, timeout=1)
-            ReqResManager.load("tcp_client", self.tcp_client)
+            ReqResManager.register("tcp_client", self.tcp_client)
             print("✓ 기본 TCP 클라이언트 설정 완료: localhost:8080")
             
             # TCP 서버 생성
             self.tcp_server = TCPServer("localhost", 8081, timeout=1)
-            ReqResManager.load("tcp_server", self.tcp_server)
+            ReqResManager.register("tcp_server", self.tcp_server)
             print("✓ 기본 TCP 서버 설정 완료: localhost:8081")
             
             return True
@@ -50,11 +50,11 @@ class ComprehensiveTCPExample:
         try:
             # 다양한 포트로 고급 설정
             advanced_client = TCPClient("localhost", 8082, timeout=0.5)
-            ReqResManager.load("advanced_client", advanced_client)
+            ReqResManager.register("advanced_client", advanced_client)
             print("✓ 고급 TCP 클라이언트 설정 완료: localhost:8082")
             
             advanced_server = TCPServer("localhost", 8083, timeout=0.5)
-            ReqResManager.load("advanced_server", advanced_server)
+            ReqResManager.register("advanced_server", advanced_server)
             print("✓ 고급 TCP 서버 설정 완료: localhost:8083")
             
             return True
@@ -445,11 +445,11 @@ class ComprehensiveTCPExample:
             try:
                 # 서버 생성
                 server = TCPServer(config['host'], config['port'], config['timeout'])
-                ReqResManager.load(f"test_server_{config['port']}", server)
+                ReqResManager.register(f"test_server_{config['port']}", server)
                 
                 # 클라이언트 생성
                 client = TCPClient(config['host'], config['port'], config['timeout'])
-                ReqResManager.load(f"test_client_{config['port']}", client)
+                ReqResManager.register(f"test_client_{config['port']}", client)
                 
                 # 연결 테스트
                 if ReqResManager.connect(f"test_server_{config['port']}"):
@@ -460,11 +460,12 @@ class ComprehensiveTCPExample:
                         
                         # 간단한 테스트
                         test_message = f"TEST_{config['port']}".encode()
-                        if ReqResManager.send(f"test_client_{config['port']}", test_message):
+                        result = ReqResManager.send(f"test_client_{config['port']}", test_message)
+                        if result > 0:
                             print("✓ 테스트 메시지 전송 성공")
                             
                             time.sleep(0.5)
-                            response = ReqResManager.receive(f"test_client_{config['port']}")
+                            response = ReqResManager.read(f"test_client_{config['port']}")
                             if response:
                                 print(f"📨 테스트 응답: {response.decode()}")
                                 self.message_count += 1
@@ -488,7 +489,7 @@ class ComprehensiveTCPExample:
         print("1. 존재하지 않는 서버 연결 테스트")
         try:
             bad_client = TCPClient("192.168.1.999", 9999, timeout=1)
-            ReqResManager.load("bad_client", bad_client)
+            ReqResManager.register("bad_client", bad_client)
             
             if not ReqResManager.connect("bad_client"):
                 print("❌ 예상된 연결 실패")
@@ -502,7 +503,7 @@ class ComprehensiveTCPExample:
         print("\n2. 잘못된 데이터 전송 테스트")
         try:
             test_client = TCPClient("localhost", 8087, timeout=1)
-            ReqResManager.load("error_test_client", test_client)
+            ReqResManager.register("error_test_client", test_client)
             
             if ReqResManager.connect("error_test_client"):
                 # None 데이터 전송 시도
@@ -597,8 +598,8 @@ def quick_tcp_test():
         server = TCPServer("localhost", 8088, timeout=1)
         client = TCPClient("localhost", 8088, timeout=1)
         
-        ReqResManager.load("quick_server", server)
-        ReqResManager.load("quick_client", client)
+        ReqResManager.register("quick_server", server)
+        ReqResManager.register("quick_client", client)
         
         # 서버 연결
         if ReqResManager.connect("quick_server"):
@@ -610,11 +611,12 @@ def quick_tcp_test():
                 
                 # 테스트 메시지
                 test_message = b"Quick TCP Test"
-                if ReqResManager.send("quick_client", test_message):
+                result = ReqResManager.send("quick_client", test_message)
+                if result > 0:
                     print("✓ 메시지 전송 성공")
                     
                     time.sleep(0.5)
-                    response = ReqResManager.receive("quick_client")
+                    response = ReqResManager.read("quick_client")
                     if response:
                         print(f"📨 응답: {response.decode()}")
                     else:

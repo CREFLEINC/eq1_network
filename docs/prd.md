@@ -76,6 +76,7 @@ flowchart TD
 - NetworkHandler 클래스 구현
 - Listener/Requester 워커 모듈 구현
 - ReqResManager/PubSubManager 구현
+- MessageFactory 및 통신 예시 유틸리티
 
 ### 제외 사항
 - UI (GUI, Web)
@@ -100,6 +101,7 @@ flowchart TD
 | **F-13** | **NetworkHandler 클래스 구현** | - `send`, `receive` 메서드가 포함된 클래스 구축<br/>- Listener, Requester 워커 모듈과 연동 |
 | **F-14** | **워커 모듈 구현** | - Listener: 수신 처리 스레드<br/>- Requester: 송신 처리 스레드<br/>- 이벤트 기반 콜백 처리 |
 | **F-15** | **매니저 시스템 구현** | - ReqResManager: ReqRes 프로토콜 통합 관리<br/>  - `register(name, protocol)`: 프로토콜 등록<br/>  - `send(name, data) -> int`: 데이터 전송 (전송된 바이트 수 반환)<br/>  - `read(name) -> bytes`: 데이터 수신 (bytes 반환)<br/>- PubSubManager: PubSub 프로토콜 통합 관리<br/>  - `register(name, protocol)`: 프로토콜 등록<br/>  - `publish(name, topic, message)`: 메시지 발행<br/>  - `subscribe(name, topic, callback)`: 토픽 구독<br/>- 플러그인 등록/관리 기능 |
+| **F-16** | **MessageFactory 구현** | - 다양한 타입의 네트워크 메시지 생성 팩토리<br/>  - `create_text_message()`: 텍스트 메시지 생성<br/>  - `create_binary_message()`: 바이너리 메시지 생성<br/>  - `create_int_message()`: 정수 메시지 생성<br/>- 통신 예시 함수들<br/>  - `example_text_communication()`: 텍스트 통신 예시<br/>  - `example_binary_communication()`: 바이너리 통신 예시<br/>  - `example_int_communication()`: 정수 통신 예시<br/>  - `example_multi_packet_handling()`: 다중 패킷 처리 예시 |
 
 ## 비기능 요구사항
 | ID | 요구사항 | 상세 |
@@ -261,6 +263,22 @@ modbus = ModbusProtocol("192.168.0.10", 502)
 modbus.connect()
 modbus.send(b"PING")
 resp = modbus.read()
+```
+
+### MessageFactory 사용 예시
+```python
+# 메시지 생성 및 통신 예시
+from eq1_network.examples.data.data_utils import MessageFactory, example_text_communication
+from eq1_network.examples.data.dataset import MessageType
+
+# 다양한 타입의 메시지 생성
+text_msg = MessageFactory.create_text_message("msg001", MessageType.COMMAND, "client", "server", "Hello")
+binary_msg = MessageFactory.create_binary_message("msg002", MessageType.DATA, "sensor", "controller", b"\x01\x02")
+int_msg = MessageFactory.create_int_message("msg003", MessageType.STATUS, "device", "monitor", 42)
+
+# 통신 예시 실행
+packet, received = example_text_communication()
+print(f"Packet: {packet}, Received: {received}")
 ```
 
 ### PacketStructure 사용 예시

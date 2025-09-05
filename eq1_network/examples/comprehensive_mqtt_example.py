@@ -297,9 +297,42 @@ class ComprehensiveMQTTExample:
         except Exception as e:
             print(f"❌ 주기적 발행 오류: {e}")
     
+    def data_utils_example(self):
+        """data_utils.py 사용 예제"""
+        print("\n=== 9. data_utils.py 사용 예제 ===")
+        
+        try:
+            from eq1_network.examples.data.data_utils import (
+                MessageFactory, 
+                example_text_communication
+            )
+            from eq1_network.examples.data.dataset import MessageType
+            
+            # MessageFactory로 메시지 생성
+            text_msg = MessageFactory.create_text_message(
+                "mqtt_001", MessageType.COMMAND, "mqtt_client", "mqtt_server", "MQTT Hello"
+            )
+            
+            print(f"✓ 생성된 메시지: {text_msg.msg_id} -> {text_msg.payload}")
+            
+            # MQTT로 메시지 발행
+            self.mqtt.publish("data_utils/test", text_msg.payload)
+            print("✓ data_utils 메시지 MQTT로 발행 완료")
+            
+            # 통신 예시 실행
+            packet, received = example_text_communication()
+            print(f"✓ 텍스트 통신 예시: 패킷 크기 {len(packet)} bytes")
+            
+            time.sleep(1)
+            
+        except ImportError as e:
+            print(f"❌ data_utils 모듈 임포트 실패: {e}")
+        except Exception as e:
+            print(f"❌ data_utils 예제 오류: {e}")
+    
     def error_handling_example(self):
         """오류 처리 예제"""
-        print("\n=== 9. 오류 처리 예제 ===")
+        print("\n=== 10. 오류 처리 예제 ===")
         
         try:
             # 잘못된 브로커 주소로 연결 시도
@@ -344,6 +377,7 @@ class ComprehensiveMQTTExample:
             self.qos_example()
             self.retain_message_example()
             self.periodic_publisher()
+            self.data_utils_example()
             self.error_handling_example()
             
             # 5. 결과 요약

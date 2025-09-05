@@ -310,12 +310,29 @@ class RedisProtocol(PubSubProtocol):
 
 ## 예제 코드
 
+### 메시지 팩토리 및 통신 예시
+`data_utils.py`에서 제공하는 메시지 생성 및 통신 예시:
+
+```python
+from eq1_network.examples.data.data_utils import MessageFactory, example_text_communication
+
+# 메시지 생성
+text_msg = MessageFactory.create_text_message("msg001", MessageType.COMMAND, "client", "server", "Hello")
+binary_msg = MessageFactory.create_binary_message("msg002", MessageType.DATA, "sensor", "controller", b"\x01\x02")
+int_msg = MessageFactory.create_int_message("msg003", MessageType.STATUS, "device", "monitor", 42)
+
+# 통신 예시 실행
+packet, received = example_text_communication()
+print(f"Packet: {packet}, Received: {received}")
+```
+
 ### 종합 예제
 프로젝트에는 각 프로토콜별 종합 예제가 포함되어 있습니다:
 
 - `examples/comprehensive_mqtt_example.py` - MQTT 종합 예제
 - `examples/comprehensive_tcp_example.py` - TCP 종합 예제
 - `examples/comprehensive_serial_example.py` - Serial 종합 예제
+- `examples/data/data_utils.py` - 메시지 생성 및 통신 유틸리티
 
 ### TCP 클라이언트-서버 예제
 ```python

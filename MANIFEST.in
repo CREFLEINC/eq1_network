@@ -4,7 +4,10 @@ include eq1_network/py.typed
 recursive-include docs *.md *.png
 recursive-include examples *.py
 recursive-include tests *.py
+recursive-include eq1_network *
+recursive-include examples *
 
+recursive-exclude * *.py[co]
 recursive-exclude .git *
 recursive-exclude __pycache__ *
 recursive-exclude *.egg-info *

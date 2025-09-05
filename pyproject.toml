@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eq1-network"
-version = "1.0.8"
+version = "1.0.10"
 description = "Plugin-based Communication Framework"
 readme = "docs/README.md"
 license = {file = "LICENSE"}
@@ -55,7 +55,8 @@ Issues = "https://github.com/eq1-team/eq1-network/issues"
 eq1-network = "eq1_network.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["eq1_network*"]
+where = ["."]
+include = ["eq1_network*", "examples*", "tests*", "docs*"]
 
 [tool.setuptools.package-data]
 eq1_network = ["py.typed"]

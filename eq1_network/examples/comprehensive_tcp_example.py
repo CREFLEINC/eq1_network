@@ -481,9 +481,57 @@ class ComprehensiveTCPExample:
             except Exception as e:
                 print(f"❌ 연결 테스트 오류: {e}")
     
+    def data_utils_example(self):
+        """data_utils.py 사용 예제"""
+        print("\n=== 8. data_utils.py 사용 예제 ===")
+        
+        try:
+            from eq1_network.examples.data.data_utils import (
+                MessageFactory,
+                example_text_communication,
+                example_binary_communication
+            )
+            from eq1_network.examples.data.dataset import MessageType
+            
+            # MessageFactory로 메시지 생성
+            text_msg = MessageFactory.create_text_message(
+                "tcp_001", MessageType.COMMAND, "tcp_client", "tcp_server", "TCP Hello"
+            )
+            binary_msg = MessageFactory.create_binary_message(
+                "tcp_002", MessageType.DATA, "sensor", "tcp_controller", b"\x01\x02\x03"
+            )
+            
+            print(f"✓ 생성된 메시지:")
+            print(f"  - 텍스트: {text_msg.msg_id} -> {text_msg.payload}")
+            print(f"  - 바이너리: {binary_msg.msg_id} -> {binary_msg.payload.hex()}")
+            
+            # TCP로 메시지 전송 예시
+            if ReqResManager.connect("tcp_client"):
+                result = ReqResManager.send("tcp_client", text_msg.payload.encode())
+                if result > 0:
+                    print("✓ data_utils 텍스트 메시지 TCP로 전송 완료")
+                
+                result = ReqResManager.send("tcp_client", binary_msg.payload)
+                if result > 0:
+                    print("✓ data_utils 바이너리 메시지 TCP로 전송 완료")
+                
+                ReqResManager.disconnect("tcp_client")
+            
+            # 통신 예시 실행
+            packet, received = example_text_communication()
+            print(f"✓ 텍스트 통신 예시: 패킷 크기 {len(packet)} bytes")
+            
+            packet, received = example_binary_communication()
+            print(f"✓ 바이너리 통신 예시: 패킷 크기 {len(packet)} bytes")
+            
+        except ImportError as e:
+            print(f"❌ data_utils 모듈 임포트 실패: {e}")
+        except Exception as e:
+            print(f"❌ data_utils 예제 오류: {e}")
+    
     def error_handling_example(self):
         """오류 처리 예제"""
-        print("\n=== 8. 오류 처리 예제 ===")
+        print("\n=== 9. 오류 처리 예제 ===")
         
         # 1. 존재하지 않는 서버 연결 시도
         print("1. 존재하지 않는 서버 연결 테스트")
@@ -567,6 +615,7 @@ class ComprehensiveTCPExample:
             self.binary_data_example()
             self.continuous_monitoring()
             self.connection_test_example()
+            self.data_utils_example()
             self.error_handling_example()
             self.data_analysis_example()
             

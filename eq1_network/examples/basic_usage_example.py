@@ -9,7 +9,6 @@ from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig,
 from eq1_network.protocols.ethernet.tcp_client import TCPClient
 from eq1_network.protocols.ethernet.tcp_server import TCPServer
 
-
 def basic_mqtt_example():
     """MQTT 기본 사용법"""
     print("=== MQTT 기본 사용법 ===")
@@ -81,6 +80,50 @@ def basic_tcp_example():
         print("❌ TCP 클라이언트 연결 실패")
 
 
+def data_utils_example():
+    """data_utils.py 사용 예제"""
+    print("\n=== data_utils.py 사용 예제 ===")
+    
+    try:
+        from eq1_network.examples.data.data_utils import (
+            MessageFactory, 
+            example_text_communication,
+            example_binary_communication,
+            example_int_communication,
+            example_multi_packet_handling
+        )
+        from eq1_network.examples.data.dataset import MessageType
+        
+        # 메시지 팩토리 사용
+        print("1. MessageFactory 사용")
+        text_msg = MessageFactory.create_text_message("msg001", MessageType.COMMAND, "client", "server", "Hello")
+        binary_msg = MessageFactory.create_binary_message("msg002", MessageType.DATA, "sensor", "controller", b"\x01\x02")
+        int_msg = MessageFactory.create_int_message("msg003", MessageType.STATUS, "device", "monitor", 42)
+        
+        print(f"✓ 텍스트 메시지: {text_msg.msg_id} - {text_msg.payload}")
+        print(f"✓ 바이너리 메시지: {binary_msg.msg_id} - {binary_msg.payload.hex()}")
+        print(f"✓ 정수 메시지: {int_msg.msg_id} - {int_msg.payload}")
+        
+        # 통신 예시 실행
+        print("\n2. 통신 예시 실행")
+        packet, _ = example_text_communication()
+        print(f"✓ 텍스트 통신: 패킷 크기 {len(packet)} bytes")
+        
+        packet, _ = example_binary_communication()
+        print(f"✓ 바이너리 통신: 패킷 크기 {len(packet)} bytes")
+        
+        packet, _ = example_int_communication()
+        print(f"✓ 정수 통신: 패킷 크기 {len(packet)} bytes")
+        
+        results = example_multi_packet_handling()
+        print(f"✓ 다중 패킷 처리: {len(results)}개 메시지 처리")
+        
+    except ImportError as e:
+        print(f"❌ data_utils 모듈 임포트 실패: {e}")
+    except Exception as e:
+        print(f"❌ data_utils 예제 오류: {e}")
+
+
 def protocol_management_example():
     """프로토콜 관리 예제"""
     print("\n=== 프로토콜 관리 예제 ===")
@@ -119,6 +162,7 @@ if __name__ == "__main__":
     # 기본 사용법 예제들
     basic_mqtt_example()
     basic_tcp_example()
+    data_utils_example()
     protocol_management_example()
     
     print("\n" + "=" * 50)

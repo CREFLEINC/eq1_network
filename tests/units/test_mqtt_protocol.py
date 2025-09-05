@@ -422,8 +422,12 @@ def test_unsubscribe_specific_callback(protocol_factory, mode):
     특정 콜백 제거 테스트
     """
     protocol, client = protocol_factory(mode)
-    callback1 = func
-    callback2 = func
+    
+    def callback1(t, m):
+        return "callback1"
+    
+    def callback2(t, m):
+        return "callback2"
 
     client.subscribe.return_value = (0, 1)
     protocol.subscribe("topic", callback1)
@@ -446,11 +450,16 @@ def test_unsubscribe_callback_not_in_list(protocol_factory, mode):
     """
     콜백이 리스트에 없을 때 unsubscribe 테스트
     """
-    protocol, _ = protocol_factory(mode)
-    callback1 = func
-    callback2 = func
+    protocol, client = protocol_factory(mode)
+    
+    def callback1(t, m):
+        return "callback1"
+    
+    def callback2(t, m):
+        return "callback2"
 
     protocol._subscriptions["topic"] = [callback1]
+    client.unsubscribe.return_value = (0, 1)  # Mock 반환값 설정
     assert protocol.unsubscribe("topic", callback2) is True
     assert "topic" in protocol._subscriptions
     assert callback1 in protocol._subscriptions["topic"]

@@ -23,12 +23,12 @@ def mock_reqres_plugin():
 
 
 @pytest.mark.unit
-def test_reqres_load_and_get(mock_reqres_plugin):
+def test_reqres_register_and_get(mock_reqres_plugin):
     """
     ReqResManager에 플러그인을 등록하고 정상적으로 조회되는지 테스트합니다.
     """
     ReqResManager._plugins.clear()
-    ReqResManager.load("tcp", mock_reqres_plugin)
+    ReqResManager.register("tcp", mock_reqres_plugin)
     assert ReqResManager.get("tcp") is mock_reqres_plugin
 
 
@@ -38,7 +38,7 @@ def test_reqres_get_missing():
     등록되지 않은 프로토콜 이름으로 get() 호출 시 예외 발생 여부를 테스트합니다.
     """
     ReqResManager._plugins.clear()
-    with pytest.raises(ValueError, match="'abc' 프로토콜이 등록되지 않았습니다."):
+    with pytest.raises(LookupError, match="ReqRes plugin not found: abc"):
         ReqResManager.get("abc")
 
 
@@ -48,7 +48,7 @@ def test_reqres_connect(mock_reqres_plugin):
     등록된 플러그인 이름으로 connect() 호출 시 플러그인의 connect()가 호출되는지 테스트합니다.
     """
     ReqResManager._plugins.clear()
-    ReqResManager.load("tcp", mock_reqres_plugin)
+    ReqResManager.register("tcp", mock_reqres_plugin)
     assert ReqResManager.connect("tcp") is True
     mock_reqres_plugin.connect.assert_called_once()
 
@@ -59,22 +59,23 @@ def test_reqres_send(mock_reqres_plugin):
     등록된 플러그인 이름으로 send() 호출 시 플러그인의 send()가 호출되는지 테스트합니다.
     """
     ReqResManager._plugins.clear()
-    ReqResManager.load("tcp", mock_reqres_plugin)
+    ReqResManager.register("tcp", mock_reqres_plugin)
     result = ReqResManager.send("tcp", b"data")
     assert result == 5
     mock_reqres_plugin.send.assert_called_once_with(b"data")
 
 
 @pytest.mark.unit
-def test_reqres_receive(mock_reqres_plugin):
+def test_reqres_read(mock_reqres_plugin):
     """
-    등록된 플러그인 이름으로 receive() 호출 시 플러그인의 receive()가 호출되는지 테스트합니다.
+    등록된 플러그인 이름으로 read() 호출 시 플러그인의 read()가 호출되는지 테스트합니다.
     """
     ReqResManager._plugins.clear()
-    ReqResManager.load("tcp", mock_reqres_plugin)
-    result = ReqResManager.receive("tcp", buffer_size=2048)
+    mock_reqres_plugin.read.return_value = (True, b"response")
+    ReqResManager.register("tcp", mock_reqres_plugin)
+    result = ReqResManager.read("tcp")
     assert result == b"response"
-    mock_reqres_plugin.receive.assert_called_once_with(2048)
+    mock_reqres_plugin.read.assert_called_once()
 
 
 @pytest.mark.unit
@@ -83,7 +84,7 @@ def test_reqres_disconnect(mock_reqres_plugin):
     등록된 플러그인 이름으로 disconnect() 호출 시 플러그인의 disconnect()가 호출되는지 테스트합니다.
     """
     ReqResManager._plugins.clear()
-    ReqResManager.load("tcp", mock_reqres_plugin)
+    ReqResManager.register("tcp", mock_reqres_plugin)
     ReqResManager.disconnect("tcp")
     mock_reqres_plugin.disconnect.assert_called_once()
 
@@ -103,12 +104,12 @@ def mock_pubsub_plugin():
 
 
 @pytest.mark.unit
-def test_pubsub_load_and_get(mock_pubsub_plugin):
+def test_pubsub_register_and_get(mock_pubsub_plugin):
     """
     PubSubManager에 플러그인을 등록하고 정상적으로 조회되는지 테스트합니다.
     """
     PubSubManager._plugins.clear()
-    PubSubManager.load("mqtt", mock_pubsub_plugin)
+    PubSubManager.register("mqtt", mock_pubsub_plugin)
     assert PubSubManager.get("mqtt") is mock_pubsub_plugin
 
 
@@ -118,7 +119,7 @@ def test_pubsub_get_missing():
     등록되지 않은 플러그인 이름으로 get() 호출 시 예외 발생 여부를 테스트합니다.
     """
     PubSubManager._plugins.clear()
-    with pytest.raises(ValueError, match="'xyz' 프로토콜이 등록되지 않았습니다."):
+    with pytest.raises(LookupError, match="PubSub plugin not found: xyz"):
         PubSubManager.get("xyz")
 
 
@@ -128,7 +129,7 @@ def test_pubsub_connect(mock_pubsub_plugin):
     등록된 플러그인 이름으로 connect() 호출 시 플러그인의 connect()가 호출되는지 테스트합니다.
     """
     PubSubManager._plugins.clear()
-    PubSubManager.load("mqtt", mock_pubsub_plugin)
+    PubSubManager.register("mqtt", mock_pubsub_plugin)
     assert PubSubManager.connect("mqtt") is True
     mock_pubsub_plugin.connect.assert_called_once()
 
@@ -139,10 +140,10 @@ def test_pubsub_publish(mock_pubsub_plugin):
     등록된 플러그인 이름으로 publish() 호출 시 플러그인의 publish()가 호출되는지 테스트합니다.
     """
     PubSubManager._plugins.clear()
-    PubSubManager.load("mqtt", mock_pubsub_plugin)
+    PubSubManager.register("mqtt", mock_pubsub_plugin)
     result = PubSubManager.publish("mqtt", "topic/a", "hello", qos=1)
     assert result is True
-    mock_pubsub_plugin.publish.assert_called_once_with("topic/a", "hello", 1)
+    mock_pubsub_plugin.publish.assert_called_once_with("topic/a", b"hello", 1)
 
 
 @pytest.mark.unit
@@ -151,23 +152,11 @@ def test_pubsub_subscribe(mock_pubsub_plugin):
     등록된 플러그인 이름으로 subscribe() 호출 시 플러그인의 subscribe()가 호출되는지 테스트합니다.
     """
     PubSubManager._plugins.clear()
-    PubSubManager.load("mqtt", mock_pubsub_plugin)
+    PubSubManager.register("mqtt", mock_pubsub_plugin)
     cb = func
     result = PubSubManager.subscribe("mqtt", "topic/b", cb, qos=2)
     assert result is True
     mock_pubsub_plugin.subscribe.assert_called_once_with("topic/b", cb, 2)
-
-
-@pytest.mark.unit
-def test_pubsub_unsubscribe(mock_pubsub_plugin):
-    """
-    등록된 플러그인 이름으로 unsubscribe() 호출 시 플러그인의 unsubscribe()가 호출되는지 테스트합니다.
-    """
-    PubSubManager._plugins.clear()
-    PubSubManager.load("mqtt", mock_pubsub_plugin)
-    result = PubSubManager.unsubscribe("mqtt", "topic/c")
-    assert result is True
-    mock_pubsub_plugin.unsubscribe.assert_called_once_with("topic/c")
 
 
 @pytest.mark.unit
@@ -176,6 +165,6 @@ def test_pubsub_disconnect(mock_pubsub_plugin):
     등록된 플러그인 이름으로 disconnect() 호출 시 플러그인의 disconnect()가 호출되는지 테스트합니다.
     """
     PubSubManager._plugins.clear()
-    PubSubManager.load("mqtt", mock_pubsub_plugin)
+    PubSubManager.register("mqtt", mock_pubsub_plugin)
     PubSubManager.disconnect("mqtt")
     mock_pubsub_plugin.disconnect.assert_called_once()

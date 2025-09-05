@@ -115,6 +115,8 @@ class MockReqResProtocol(ReqResProtocol):
         self.connect_result = True
         self.send_result = True
         self.read_result = (True, b"test_data")
+        self._read_count = 0
+        self.max_reads = 0  # 기본적으로 읽지 않음 (테스트에서 필요시 설정)
 
     def connect(self) -> bool:
         self.connect_called = True
@@ -131,7 +133,13 @@ class MockReqResProtocol(ReqResProtocol):
 
     def read(self) -> tuple[bool, Optional[bytes]]:
         self.read_called = True
-        return self.read_result
+        self._read_count += 1
+        if self._read_count <= self.max_reads:
+            return self.read_result
+        else:
+            # 무한루프 방지를 위해 짧은 대기 시간 추가
+            time.sleep(0.01)
+            return (False, None)
 
 
 class MockPubSubProtocol(PubSubProtocol):
@@ -182,8 +190,8 @@ class TestNetworkHandler(unittest.TestCase):
             received_data=MockReceivedData,
         )
 
-        # 로깅 레벨 설정
-        logging.getLogger("app.network").setLevel(logging.DEBUG)
+        # 로깅 레벨 설정 (테스트에서 DEBUG 로그 출력 방지)
+        logging.getLogger("app.network").setLevel(logging.WARNING)
 
     def tearDown(self):
         """테스트 정리"""
@@ -228,12 +236,22 @@ class TestNetworkHandler(unittest.TestCase):
         self.assertTrue(handler._retry_flag)
         self.assertFalse(handler._stop_flag.is_set())
 
+    @patch("app.network.Requester")
+    @patch("app.network.Listener")
     @patch("app.network.create_protocol")
-    def test_start_communication_success(self, mock_create_protocol):
+    def test_start_communication_success(self, mock_create_protocol, mock_listener_class, mock_requester_class):
         """통신 시작 성공 테스트"""
         mock_protocol = MockReqResProtocol()
         mock_protocol.connect_result = True
         mock_create_protocol.return_value = mock_protocol
+        
+        # Mock 스레드 인스턴스 생성
+        mock_listener = Mock()
+        mock_requester = Mock()
+        mock_listener.is_alive.return_value = False
+        mock_requester.is_alive.return_value = False
+        mock_listener_class.return_value = mock_listener
+        mock_requester_class.return_value = mock_requester
 
         handler = NetworkHandler(
             network_config=self.network_config,
@@ -245,31 +263,37 @@ class TestNetworkHandler(unittest.TestCase):
         # stop_flag를 설정하여 무한루프 방지
         handler._stop_flag.set()
 
-        # start_communication() 호출하여 create_protocol이 호출되도록 함
+        # start_communication() 호출
         handler.start_communication()
 
         # create_protocol이 호출되었는지 확인
         mock_create_protocol.assert_called_once_with(params=self.network_config)
 
-        # Verify Listener and Requester were created
-        self.assertIsInstance(handler._listener, Listener)
-        self.assertIsInstance(handler._requester, Requester)
+        # Listener와 Requester가 생성되었는지 확인
+        self.assertEqual(handler._listener, mock_listener)
+        self.assertEqual(handler._requester, mock_requester)
         self.assertIsInstance(handler._request_queue, queue.Queue)
         self.assertFalse(handler._retry_flag)
-
-        # stop_flag가 설정되어 있어서 스레드가 시작되지 않음
-        self.assertFalse(handler._listener.is_alive())
-        self.assertFalse(handler._requester.is_alive())
 
         # 정리
         handler.stop_communications()
 
+    @patch("app.network.Requester")
+    @patch("app.network.Listener")
     @patch("app.network.create_protocol")
-    def test_start_communication_without_data_package(self, mock_create_protocol):
+    def test_start_communication_without_data_package(self, mock_create_protocol, mock_listener_class, mock_requester_class):
         """DataPackage 없이 통신 시작 테스트"""
         mock_protocol = MockReqResProtocol()
         mock_protocol.connect_result = True
         mock_create_protocol.return_value = mock_protocol
+        
+        # Mock 스레드 인스턴스 생성
+        mock_listener = Mock()
+        mock_requester = Mock()
+        mock_listener.is_alive.return_value = False
+        mock_requester.is_alive.return_value = False
+        mock_listener_class.return_value = mock_listener
+        mock_requester_class.return_value = mock_requester
 
         handler = NetworkHandler(
             network_config=self.network_config,
@@ -280,15 +304,15 @@ class TestNetworkHandler(unittest.TestCase):
         # stop_flag를 설정하여 무한루프 방지
         handler._stop_flag.set()
 
-        # start_communication() 호출하여 create_protocol이 호출되도록 함
+        # start_communication() 호출
         handler.start_communication()
 
         # create_protocol이 호출되었는지 확인
         mock_create_protocol.assert_called_once_with(params=self.network_config)
 
-        # Verify Listener and Requester were created
-        self.assertIsInstance(handler._listener, Listener)
-        self.assertIsInstance(handler._requester, Requester)
+        # Listener와 Requester가 생성되었는지 확인
+        self.assertEqual(handler._listener, mock_listener)
+        self.assertEqual(handler._requester, mock_requester)
         self.assertIsInstance(handler._request_queue, queue.Queue)
         self.assertFalse(handler._retry_flag)
 

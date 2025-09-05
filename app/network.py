@@ -91,11 +91,11 @@ class NetworkHandler(threading.Thread, ListenerEvent, RequesterEvent):
         self._retry_flag = False
 
     def stop_communications(self):
-        if isinstance(self._listener, Listener) and self._listener.is_alive():
+        if self._listener and hasattr(self._listener, 'is_alive') and self._listener.is_alive():
             self._listener.stop()
             self._listener.join()
 
-        if isinstance(self._requester, Requester) and self._requester.is_alive():
+        if self._requester and hasattr(self._requester, 'is_alive') and self._requester.is_alive():
             self._requester.stop()
             self._requester.join()
 

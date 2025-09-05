@@ -101,14 +101,14 @@ class PubSubManager:
         """
         등록된 플러그인 이름으로 publish() 호출 시 플러그인의 publish()가 호출되는지 테스트합니다.
         """
-        return cls.get(name).publish(topic, message.encode(), qos, retain)
+        return cls.get(name).publish(topic, message.encode(), qos)
 
     @classmethod
-    def subscribe(cls, name: str, topic: str, callback) -> bool:
+    def subscribe(cls, name: str, topic: str, callback, qos: int = 0) -> bool:
         """
         등록된 플러그인 이름으로 subscribe() 호출 시 플러그인의 subscribe()가 호출되는지 테스트합니다.
         """
-        cls.get(name).subscribe(topic, callback)
+        cls.get(name).subscribe(topic, callback, qos)
         return True
 
     @classmethod

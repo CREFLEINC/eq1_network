@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eq1-network"
-version = "1.0.15"
+version = "1.0.19"
 description = "Plugin-based Communication Framework"
 readme = "docs/README.md"
 license = {file = "LICENSE"}
@@ -55,18 +55,20 @@ Issues = "https://github.com/eq1-team/eq1-network/issues"
 eq1-network = "eq1_network.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["eq1_network*"]
+include = ["eq1_network", "eq1_network.*"]
 
 [tool.setuptools.package-data]
-eq1_network = ["py.typed"]
+eq1_network = [
+  "examples/**/*",
+  "py.typed"
+]
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
+testpaths = ["eq1_network/tests"]
+python_files = ["eq1_network/tests/test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--verbose --tb=short"

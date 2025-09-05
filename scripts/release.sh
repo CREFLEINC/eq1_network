@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # EQ-1 Network PyPI 배포 스크립트
-# 사용법: ./scripts/deploy.sh [--test] [--build-only] [--version VERSION]
+# 사용법: ./scripts/release.sh [--test] [--build-only] [--version VERSION]
 
 set -e  # 오류 발생 시 스크립트 중단
 

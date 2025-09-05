@@ -11,6 +11,7 @@ from datetime import datetime
 from eq1_network import ReqResManager
 from eq1_network.protocols.ethernet.tcp_client import TCPClient
 from eq1_network.protocols.ethernet.tcp_server import TCPServer
+from eq1_network.examples.data.dataset import MessageType, DataFormat      # TODO: uitls 파일 추가 시, 사용할 것
 
 
 class ComprehensiveTCPExample:

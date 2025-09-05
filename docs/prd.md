@@ -174,7 +174,7 @@ app/
 
 ### 현재 구현된 MQTT 예시
 ```python
-from app.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
+from eq1_network.protocols.mqtt.mqtt_protocol import MQTTProtocol, BrokerConfig, ClientConfig
 
 # 기본 인증 설정
 broker_config = BrokerConfig(
@@ -201,8 +201,8 @@ mqtt.disconnect()
 ### 현재 구현된 TCP 예시
 ```python
 from app import ReqResManager
-from app.protocols.ethernet.tcp_client import TCPClient
-from app.protocols.ethernet.tcp_server import TCPServer
+from eq1_network.protocols.ethernet.tcp_client import TCPClient
+from eq1_network.protocols.ethernet.tcp_server import TCPServer
 
 # TCP 클라이언트 설정
 tcp_client = TCPClient("localhost", 8080, timeout=1)
@@ -224,7 +224,7 @@ if ReqResManager.connect("tcp_client"):
 ### 현재 구현된 Serial 예시
 ```python
 from app import ReqResManager
-from app.protocols.serial.serial_protocol import SerialProtocol
+from eq1_network.protocols.serial.serial_protocol import SerialProtocol
 
 # 시리얼 프로토콜 설정
 serial_protocol = SerialProtocol("COM1", 9600, timeout=1)
@@ -266,7 +266,7 @@ resp = modbus.read()
 ### PacketStructure 사용 예시
 ```python
 # PacketInterface를 통한 표준화된 데이터 처리
-from app.interfaces.packet import PacketStructureInterface
+from eq1_network.interfaces.packet import PacketStructureInterface
 
 class PacketStructure(PacketStructureInterface):
     HEAD_PACKET = b'$'

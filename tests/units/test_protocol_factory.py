@@ -2,8 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.common.params import Params
-from app.manager.protocol_factory import (
+from eq1_network.common.params import Params
+from eq1_network.manager.protocol_factory import (
     create_mqtt_protocol,
     create_protocol,
     valid_params,
@@ -49,9 +49,9 @@ def test_valid_params_missing_key():
 
 
 @pytest.mark.unit
-@patch("app.protocols.mqtt.mqtt_protocol.MQTTProtocol")
-@patch("app.protocols.mqtt.mqtt_protocol.ClientConfig")
-@patch("app.protocols.mqtt.mqtt_protocol.BrokerConfig")
+@patch("eq1_network.protocols.mqtt.mqtt_protocol.MQTTProtocol")
+@patch("eq1_network.protocols.mqtt.mqtt_protocol.ClientConfig")
+@patch("eq1_network.protocols.mqtt.mqtt_protocol.BrokerConfig")
 def test_create_mqtt_protocol_success(mock_broker_cfg_cls, mock_client_cfg_cls, mock_mqtt_cls):
     """
     create_mqtt_protocol()이 BrokerConfig/ClientConfig를 생성해
@@ -83,7 +83,7 @@ def test_create_mqtt_protocol_success(mock_broker_cfg_cls, mock_client_cfg_cls, 
 
 
 @pytest.mark.unit
-@patch("app.manager.protocol_factory.create_mqtt_protocol")
+@patch("eq1_network.manager.protocol_factory.create_mqtt_protocol")
 def test_create_protocol_with_mqtt(mock_create_mqtt):
     """
     method가 'mqtt'일 때 create_protocol()이 create_mqtt_protocol()을 호출하는지 테스트합니다.

@@ -19,7 +19,7 @@ _FALLBACK_ALL = [
 ]
 
 try:
-    from app.common.exception import (
+    from eq1_network.common.exception import (
         ProtocolAuthenticationError,
         ProtocolConnectionError,
         ProtocolDecodeError,
@@ -27,8 +27,8 @@ try:
         ProtocolTimeoutError,
         ProtocolValidationError,
     )
-    from app.interfaces.protocol import BaseProtocol, PubSubProtocol, ReqResProtocol
-    from app.manager.protocol_manager import PubSubManager, ReqResManager
+    from eq1_network.interfaces.protocol import BaseProtocol, PubSubProtocol, ReqResProtocol
+    from eq1_network.manager.protocol_manager import PubSubManager, ReqResManager
 
     __all__ = [
         "ReqResManager",

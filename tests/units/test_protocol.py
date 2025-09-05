@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 
 import pytest
 
-from app.interfaces.protocol import BaseProtocol, PubSubProtocol, ReqResProtocol
+from eq1_network.interfaces.protocol import BaseProtocol, PubSubProtocol, ReqResProtocol
 
 
 class MockReqResProtocol(ReqResProtocol):

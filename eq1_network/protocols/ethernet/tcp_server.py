@@ -3,7 +3,7 @@ import socket
 import time
 from typing import Optional, Tuple
 
-from app.interfaces.protocol import ReqResProtocol
+from eq1_network.interfaces.protocol import ReqResProtocol
 
 
 class TCPServer(ReqResProtocol):

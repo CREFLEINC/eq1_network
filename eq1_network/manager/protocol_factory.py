@@ -1,7 +1,7 @@
 from typing import List, Union, Dict
 
-from app.common.params import Params
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.common.params import Params
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 
 def valid_params(params: Union[Params, Dict], need_params: List[str]):
@@ -30,8 +30,8 @@ def valid_params(params: Union[Params, Dict], need_params: List[str]):
 
 
 def create_ethernet_protocol(protocol: str, address: str, port: int, timeout: float = 0.01, mode: str = "client"):
-    from app.protocols.ethernet.tcp_server import TCPServer
-    from app.protocols.ethernet.tcp_client import TCPClient
+    from eq1_network.protocols.ethernet.tcp_server import TCPServer
+    from eq1_network.protocols.ethernet.tcp_client import TCPClient
 
     if protocol.lower() == "tcp" and mode.lower() == "server":
         return TCPServer(address, port, timeout)
@@ -46,7 +46,7 @@ def create_ethernet_protocol(protocol: str, address: str, port: int, timeout: fl
 
 
 def create_serial_protocol(port_name: str, baud_rate: int, timeout: int = 1):
-    from app.protocols.serial.serial_protocol import SerialProtocol
+    from eq1_network.protocols.serial.serial_protocol import SerialProtocol
 
     return SerialProtocol(port_name, baud_rate, timeout)
 
@@ -63,7 +63,7 @@ def create_mqtt_protocol(broker_address: str, port: int, keepalive: int = 60) ->
     Returns:
         PubSubProtocol: MQTT 프로토콜 객체
     """
-    from app.protocols.mqtt.mqtt_protocol import (
+    from eq1_network.protocols.mqtt.mqtt_protocol import (
         BrokerConfig,
         ClientConfig,
         MQTTProtocol,

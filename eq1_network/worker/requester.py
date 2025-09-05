@@ -5,7 +5,7 @@ import threading
 import traceback
 from typing import Generic, Optional, Type, TypeVar, Union
 
-from app.common.exception import (
+from eq1_network.common.exception import (
     ProtocolAuthenticationError,
     ProtocolConnectionError,
     ProtocolDecodeError,
@@ -13,9 +13,9 @@ from app.common.exception import (
     ProtocolTimeoutError,
     ProtocolValidationError,
 )
-from app.data import SendData
-from app.interfaces.packet import PacketStructureInterface
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.data import SendData
+from eq1_network.interfaces.packet import PacketStructureInterface
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 ProtocolLike = Union[ReqResProtocol, PubSubProtocol]
 TSend = TypeVar("TSend", bound=SendData)

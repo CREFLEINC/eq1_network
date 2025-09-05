@@ -4,11 +4,11 @@ import threading
 import time
 from typing import Any, Dict
 
-from app.data import DataPackage
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
-from app.manager.protocol_factory import create_protocol
-from app.worker.listener import Listener, ListenerEvent
-from app.worker.requester import Requester, RequesterEvent
+from eq1_network.data import DataPackage
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.manager.protocol_factory import create_protocol
+from eq1_network.worker.listener import Listener, ListenerEvent
+from eq1_network.worker.requester import Requester, RequesterEvent
 
 logger = logging.getLogger(__name__)
 

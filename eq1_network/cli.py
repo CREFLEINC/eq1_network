@@ -2,8 +2,8 @@ import argparse
 import sys
 from typing import List, Optional
 
-from app import __version__
-from app.manager.protocol_manager import PubSubManager, ReqResManager
+from eq1_network import __version__
+from eq1_network.manager.protocol_manager import PubSubManager, ReqResManager
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -27,6 +27,9 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     subparsers = parser.add_subparsers(dest="command", help="사용 가능한 명령어")
+
+    # list-protocols 서브커맨드
+    subparsers.add_parser("list-protocols", help="사용 가능한 프로토콜 목록")
 
     # test-mqtt 서브커맨드
     mqtt_parser = subparsers.add_parser("test-mqtt", help="MQTT 연결 테스트")
@@ -72,7 +75,7 @@ def list_protocols() -> None:
 def test_mqtt(broker: str, port: int, topic: str) -> None:
     """MQTT 연결 테스트"""
     try:
-        from app.protocols.mqtt.mqtt_protocol import (
+        from eq1_network.protocols.mqtt.mqtt_protocol import (
             BrokerConfig,
             ClientConfig,
             MQTTProtocol,

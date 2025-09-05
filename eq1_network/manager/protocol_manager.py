@@ -1,6 +1,6 @@
 from typing import Dict
 
-from app.interfaces.protocol import PubSubProtocol, ReqResProtocol
+from eq1_network.interfaces.protocol import PubSubProtocol, ReqResProtocol
 
 
 class ReqResManager:

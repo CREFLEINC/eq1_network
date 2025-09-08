@@ -317,6 +317,19 @@ class RedisProtocol(PubSubProtocol):
 - `examples/comprehensive_tcp_example.py` - TCP 종합 예제
 - `examples/comprehensive_serial_example.py` - Serial 종합 예제
 
+### 데이터 인터페이스 (신규 추가)
+`examples/data/data_interface.py`에서 네트워크 패킷 구조화 기능을 제공합니다:
+
+```python
+from eq1_network.examples.data.data_interface import NetworkPacketStructure
+from eq1_network.examples.data.data_utils import MessageFactory
+
+# 메시지 생성 및 패킷 변환
+msg = MessageFactory.create_text_message("id001", "COMMAND", "client", "server", "Hello")
+packet = NetworkPacketStructure.pack_message(msg)
+received = NetworkPacketStructure.unpack_message(packet)
+```
+
 ### TCP 클라이언트-서버 예제
 ```python
 import threading

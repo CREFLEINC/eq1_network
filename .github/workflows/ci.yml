@@ -44,13 +44,13 @@ jobs:
       run: isort .
 
     - name: Lint with flake8
-      run: flake8 app
+      run: flake8 eq1_network
 
     - name: Type check with mypy
       run: mypy src
 
     - name: Run unit tests
-      run: pytest tests/units/ -v --cov=app --cov-report=xml
+      run: pytest tests/units/ -v --cov=eq1_network --cov-report=xml
 
     - name: Run integration tests
       run: pytest tests/integrations/ -v

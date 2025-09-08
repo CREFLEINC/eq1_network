@@ -31,6 +31,15 @@ class DataFormat(Enum):
     INT = "INT"              # 정수 형식
 
 
+class CommandType(Enum):
+    """명령어 타입 정의"""
+    NEXT = 'NEXT'           # 다음 명령
+    NEW = 'NEW'             # 새 명령
+    STATUS = 'STATUS'       # 상태 명령
+    DATA = 'DATA'           # 데이터 명령
+    INT = 'INT'             # 정수 명령
+
+
 @dataclass
 class TextNetworkMessage(SendData):
     """텍스트 포맷 네트워크 메시지"""

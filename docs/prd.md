@@ -56,6 +56,7 @@ flowchart TD
 - **예외 처리**: ✅ 구현됨 - ProtocolError 계층 구조 구현
 - **워커 모듈**: ✅ 구현됨 - Listener, Requester 스레드 기반 워커 구현
 - **매니저 시스템**: ✅ 구현됨 - ReqResManager, PubSubManager 구현 완료
+- **다중 포맷 메시지**: ✅ 구현됨 - TEXT, BINARY, INT 포맷 지원 및 성능 최적화 완료
 
 ### 지속적 목표
 - **안정성**: 3개월간 치명적 통신 버그 0건 유지
@@ -102,7 +103,7 @@ flowchart TD
 | **F-14** | **워커 모듈 구현** | - Listener: 수신 처리 스레드<br/>- Requester: 송신 처리 스레드<br/>- 이벤트 기반 콜백 처리 |
 | **F-15** | **매니저 시스템 구현** | - ReqResManager: ReqRes 프로토콜 통합 관리<br/>  - `register(name, protocol)`: 프로토콜 등록<br/>  - `send(name, data) -> int`: 데이터 전송 (전송된 바이트 수 반환)<br/>  - `read(name) -> bytes`: 데이터 수신 (bytes 반환)<br/>- PubSubManager: PubSub 프로토콜 통합 관리<br/>  - `register(name, protocol)`: 프로토콜 등록<br/>  - `publish(name, topic, message)`: 메시지 발행<br/>  - `subscribe(name, topic, callback)`: 토픽 구독<br/>- 플러그인 등록/관리 기능 |
 | **F-16** | **NetworkPacketStructure 구현** | - `PacketStructureInterface`를 구현한 `NetworkPacketStructure` 클래스<br/>- 4바이트 헤더 기반 패킷 구조 (빅엔디안)<br/>- 최대 1MB 페이로드 크기 제한<br/>- 패킷 분할 및 병합 기능<br/>- 메시지 타입별 직렬화/역직렬화 지원 |
-| **F-17** | **다중 포맷 메시지 지원** | - TEXT, BINARY, INT 포맷 지원<br/>- 각 포맷별 SendData/ReceivedData 클래스 구현<br/>- 메시지 타입 정의 (COMMAND, DATA, RESPONSE, STATUS, ERROR, HEARTBEAT, FILE_TRANSFER, BULK_DATA)<br/>- 타임스탬프, 소스/목적지 정보 포함 |
+| **F-17** | **다중 포맷 메시지 지원** | - **현재 구현**: TEXT, BINARY, INT 포맷 지원<br/>- **현재 구현**: 각 포맷별 SendData/ReceivedData 클래스 구현<br/>- **현재 구현**: 메시지 타입 정의 (COMMAND, DATA, RESPONSE, STATUS, ERROR, HEARTBEAT, FILE_TRANSFER, BULK_DATA)<br/>- **현재 구현**: 타임스탬프, 소스/목적지 정보 포함<br/>- **현재 구현**: 성능 최적화된 인덱스 매핑 및 에러 핸들링 강화 |
 | **F-18** | **DataPackage 통합 관리** | - 패킷 구조와 데이터 클래스를 묶은 `DataPackage` 클래스<br/>- 포맷별 사전 정의된 패키지 (TEXT_PACKAGE, BINARY_PACKAGE, INT_PACKAGE)<br/>- 일관된 데이터 처리 인터페이스 제공 |
 
 ## 비기능 요구사항
@@ -403,9 +404,10 @@ network_handler.send_data(send_data)  # PacketStructure 기반 전송
 - **명시적 연결**: connect() 메서드 호출 필수 (자동 연결 없음)
 
 ### 성능 제약
-- **처리량**: 초당 10,000 메시지 처리 가능
+- **처리량**: 초당 10,000 메시지 처리 가능 (성능 최적화 완료)
 - **동시 연결**: 100개 이하 권장
 - **메모리**: 연결당 약 10MB 사용
+- **데이터 검증**: 강화된 경계값 검사 및 에러 핸들링 적용
 
 ## 참고 자료
 - [MQTT Protocol](mqtt_protocol.md)

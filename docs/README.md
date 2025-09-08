@@ -175,9 +175,14 @@ mqtt.disconnect()
     - SendData/ReceivedData 클래스의 PacketInterface 상속
     - NetworkHandler 클래스의 PacketInterface 지원
 
+### ✅ 최근 개선사항
+- **성능 최적화:** MessageType 인덱스 매핑으로 O(1) 조회 성능 달성
+- **에러 핸들링 강화:** 데이터 검증 및 예외 처리 개선
+- **네이밍 일관성:** CommandType enum 중복 제거 및 명확한 네이밍 적용
+
 ## 프로젝트 구조
 ```
-app/
+eq1_network/
 ├── common/         # 공통 모듈 (예외, 로깅 등)
 ├── interfaces/     # 추상 인터페이스 (Protocol, Packet 등)
 ├── manager/        # 프로토콜 매니저
@@ -315,15 +320,19 @@ class RedisProtocol(PubSubProtocol):
 
 ```python
 from eq1_network.examples.data.data_utils import MessageFactory, example_text_communication
+from eq1_network.examples.data.dataset import MessageType
 
-# 메시지 생성
+# 개선된 메시지 생성 (성능 최적화 적용)
 text_msg = MessageFactory.create_text_message("msg001", MessageType.COMMAND, "client", "server", "Hello")
 binary_msg = MessageFactory.create_binary_message("msg002", MessageType.DATA, "sensor", "controller", b"\x01\x02")
 int_msg = MessageFactory.create_int_message("msg003", MessageType.STATUS, "device", "monitor", 42)
 
-# 통신 예시 실행
-packet, received = example_text_communication()
-print(f"Packet: {packet}, Received: {received}")
+# 통신 예시 실행 (에러 핸들링 강화)
+try:
+    packet, received = example_text_communication()
+    print(f"Packet: {packet}, Received: {received}")
+except ValueError as e:
+    print(f"Communication error: {e}")
 ```
 
 ### 종합 예제

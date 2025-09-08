@@ -9,4 +9,4 @@ COPY . .
 
 ENV PYTHONPATH=/app
 
-CMD ["python", "-m", "communicator.protocols.mqtt.mqtt_protocol"]
+CMD ["python", "-m", "app.protocols.mqtt.mqtt_protocol"]

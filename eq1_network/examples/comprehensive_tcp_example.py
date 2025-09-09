@@ -5,13 +5,12 @@ TCP 통신 종합 예제
 
 import time
 import threading
-import socket
 import json
 from datetime import datetime
 from eq1_network import ReqResManager
 from eq1_network.protocols.ethernet.tcp_client import TCPClient
 from eq1_network.protocols.ethernet.tcp_server import TCPServer
-from eq1_network.examples.data.dataset import MessageType, DataFormat      # TODO: uitls 파일 추가 시, 사용할 것
+from eq1_network.examples.data.dataset import MessageType, DataFormat
 
 
 class ComprehensiveTCPExample:
@@ -63,106 +62,101 @@ class ComprehensiveTCPExample:
             print(f"❌ 고급 TCP 설정 실패: {e}")
             return False
     
+    def _handle_server_message(self, data):
+        """서버 메시지 처리"""
+        message = data.decode('utf-8')
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"📨 [{timestamp}] 서버 수신: {message}")
+        
+        response = f"서버 응답: {message.upper()}"
+        if self.tcp_server.send(response.encode('utf-8')):
+            print(f"📤 [{timestamp}] 서버 응답: {response}")
+        
+        return message.lower() == "quit"
+    
+    def _run_basic_server(self):
+        """기본 TCP 서버 실행"""
+        print("=== TCP 서버 시작 ===")
+        
+        try:
+            if not self.tcp_server.connect():
+                print("❌ 서버 연결 실패")
+                return
+            
+            print("✓ 서버 연결됨 (포트: 8081)")
+            
+            while self.running:
+                success, data = self.tcp_server.read()
+                
+                if success and data:
+                    if self._handle_server_message(data):
+                        break
+                elif not success:
+                    print("❌ 클라이언트 연결이 끊어짐")
+                    break
+                    
+                time.sleep(0.1)
+                
+        except Exception as e:
+            print(f"❌ 서버 오류: {e}")
+        finally:
+            self.tcp_server.disconnect()
+            print("✓ 서버 종료")
+    
+    def _send_client_message(self, message):
+        """클라이언트 메시지 전송"""
+        print(f"📤 클라이언트 전송: {message}")
+        
+        if not self.tcp_client.send(message.encode('utf-8')):
+            print("❌ 클라이언트 전송 실패")
+            return False
+        
+        time.sleep(0.5)
+        success, response = self.tcp_client.read()
+        if success and response:
+            print(f"📨 클라이언트 응답: {response.decode('utf-8')}")
+            self.message_count += 1
+        
+        return True
+    
+    def _run_basic_client(self):
+        """기본 TCP 클라이언트 실행"""
+        print("=== TCP 클라이언트 시작 ===")
+        time.sleep(2)
+        
+        try:
+            if not self.tcp_client.connect():
+                print("❌ 클라이언트 연결 실패")
+                return
+            
+            print("✓ 클라이언트 연결됨 (포트: 8080)")
+            
+            test_messages = ["Hello Server!", "How are you?", "This is a test message", "quit"]
+            
+            for message in test_messages:
+                if not self._send_client_message(message):
+                    break
+                if message.lower() == "quit":
+                    break
+                time.sleep(1)
+                
+        except Exception as e:
+            print(f"❌ 클라이언트 오류: {e}")
+        finally:
+            self.tcp_client.disconnect()
+            print("✓ 클라이언트 종료")
+    
     def basic_client_server_example(self):
         """기본 클라이언트-서버 통신 예제"""
         print("\n=== 3. 기본 클라이언트-서버 통신 예제 ===")
         
-        def server_handler():
-            """TCP 서버 핸들러"""
-            print("=== TCP 서버 시작 ===")
-            
-            try:
-                if self.tcp_server.connect():
-                    print("✓ 서버 연결됨 (포트: 8081)")
-                    
-                    while self.running:
-                        success, data = self.tcp_server.read()
-                        
-                        if success and data:
-                            message = data.decode('utf-8')
-                            timestamp = datetime.now().strftime("%H:%M:%S")
-                            print(f"📨 [{timestamp}] 서버 수신: {message}")
-                            
-                            # 응답 전송
-                            response = f"서버 응답: {message.upper()}"
-                            if self.tcp_server.send(response.encode('utf-8')):
-                                print(f"📤 [{timestamp}] 서버 응답: {response}")
-                            
-                            # 종료 조건
-                            if message.lower() == "quit":
-                                break
-                        elif not success:
-                            print("❌ 클라이언트 연결이 끊어짐")
-                            break
-                            
-                        time.sleep(0.1)
-                else:
-                    print("❌ 서버 연결 실패")
-                    
-            except Exception as e:
-                print(f"❌ 서버 오류: {e}")
-            finally:
-                self.tcp_server.disconnect()
-                print("✓ 서버 종료")
-        
-        def client_handler():
-            """TCP 클라이언트 핸들러"""
-            print("=== TCP 클라이언트 시작 ===")
-            
-            # 서버 시작 대기
-            time.sleep(2)
-            
-            try:
-                if self.tcp_client.connect():
-                    print("✓ 클라이언트 연결됨 (포트: 8080)")
-                    
-                    # 테스트 메시지들
-                    test_messages = [
-                        "Hello Server!",
-                        "How are you?",
-                        "This is a test message",
-                        "quit"
-                    ]
-                    
-                    for message in test_messages:
-                        print(f"📤 클라이언트 전송: {message}")
-                        
-                        if self.tcp_client.send(message.encode('utf-8')):
-                            # 서버 응답 대기
-                            time.sleep(0.5)
-                            
-                            success, response = self.tcp_client.read()
-                            if success and response:
-                                print(f"📨 클라이언트 응답: {response.decode('utf-8')}")
-                                self.message_count += 1
-                            
-                            if message.lower() == "quit":
-                                break
-                        else:
-                            print("❌ 클라이언트 전송 실패")
-                            break
-                            
-                        time.sleep(1)
-                else:
-                    print("❌ 클라이언트 연결 실패")
-                    
-            except Exception as e:
-                print(f"❌ 클라이언트 오류: {e}")
-            finally:
-                self.tcp_client.disconnect()
-                print("✓ 클라이언트 종료")
-        
         try:
             self.running = True
-            
-            # 서버 스레드 시작
-            server_thread = threading.Thread(target=server_handler, daemon=True)
+            server_thread = threading.Thread(target=self._run_basic_server, daemon=True)
             server_thread.start()
             
-            # 클라이언트 실행
-            client_handler()
+            self._run_basic_client()
             
-            # 서버 종료 대기
             self.running = False
             server_thread.join(timeout=2)
             
@@ -198,7 +192,7 @@ class ComprehensiveTCPExample:
                                 
                                 response = json.dumps(response_data)
                                 if self.tcp_server.send(response.encode('utf-8')):
-                                    print(f"📤 JSON 응답 전송")
+                                    print("📤 JSON 응답 전송")
                                 
                             except json.JSONDecodeError:
                                 print(f"❌ JSON 파싱 오류: {data.decode('utf-8')}")
@@ -428,71 +422,195 @@ class ComprehensiveTCPExample:
             print(f"❌ 연속 모니터링 오류: {e}")
             self.running = False
     
-    def connection_test_example(self):
-        """연결 테스트 예제"""
-        print("\n=== 7. 연결 테스트 예제 ===")
-        
-        # 다양한 포트와 설정으로 연결 테스트
-        test_configurations = [
+    def _get_test_configurations(self):
+        """테스트 설정 반환"""
+        return [
             {"host": "localhost", "port": 8084, "timeout": 1, "description": "표준 설정"},
             {"host": "127.0.0.1", "port": 8085, "timeout": 0.5, "description": "IP 주소"},
             {"host": "localhost", "port": 8086, "timeout": 2, "description": "긴 타임아웃"},
         ]
+    
+    def _test_connection_config(self, config):
+        """개별 연결 설정 테스트"""
+        print(f"\n--- {config['description']} 테스트 ---")
+        print(f"호스트: {config['host']}, 포트: {config['port']}")
+        
+        try:
+            server = TCPServer(config['host'], config['port'], config['timeout'])
+            client = TCPClient(config['host'], config['port'], config['timeout'])
+            
+            server_name = f"test_server_{config['port']}"
+            client_name = f"test_client_{config['port']}"
+            
+            ReqResManager.register(server_name, server)
+            ReqResManager.register(client_name, client)
+            
+            if ReqResManager.connect(server_name):
+                print("✓ 서버 연결 성공")
+                
+                if ReqResManager.connect(client_name):
+                    print("✓ 클라이언트 연결 성공")
+                    self._perform_connection_test(client_name, config['port'])
+                    ReqResManager.disconnect(client_name)
+                else:
+                    print("❌ 클라이언트 연결 실패")
+                
+                ReqResManager.disconnect(server_name)
+            else:
+                print("❌ 서버 연결 실패")
+                
+        except Exception as e:
+            print(f"❌ 연결 테스트 오류: {e}")
+    
+    def _perform_connection_test(self, client_name, port):
+        """연결 테스트 수행"""
+        test_message = f"TEST_{port}".encode()
+        result = ReqResManager.send(client_name, test_message)
+        
+        if result > 0:
+            print("✓ 테스트 메시지 전송 성공")
+            
+            time.sleep(0.5)
+            response = ReqResManager.read(client_name)
+            if response:
+                print(f"📨 테스트 응답: {response.decode()}")
+                self.message_count += 1
+    
+    def connection_test_example(self):
+        """연결 테스트 예제"""
+        print("\n=== 7. 연결 테스트 예제 ===")
+        
+        test_configurations = self._get_test_configurations()
         
         for config in test_configurations:
-            print(f"\n--- {config['description']} 테스트 ---")
-            print(f"호스트: {config['host']}, 포트: {config['port']}")
+            self._test_connection_config(config)
+    
+    def _parse_typed_message(self, data):
+        """타입별 메시지 파싱"""
+        from eq1_network.examples.data.data_interface import NetworkPacketStructure
+        
+        try:
+            if "text" in str(data[:50]):
+                received = NetworkPacketStructure.unpack_message(data, DataFormat.TEXT)
+                print(f"📨 텍스트 메시지: {received.message_type.value} - {received.payload}")
+            elif len(data) > 100:
+                received = NetworkPacketStructure.unpack_message(data, DataFormat.BINARY)
+                print(f"📨 바이너리 메시지: {received.message_type.value} - {received.payload.hex()}")
+            else:
+                received = NetworkPacketStructure.unpack_message(data, DataFormat.INT)
+                print(f"📨 정수 메시지: {received.message_type.value} - {received.payload}")
             
-            try:
-                # 서버 생성
-                server = TCPServer(config['host'], config['port'], config['timeout'])
-                ReqResManager.register(f"test_server_{config['port']}", server)
+            return f"ACK_{received.message_type.value}"
+        except Exception:
+            message = data.decode('utf-8', errors='ignore')
+            print(f"📨 일반 메시지: {message[:50]}...")
+            return "ACK_GENERAL"
+    
+    def _run_typed_server(self):
+        """타입별 메시지 서버 실행"""
+        try:
+            if not self.tcp_server.connect():
+                print("❌ MessageType 서버 연결 실패")
+                return
+            
+            print("✓ MessageType 서버 시작")
+            
+            while self.running:
+                success, data = self.tcp_server.read()
                 
-                # 클라이언트 생성
-                client = TCPClient(config['host'], config['port'], config['timeout'])
-                ReqResManager.register(f"test_client_{config['port']}", client)
+                if success and data:
+                    response = self._parse_typed_message(data)
+                    self.tcp_server.send(response.encode('utf-8'))
+                    
+                time.sleep(0.1)
                 
-                # 연결 테스트
-                if ReqResManager.connect(f"test_server_{config['port']}"):
-                    print("✓ 서버 연결 성공")
+        except Exception as e:
+            print(f"❌ MessageType 서버 오류: {e}")
+    
+    def _create_typed_messages(self):
+        """타입별 메시지 생성"""
+        from eq1_network.examples.data.data_utils import MessageFactory
+        
+        return [
+            MessageFactory.create_text_message(
+                "tcp_cmd_001", MessageType.COMMAND, "tcp_client", "tcp_server", "START_PROCESS"
+            ),
+            MessageFactory.create_binary_message(
+                "tcp_data_001", MessageType.DATA, "sensor", "controller", b"\x01\x02\x03\x04\x05"
+            ),
+            MessageFactory.create_int_message(
+                "tcp_status_001", MessageType.STATUS, "device", "monitor", 85
+            ),
+            MessageFactory.create_text_message(
+                "tcp_hb_001", MessageType.HEARTBEAT, "client", "server", "ALIVE"
+            )
+        ]
+    
+    def _run_typed_client(self):
+        """타입별 메시지 클라이언트 실행"""
+        time.sleep(2)
+        
+        try:
+            from eq1_network.examples.data.data_interface import NetworkPacketStructure
+            
+            if not self.tcp_client.connect():
+                print("❌ MessageType 클라이언트 연결 실패")
+                return
+            
+            print("✓ MessageType 클라이언트 시작")
+            
+            messages = self._create_typed_messages()
+            
+            for i, message in enumerate(messages, 1):
+                packet = NetworkPacketStructure.pack_message(message)
+                print(f"📤 전송 #{i}: {message.message_type.value} ({len(packet)} bytes)")
+                
+                if self.tcp_client.send(packet):
+                    time.sleep(0.5)
                     
-                    if ReqResManager.connect(f"test_client_{config['port']}"):
-                        print("✓ 클라이언트 연결 성공")
-                        
-                        # 간단한 테스트
-                        test_message = f"TEST_{config['port']}".encode()
-                        result = ReqResManager.send(f"test_client_{config['port']}", test_message)
-                        if result > 0:
-                            print("✓ 테스트 메시지 전송 성공")
-                            
-                            time.sleep(0.5)
-                            response = ReqResManager.read(f"test_client_{config['port']}")
-                            if response:
-                                print(f"📨 테스트 응답: {response.decode()}")
-                                self.message_count += 1
-                        
-                        ReqResManager.disconnect(f"test_client_{config['port']}")
-                    else:
-                        print("❌ 클라이언트 연결 실패")
-                    
-                    ReqResManager.disconnect(f"test_server_{config['port']}")
+                    success, response = self.tcp_client.read()
+                    if success and response:
+                        print(f"📨 응답 #{i}: {response.decode('utf-8')}")
+                        self.message_count += 1
                 else:
-                    print("❌ 서버 연결 실패")
-                    
-            except Exception as e:
-                print(f"❌ 연결 테스트 오류: {e}")
+                    print(f"❌ 전송 실패 #{i}")
+                
+                time.sleep(1)
+                
+        except ImportError as e:
+            print(f"❌ 모듈 임포트 실패: {e}")
+        except Exception as e:
+            print(f"❌ MessageType 클라이언트 오류: {e}")
+    
+    def message_type_tcp_example(self):
+        """MessageType을 활용한 TCP 통신 예제"""
+        print("\n=== 8. MessageType TCP 통신 예제 ===")
+        
+        try:
+            self.running = True
+            server_thread = threading.Thread(target=self._run_typed_server, daemon=True)
+            server_thread.start()
+            
+            self._run_typed_client()
+            
+            self.running = False
+            server_thread.join(timeout=2)
+            
+        except Exception as e:
+            print(f"❌ MessageType TCP 예제 오류: {e}")
+            self.running = False
     
     def data_utils_example(self):
         """data_utils.py 사용 예제"""
-        print("\n=== 8. data_utils.py 사용 예제 ===")
+        print("\n=== 9. data_utils.py 사용 예제 ===")
         
         try:
             from eq1_network.examples.data.data_utils import (
                 MessageFactory,
                 example_text_communication,
-                example_binary_communication
+                example_binary_communication,
+                example_int_communication
             )
-            from eq1_network.examples.data.dataset import MessageType
             
             # MessageFactory로 메시지 생성
             text_msg = MessageFactory.create_text_message(
@@ -501,10 +619,14 @@ class ComprehensiveTCPExample:
             binary_msg = MessageFactory.create_binary_message(
                 "tcp_002", MessageType.DATA, "sensor", "tcp_controller", b"\x01\x02\x03"
             )
+            int_msg = MessageFactory.create_int_message(
+                "tcp_003", MessageType.STATUS, "device", "monitor", 75
+            )
             
-            print(f"✓ 생성된 메시지:")
+            print("✓ 생성된 메시지:")
             print(f"  - 텍스트: {text_msg.msg_id} -> {text_msg.payload}")
             print(f"  - 바이너리: {binary_msg.msg_id} -> {binary_msg.payload.hex()}")
+            print(f"  - 정수: {int_msg.msg_id} -> {int_msg.payload}")
             
             # TCP로 메시지 전송 예시
             if ReqResManager.connect("tcp_client"):
@@ -519,11 +641,14 @@ class ComprehensiveTCPExample:
                 ReqResManager.disconnect("tcp_client")
             
             # 통신 예시 실행
-            packet, received = example_text_communication()
+            packet, _ = example_text_communication()
             print(f"✓ 텍스트 통신 예시: 패킷 크기 {len(packet)} bytes")
             
-            packet, received = example_binary_communication()
+            packet, _ = example_binary_communication()
             print(f"✓ 바이너리 통신 예시: 패킷 크기 {len(packet)} bytes")
+            
+            packet, _ = example_int_communication()
+            print(f"✓ 정수 통신 예시: 패킷 크기 {len(packet)} bytes")
             
         except ImportError as e:
             print(f"❌ data_utils 모듈 임포트 실패: {e}")
@@ -532,7 +657,7 @@ class ComprehensiveTCPExample:
     
     def error_handling_example(self):
         """오류 처리 예제"""
-        print("\n=== 9. 오류 처리 예제 ===")
+        print("\n=== 10. 오류 처리 예제 ===")
         
         # 1. 존재하지 않는 서버 연결 시도
         print("1. 존재하지 않는 서버 연결 테스트")
@@ -571,7 +696,7 @@ class ComprehensiveTCPExample:
     
     def data_analysis_example(self):
         """수신 데이터 분석 예제"""
-        print("\n=== 9. 수신 데이터 분석 예제 ===")
+        print("\n=== 11. 수신 데이터 분석 예제 ===")
         
         if not self.received_data:
             print("분석할 데이터가 없습니다.")
@@ -616,12 +741,13 @@ class ComprehensiveTCPExample:
             self.binary_data_example()
             self.continuous_monitoring()
             self.connection_test_example()
+            self.message_type_tcp_example()
             self.data_utils_example()
             self.error_handling_example()
             self.data_analysis_example()
             
             # 4. 결과 요약
-            print(f"\n=== 결과 요약 ===")
+            print("\n=== 결과 요약 ===")
             print(f"총 처리 메시지: {self.message_count}개")
             print(f"수신된 데이터: {len(self.received_data)}개")
             

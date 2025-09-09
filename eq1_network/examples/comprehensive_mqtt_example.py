@@ -6,10 +6,9 @@ MQTT 프로토콜 종합 예제
 import json
 import time
 import threading
-import uuid
 from datetime import datetime
 from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
-from eq1_network.examples.data.dataset import MessageType   # TODO: uitls 파일 추가 시, 사용할 것
+from eq1_network.examples.data.dataset import MessageType
 
 
 class ComprehensiveMQTTExample:
@@ -298,16 +297,97 @@ class ComprehensiveMQTTExample:
         except Exception as e:
             print(f"❌ 주기적 발행 오류: {e}")
     
+    def message_type_handler(self, topic: str, payload: bytes):
+        """메시지 타입별 핸들러"""
+        try:
+            from eq1_network.examples.data.data_interface import NetworkPacketStructure
+            from eq1_network.examples.data.dataset import DataFormat
+            
+            # 토픽에 따른 데이터 포맷 결정
+            if "binary" in topic:
+                received = NetworkPacketStructure.unpack_message(payload, DataFormat.BINARY)
+                print(f"📨 바이너리 메시지: {received.message_type.value} - {received.payload.hex()}")
+            elif "int" in topic:
+                received = NetworkPacketStructure.unpack_message(payload, DataFormat.INT)
+                print(f"📨 정수 메시지: {received.message_type.value} - {received.payload}")
+            else:
+                received = NetworkPacketStructure.unpack_message(payload, DataFormat.TEXT)
+                print(f"📨 텍스트 메시지: {received.message_type.value} - {received.payload}")
+                
+            self.message_count += 1
+            
+        except Exception as e:
+            # 일반 텍스트로 처리
+            message = payload.decode('utf-8')
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            print(f"📨 [{timestamp}] {topic}: {message}")
+            self.message_count += 1
+    
+    def message_type_mqtt_example(self):
+        """MessageType을 활용한 MQTT 통신 예제"""
+        print("\n=== 9. MessageType MQTT 통신 예제 ===")
+        
+        try:
+            from eq1_network.examples.data.data_utils import MessageFactory
+            from eq1_network.examples.data.data_interface import NetworkPacketStructure
+            
+            # 메시지 타입별 구독
+            topics = [
+                "mqtt/command/text",
+                "mqtt/data/binary", 
+                "mqtt/status/int",
+                "mqtt/heartbeat/text",
+                "mqtt/response/text"
+            ]
+            
+            for topic in topics:
+                self.mqtt.subscribe(topic, self.message_type_handler, qos=1)
+                print(f"✓ 구독: {topic}")
+            
+            # 다양한 MessageType 메시지 생성 및 발행
+            messages = [
+                ("mqtt/command/text", MessageFactory.create_text_message(
+                    "cmd_001", MessageType.COMMAND, "controller", "device", "START_SYSTEM"
+                )),
+                ("mqtt/data/binary", MessageFactory.create_binary_message(
+                    "data_001", MessageType.DATA, "sensor", "logger", b"\x01\x02\x03\x04"
+                )),
+                ("mqtt/status/int", MessageFactory.create_int_message(
+                    "status_001", MessageType.STATUS, "system", "monitor", 95
+                )),
+                ("mqtt/heartbeat/text", MessageFactory.create_text_message(
+                    "hb_001", MessageType.HEARTBEAT, "client", "server", "ALIVE"
+                )),
+                ("mqtt/response/text", MessageFactory.create_text_message(
+                    "resp_001", MessageType.RESPONSE, "server", "client", "SYSTEM_STARTED"
+                ))
+            ]
+            
+            for topic, message in messages:
+                packet = NetworkPacketStructure.pack_message(message)
+                self.mqtt.publish(topic, packet, qos=1)
+                print(f"📤 발행: {topic} -> {message.message_type.value}")
+                time.sleep(0.5)
+            
+            print("메시지 처리 대기... (3초)")
+            time.sleep(3)
+            
+        except ImportError as e:
+            print(f"❌ 모듈 임포트 실패: {e}")
+        except Exception as e:
+            print(f"❌ MessageType MQTT 예제 오류: {e}")
+    
     def data_utils_example(self):
         """data_utils.py 사용 예제"""
-        print("\n=== 9. data_utils.py 사용 예제 ===")
+        print("\n=== 10. data_utils.py 사용 예제 ===")
         
         try:
             from eq1_network.examples.data.data_utils import (
                 MessageFactory, 
-                example_text_communication
+                example_text_communication,
+                example_binary_communication,
+                example_int_communication
             )
-            from eq1_network.examples.data.dataset import MessageType
             
             # MessageFactory로 메시지 생성
             text_msg = MessageFactory.create_text_message(
@@ -317,6 +397,7 @@ class ComprehensiveMQTTExample:
             print(f"✓ 생성된 메시지: {text_msg.msg_id} -> {text_msg.payload}")
             
             # MQTT로 메시지 발행
+            self.mqtt.subscribe("data_utils/test", self.basic_message_handler)
             self.mqtt.publish("data_utils/test", text_msg.payload)
             print("✓ data_utils 메시지 MQTT로 발행 완료")
             
@@ -324,7 +405,13 @@ class ComprehensiveMQTTExample:
             packet, received = example_text_communication()
             print(f"✓ 텍스트 통신 예시: 패킷 크기 {len(packet)} bytes")
             
-            time.sleep(1)
+            packet, received = example_binary_communication()
+            print(f"✓ 바이너리 통신 예시: 패킷 크기 {len(packet)} bytes")
+            
+            packet, received = example_int_communication()
+            print(f"✓ 정수 통신 예시: 패킷 크기 {len(packet)} bytes")
+            
+            time.sleep(2)
             
         except ImportError as e:
             print(f"❌ data_utils 모듈 임포트 실패: {e}")
@@ -333,7 +420,7 @@ class ComprehensiveMQTTExample:
     
     def error_handling_example(self):
         """오류 처리 예제"""
-        print("\n=== 10. 오류 처리 예제 ===")
+        print("\n=== 11. 오류 처리 예제 ===")
         
         try:
             # 잘못된 브로커 주소로 연결 시도
@@ -343,7 +430,7 @@ class ComprehensiveMQTTExample:
                 port=1883,
                 mode="non-blocking"
             )
-            bad_mqtt = MQTTProtocol(bad_config)
+            MQTTProtocol(bad_config)
             
             # 연결 시도 (타임아웃 발생 예상)
             time.sleep(3)
@@ -378,11 +465,12 @@ class ComprehensiveMQTTExample:
             self.qos_example()
             self.retain_message_example()
             self.periodic_publisher()
+            self.message_type_mqtt_example()
             self.data_utils_example()
             self.error_handling_example()
             
             # 5. 결과 요약
-            print(f"\n=== 결과 요약 ===")
+            print("\n=== 결과 요약 ===")
             print(f"총 수신 메시지: {self.message_count}개")
             print(f"수신된 토픽들: {list(set(msg[0] for msg in self.received_messages))}")
             

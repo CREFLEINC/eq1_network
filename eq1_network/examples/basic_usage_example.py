@@ -7,8 +7,7 @@ import time
 from eq1_network import PubSubManager, ReqResManager
 from eq1_network.protocols.mqtt.mqtt_protocol import BrokerConfig, ClientConfig, MQTTProtocol
 from eq1_network.protocols.ethernet.tcp_client import TCPClient
-from eq1_network.protocols.ethernet.tcp_server import TCPServer
-from eq1_network.examples.data.dataset import MessageType   # TODO: uitls 파일 추가 시, 사용할 것
+from eq1_network.examples.data.dataset import MessageType
 
 def basic_mqtt_example():
     """MQTT 기본 사용법"""
@@ -125,6 +124,143 @@ def data_utils_example():
         print(f"❌ data_utils 예제 오류: {e}")
 
 
+def message_type_communication_example():
+    """MessageType을 활용한 통신 예제"""
+    print("\n=== MessageType 통신 예제 ===")
+    
+    try:
+        from eq1_network.examples.data.data_utils import MessageFactory
+        from eq1_network.examples.data.data_interface import NetworkPacketStructure
+        from eq1_network.examples.data.dataset import DataFormat
+        
+        # 1. 명령 메시지 생성 및 전송
+        command_msg = MessageFactory.create_text_message(
+            "cmd_001", MessageType.COMMAND, "client", "server", "START_PROCESS"
+        )
+        command_packet = NetworkPacketStructure.pack_message(command_msg)
+        print(f"✓ 명령 메시지 생성: {command_msg.payload} ({len(command_packet)} bytes)")
+        
+        # 2. 데이터 메시지 생성 및 전송
+        sensor_data = MessageFactory.create_binary_message(
+            "data_001", MessageType.DATA, "sensor_01", "controller", b"\x01\x02\x03\x04"
+        )
+        data_packet = NetworkPacketStructure.pack_message(sensor_data)
+        print(f"✓ 센서 데이터 생성: {sensor_data.payload.hex()} ({len(data_packet)} bytes)")
+        
+        # 3. 상태 메시지 생성 및 전송
+        status_msg = MessageFactory.create_int_message(
+            "status_001", MessageType.STATUS, "device_01", "monitor", 100
+        )
+        status_packet = NetworkPacketStructure.pack_message(status_msg)
+        print(f"✓ 상태 메시지 생성: {status_msg.payload}% ({len(status_packet)} bytes)")
+        
+        # 4. 하트비트 메시지 생성
+        heartbeat_msg = MessageFactory.create_text_message(
+            "hb_001", MessageType.HEARTBEAT, "client", "server", "ALIVE"
+        )
+        heartbeat_packet = NetworkPacketStructure.pack_message(heartbeat_msg)
+        print(f"✓ 하트비트 메시지 생성: {heartbeat_msg.payload} ({len(heartbeat_packet)} bytes)")
+        
+        # 5. 응답 메시지 생성
+        response_msg = MessageFactory.create_text_message(
+            "resp_001", MessageType.RESPONSE, "server", "client", "PROCESS_STARTED"
+        )
+        response_packet = NetworkPacketStructure.pack_message(response_msg)
+        print(f"✓ 응답 메시지 생성: {response_msg.payload} ({len(response_packet)} bytes)")
+        
+        # 6. 패킷 역직렬화 테스트
+        print("\n패킷 역직렬화 테스트:")
+        received_command = NetworkPacketStructure.unpack_message(command_packet, DataFormat.TEXT)
+        print(f"  - 명령 수신: {received_command.payload}")
+        
+        received_data = NetworkPacketStructure.unpack_message(data_packet, DataFormat.BINARY)
+        print(f"  - 데이터 수신: {received_data.payload.hex()}")
+        
+        received_status = NetworkPacketStructure.unpack_message(status_packet, DataFormat.INT)
+        print(f"  - 상태 수신: {received_status.payload}%")
+        
+    except ImportError as e:
+        print(f"❌ 모듈 임포트 실패: {e}")
+    except Exception as e:
+        print(f"❌ MessageType 통신 예제 오류: {e}")
+
+
+def mqtt_with_message_types_example():
+    """MQTT와 MessageType 연동 예제"""
+    print("\n=== MQTT + MessageType 연동 예제 ===")
+    
+    try:
+        from eq1_network.examples.data.data_utils import MessageFactory
+        from eq1_network.examples.data.data_interface import NetworkPacketStructure
+        from eq1_network.examples.data.dataset import DataFormat
+        
+        # MQTT 프로토콜 설정
+        broker_config = BrokerConfig("localhost", 1883, "non-blocking")
+        client_config = ClientConfig()
+        mqtt = MQTTProtocol(broker_config, client_config)
+        PubSubManager.register("mqtt_typed", mqtt)
+        
+        if PubSubManager.connect("mqtt_typed"):
+            print("✓ MQTT 연결 성공")
+            
+            # 메시지 타입별 핸들러 정의
+            def command_handler(topic: str, payload: bytes):
+                try:
+                    received = NetworkPacketStructure.unpack_message(payload, DataFormat.TEXT)
+                    print(f"📨 명령 수신: {received.payload}")
+                except Exception as e:
+                    print(f"❌ 명령 파싱 오류: {e}")
+            
+            def data_handler(topic: str, payload: bytes):
+                try:
+                    received = NetworkPacketStructure.unpack_message(payload, DataFormat.BINARY)
+                    print(f"📨 데이터 수신: {received.payload.hex()}")
+                except Exception as e:
+                    print(f"❌ 데이터 파싱 오류: {e}")
+            
+            def status_handler(topic: str, payload: bytes):
+                try:
+                    received = NetworkPacketStructure.unpack_message(payload, DataFormat.INT)
+                    print(f"📨 상태 수신: {received.payload}%")
+                except Exception as e:
+                    print(f"❌ 상태 파싱 오류: {e}")
+            
+            # 토픽별 구독
+            PubSubManager.subscribe("mqtt_typed", "device/command", command_handler)
+            PubSubManager.subscribe("mqtt_typed", "sensor/data", data_handler)
+            PubSubManager.subscribe("mqtt_typed", "system/status", status_handler)
+            
+            # 메시지 발행
+            command_msg = MessageFactory.create_text_message(
+                "cmd_002", MessageType.COMMAND, "controller", "device", "RESET"
+            )
+            command_packet = NetworkPacketStructure.pack_message(command_msg)
+            PubSubManager.publish("mqtt_typed", "device/command", command_packet)
+            
+            data_msg = MessageFactory.create_binary_message(
+                "data_002", MessageType.DATA, "sensor", "logger", b"\xFF\xFE\xFD"
+            )
+            data_packet = NetworkPacketStructure.pack_message(data_msg)
+            PubSubManager.publish("mqtt_typed", "sensor/data", data_packet)
+            
+            status_msg = MessageFactory.create_int_message(
+                "status_002", MessageType.STATUS, "system", "monitor", 85
+            )
+            status_packet = NetworkPacketStructure.pack_message(status_msg)
+            PubSubManager.publish("mqtt_typed", "system/status", status_packet)
+            
+            time.sleep(2)
+            mqtt.disconnect()
+            print("✓ MQTT 연결 해제")
+        else:
+            print("❌ MQTT 연결 실패")
+            
+    except ImportError as e:
+        print(f"❌ 모듈 임포트 실패: {e}")
+    except Exception as e:
+        print(f"❌ MQTT + MessageType 예제 오류: {e}")
+
+
 def protocol_management_example():
     """프로토콜 관리 예제"""
     print("\n=== 프로토콜 관리 예제 ===")
@@ -164,6 +300,8 @@ if __name__ == "__main__":
     basic_mqtt_example()
     basic_tcp_example()
     data_utils_example()
+    message_type_communication_example()
+    mqtt_with_message_types_example()
     protocol_management_example()
     
     print("\n" + "=" * 50)
